@@ -52,7 +52,7 @@ execution, zero enterprise fluff. Help me set up a lean documentation and
 | Matching | Same-gender riders only. Driver can be any gender |
 | Demo setup | 3 phones: host, joiner, driver + "simulate rider" button |
 | Design source | `docs/DESIGN.md`. Rider accent = pink, driver accent = purple |
-
+| Maps & places | Google Maps Platform (map, Places search, route matrix). Demo runs from a saved snapshot |
 ### Lean Documentation Structure (5 files)
 
 `AGENTS.md` and `STATUS.md` at the repo root, the rest in `docs/`:
