@@ -1,18 +1,23 @@
 """
-fare_model.py: reference model for SPEC.md v4.
+fare_model.py: reference model for SPEC.md v5.
 Lives at docs/reference/fare_model.py. It is a SPEC, not app code: port it, don't import it.
+Golden values = what this file prints. If SPEC.md disagrees, SPEC.md gets fixed.
 
 Covers:
   - LTRC smart-app tariff + CALIBRATION (SPEC §4.1, §4.1.1, §4.4)
   - Fixed-table distances and traffic curve (§4.2.3, §4.3)
-  - Stop-order search, first pickup, effective arrive-by (§3.6, rule 7)
-  - Matching rules 1-11 (§3.5) for the demo scenario
-  - Free and late leave money flow (§3.10, §4.5)
-Not covered: state machines, ready-check timing, chat, Google/Snapshot sources, rule 12.
+  - Stop-order score: fare in piastres + trip minutes + 0.01 x total in-car minutes (§3.6)
+  - First pickup and effective arrive-by (§3.6, rule 7)
+  - Matching rules 1, 2 and 4-11 (§3.5) for the demo scenario
+  - Free and late leave with frozen pickup times (§3.6, §3.10, §4.5)
+Not covered: rule 3 (ride state), rule 12, state machines, ready check, dispatch, chat,
+credits paid at completion, Google/Snapshot sources.
+
+Times here are naive datetimes meaning Amman local time. The app must derive hours and
+weekdays through ammanParts() (ARCHITECTURE §6, trap 5).
 
 Run:  python fare_model.py
-Prints the §4.7 golden values (fixture) and the v4 demo table (§2.3).
-Note: plan() brute-forces up to 8! stop orders; a 4-rider plan takes a few seconds in Python.
+Note: plan() brute-forces stop orders; a 4-rider plan takes a few seconds in Python.
 """
 import math, itertools, datetime as dt
 
@@ -94,7 +99,7 @@ def base_factors(h):
 
 def factors(t, level='normal', weather='clear'):
     u, hw = base_factors(t.hour + t.minute/60 + t.second/3600)
-    if t.weekday() in (4, 5):  # Fri, Sat: half the congestion
+    if t.weekday() in (4, 5):  # Python: Mon=0, so Fri=4, Sat=5. Half the congestion.
         u, hw = 1+(u-1)*0.5, 1+(hw-1)*0.5
     m = LEVEL[level]*WEATHER[weather]
     return u*m, hw*m
@@ -118,7 +123,8 @@ def up05(x): return math.ceil(round(x*100, 6)/5)*5/100
 
 # ---------- Route evaluation ----------
 def evaluate(stops, T0, **kw):
-    """stops: list of (kind 'P'/'D', rider_index, place_key). Times start at T0."""
+    """stops: list of (kind 'P'/'D', rider_index, place_key). Drives continuously from T0.
+    Returns arrival times, km, billed wait, fare and duration."""
     t = T0; km = 0.0; wait = 0.0; times = []; prev = None
     for kind, _, loc in stops:
         if prev is not None:
@@ -153,8 +159,9 @@ def latest_start(stops, deadline, **kw):
     return None
 
 def plan(riders, extra_ok=None, **kw):
-    """riders: list of dict(name, gender, p, d, by). Brute-force stop orders.
-    Effective arrive-by = earliest arrive-by of all riders (rule 4/7).
+    """riders: list of dict(name, gender, p, d, by). Tries every precedence-valid stop order.
+    Effective arrive-by = earliest arrive-by of all riders (rules 4/7).
+    Score (SPEC §3.6): fare in piastres + trip minutes + 0.01 x total in-car minutes. Lowest wins.
     extra_ok(result) -> bool lets callers enforce rules 8-9 per stop order."""
     n = len(riders)
     deadline = min(r['by'] for r in riders) - dt.timedelta(minutes=BUFFER)
@@ -218,12 +225,19 @@ def check_join(ride, j, now, **kw):
     if p['T0'] < now + dt.timedelta(minutes=MIN_LEAD_TO_JOIN):  return (False, 'rule 11 too late to join', None, None)
     return (True, 'ok', p, share)
 
-# ---------- Leaving (SPEC §3.10, §4.5) ----------
+# ---------- Leaving after the freeze (SPEC §3.6, §3.10, §4.5) ----------
 def leave(p, leaver_idx, n_riders, locked_share, now, **kw):
-    """Leave after a driver accepted. Pickup times are frozen: remaining stops keep the
-    same order and the same first pickup p['T0']. Returns (new_fare, new_share, credit, late)."""
+    """A rider leaves after pickup times froze (ready check) and a driver accepted.
+    - Pickup times shown to the other riders don't change: they stay p['pick'][i].
+    - The fare is recomputed for the remaining stops in the same order, driving continuously
+      from the same first pickup p['T0']. If the driver reaches a frozen pickup early, they
+      wait; that wait is NOT billed (SPEC §3.6, §4.4).
+    - Late leave: the leaver's current share becomes a credit held on the ride
+      (paid to the completing driver at COMPLETED, reversed if the ride is CANCELED).
+    Returns (new_fare, new_share, credit, late, frozen_pickups)."""
     remaining = [s for s in p['stops'] if s[1] != leaver_idx]
     ev = evaluate(remaining, p['T0'], **kw)
+    frozen = {i: t for i, t in p['pick'].items() if i != leaver_idx}
     n = n_riders - 1
     late = (p['T0'] - now).total_seconds()/60 < LATE_LEAVE_MIN
     if late:
@@ -232,13 +246,13 @@ def leave(p, leaver_idx, n_riders, locked_share, now, **kw):
     else:
         credit = 0.0
         share = up05(ev['fare'] / n)
-    return ev['fare'], share, credit, late
+    return ev['fare'], share, credit, late, frozen
 
 def fmt(t): return t.strftime('%H:%M')
 
 # ---------- Main ----------
 if __name__ == '__main__':
-    D = dt.datetime(2026, 11, 29)  # Sunday, workday
+    D = dt.datetime(2026, 11, 29)  # Sunday, workday (Amman local time)
     at = lambda h, m: D.replace(hour=h, minute=m)
     F = lambda name, p, by: dict(name=name, gender='F', p=p, d='JUST', by=by)
 
@@ -267,38 +281,41 @@ if __name__ == '__main__':
     for k in ['HS', 'US', 'YU', 'AM']:
         print(f"{k:4} {dist_point_polyline_km(pt(k), route):.1f} km")
 
-    # ---- v4 demo scenario (SPEC §2.2 / §2.3). Demo seed: Rania arrive-by 8:05 ----
-    print('\n=== v4 demo (SPEC §2.3) ===')
+    # ---- v5 demo scenario (SPEC §2.2 / §2.3). Clock paused at 6:10 for steps 1-4 ----
+    print('\n=== v5 demo (SPEC §2.3) ===')
     lina, sara = F('Lina', 'CC', at(8, 0)), F('Sara', 'US', at(8, 0))
     rania, dana = F('Rania', 'HS', at(8, 5)), F('Dana', 'YU', at(8, 0))
+    now = at(6, 10)
 
     p = solo(lina)
-    lina_solo_fare = up05(p['fare'])
-    ride = dict(riders=[lina], first_shown={'Lina': p['T0']}, share=lina_solo_fare)
-    print(f"6:10 Lina creates      fare {p['fare']:.2f}  each {ride['share']:.2f}  pickup Lina {fmt(p['T0'])}")
+    ride = dict(riders=[lina], first_shown={'Lina': p['T0']}, share=up05(p['fare']))
+    print(f"Lina creates       fare {p['fare']:.2f}  each {ride['share']:.2f}  pickup Lina {fmt(p['T0'])}")
     print('     host estimates: ' + ' · '.join(
         f"{k} riders {up05(p['fare']*a/k):.2f}" for k, a in [(1, 1.00), (2, 1.05), (3, 1.12), (4, 1.20)]))
 
-    for now, j in [(at(6, 12), sara), (at(6, 14), rania), (at(6, 15), dana)]:
+    for j in [sara, rania, dana]:
         ok, reason, p2, share = check_join(ride, j, now)
         if not ok:
-            print(f"{fmt(now)} {j['name']} REJECTED: {reason}"); continue
+            print(f"{j['name']} REJECTED: {reason}"); continue
         ride['riders'].append(j); ride['share'] = share; p = p2
         ride['first_shown'][j['name']] = p['pick'][len(ride['riders'])-1]
         picks = ', '.join(f"{r['name']} {fmt(p['pick'][i])}" for i, r in enumerate(ride['riders']))
-        print(f"{fmt(now)} {j['name']:6} joins     fare {p['fare']:.2f}  each {share:.2f}  "
+        print(f"{j['name']:6} joins       fare {p['fare']:.2f}  each {share:.2f}  "
               f"km {p['km']}  {p['dur']:.0f} min | {picks}")
 
     n = len(ride['riders'])
     locked = ride['share']
-    print(f"6:15 Find driver -> ready check, pickups freeze. First pickup {fmt(p['T0'])}, "
+    names = [r['name'] for r in ride['riders']]
+    print(f"Find driver -> pickups freeze. First pickup {fmt(p['T0'])}, "
           f"respond-by {fmt(p['T0'] - dt.timedelta(minutes=15))}")
-    print(f"6:17 Omar accepts: fare {p['fare']:.2f}, collect {n*locked:.2f} ({n} x {locked:.2f})")
+    print(f"Omar accepts: fare {p['fare']:.2f}, collect {n*locked:.2f} ({n} x {locked:.2f})")
 
-    sara_idx = [r['name'] for r in ride['riders']].index('Sara')
-    fare3, share3, credit, late = leave(p, sara_idx, n, locked, at(6, 35))
+    sara_idx = names.index('Sara')
+    fare3, share3, credit, late, frozen = leave(p, sara_idx, n, locked, at(6, 35))
+    picks = ', '.join(f"{names[i]} {fmt(t)}" for i, t in sorted(frozen.items(), key=lambda x: x[1]))
     print(f"6:35 Sara leaves ({'LATE' if late else 'free'})  new fare {fare3:.2f}  each {share3:.2f}  "
-          f"credit {credit:.2f}  -> Omar gets {(n-1)*share3:.2f} cash + {credit:.2f} credit "
-          f"(remainder {(n-1)*share3 + credit - fare3:.2f})")
-    fare3f, share3f, _, _ = leave(p, sara_idx, n, locked, at(6, 20))
+          f"credit {credit:.2f} (held on the ride) | pickups unchanged: {picks}")
+    print(f"Complete trip: Omar gets {(n-1)*share3:.2f} cash + {credit:.2f} credit = "
+          f"{(n-1)*share3 + credit:.2f} (fare {fare3:.2f}, remainder {(n-1)*share3 + credit - fare3:.2f})")
+    fare3f, share3f, _, _, _ = leave(p, sara_idx, n, locked, at(6, 20))
     print(f"(compare) free leave at 6:20: new fare {fare3f:.2f}  each {share3f:.2f}")

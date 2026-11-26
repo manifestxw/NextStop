@@ -3,8 +3,8 @@
 Sources: screenshots of the Jeeny rider app (Android, Nov 2026) and App Store images of
 the Jeeny for Drivers app. Sizes are in CSS px.
 `≈` = estimated from screenshots. Verify with a color picker before locking.
-**Example text and numbers** (prices, times, names) follow SPEC.md v4 and are placeholders
-until regenerated from the demo snapshot. SPEC.md wins on any number.
+**Example text and numbers** (prices, times, names) follow SPEC.md v5 and are placeholders
+until regenerated from the demo snapshot. SPEC.md wins on any number or behavior.
 
 ## 1. Language & Direction
 - UI language: English. Direction: LTR only. No RTL mirroring.
@@ -27,12 +27,12 @@ One theme with an `--accent` token. Components never hard-code pink or purple.
 | `--pink-500` | ≈ #EC008C | Rider accent: primary buttons, links, active borders, pins, checks |
 | `--pink-600` | ≈ #C8007A | Bottom edge of primary buttons, pressed state |
 | `--pink-100` | ≈ #FBD9EA | Logo watermark, subtle accents |
-| `--pink-50` | ≈ #FDEEF6 | Service tiles, wallet header, icon circles, selected row background, own chat bubbles |
+| `--pink-50` | ≈ #FDEEF6 | Service tiles, icon circles, selected row background, own chat bubbles |
 
 ### Driver brand
 | Token | Hex | Use |
 |---|---|---|
-| `--purple-500` | ≈ #7E35C0 | Driver accent: buttons, icons, chart bars, selected states |
+| `--purple-500` | ≈ #7E35C0 | Driver accent: buttons, icons, selected states |
 | `--purple-800` | ≈ #4A1E78 | Dark end of driver gradients |
 | `--purple-200` | ≈ #D3A2EE | Secondary chart bars, legend dots |
 | `--purple-50` | ≈ #F4ECFB | Soft backgrounds, icon circles, own chat bubbles (driver) |
@@ -65,13 +65,13 @@ Driver header gradient: `linear-gradient(135deg, #8A3FC8, #4A1E78)`.
 ### Semantic and map
 | Token | Hex | Use |
 |---|---|---|
-| `--success` | ≈ #1E9E4F | "Completed", positive amounts, online dot, "Ready ✓" |
+| `--success` | ≈ #1E9E4F | "Completed", positive amounts, online dot, "Ready ✓", savings |
 | `--success-50` | ≈ #E8F9EC | "Active" banner background |
-| `--danger` | ≈ #E5393B | "Expired", negative amounts, "Leave ride", late-cancel amount |
+| `--danger` | ≈ #E5393B | "Expired", negative amounts, "Leave ride", late-leave amount |
 | `--amber-500` | ≈ #F5A623 | Warning icon (outstanding balance), ready-check countdown under 1 min |
 | `--cash-green` | ≈ #22A447 | Cash payment icon |
 | `--tooltip` | ≈ #1F2933 | Dark tooltips (white text) |
-| `--route` | ≈ #2B2B2B | Route line on maps (4px, rounded caps) |
+| `--route` | ≈ #2B2B2B | Route line on the driver's map (4px, rounded caps) |
 | `--search-pulse` | ≈ #4A90E2 at 20–40% | Pulsing circles while waiting or searching |
 | `--scrim` | rgba(0,0,0,0.35) | Overlay behind sheets and the drawer |
 
@@ -83,9 +83,9 @@ Driver header gradient: `linear-gradient(135deg, #8A3FC8, #4A1E78)`.
 
 | Style | Size / Line height | Weight | Example |
 |---|---|---|---|
-| Display | 32 / 40 | 700 | "JOD 9.03" (trip offer), ready-check countdown "4:32" |
+| Display | 32 / 40 | 700 | "JOD 9.03" (trip offer), ready-check countdown "4:32", summary amount |
 | Status title | 26 / 34 | 700 | "Waiting for riders" |
-| H1 | 22 / 30 | 600 | "November 2026", "You're Online" |
+| H1 | 22 / 30 | 600 | "Shared rides", "You're Online" |
 | H2 (sheet title) | 20 / 28 | 600 | "Ready to find a driver?" |
 | Nav title | 18 / 24 | 500 | "To JUST · 8:00 AM" (centered) |
 | Option name | 19 / 26 | 500 | "Shared" (600 when selected) |
@@ -137,7 +137,7 @@ Shadows are always soft and light.
 ### Secondary button
 - Same size. White, 1.5px gray-200 border, gray-900 text 17/500.
 - Optional leading accent-colored icon ("Set on Map").
-- Danger variant: same, but text in `--danger` ("Cancel anyway").
+- Danger variant: same, but text in `--danger` ("Leave anyway").
 
 ### Text link
 - `--accent`, 16/500, no underline.
@@ -229,8 +229,8 @@ Shadows are always soft and light.
 ### Empty state
 - 88px accent-soft circle with 40px accent outline icon, title 20/600, body 15/400
   gray-500 centered (max 320px wide), primary CTA pinned at the bottom.
-- Matching list empty: title "No rides yet", body "Start one and others going your way
-  can join.", CTA "Start a shared ride".
+- Shared rides list empty: title "No shared rides yet", body "Start one and others going
+  your way can join.", CTA "Start your own shared ride".
 
 ### Progress steps (vertical)
 - 40px accent circles with white check when complete, 2px gray-200 connector.
@@ -243,14 +243,19 @@ Shadows are always soft and light.
 ## 6. Map & Booking Flow
 
 ### Map
-- Google Maps, muted light gray style, minimal POIs. Route: `--route` line.
-- Pickup: blue current-location dot or pink pin (pink circle head, white center dot,
-  thin stem). Drop-off: purple-600 pin.
-- Shared ride: one small pink dot per rider pickup, numbered in stop order (white
-  13/600 number in a 20px pink circle). One purple pin at the destination.
-- Driver app: car shown as a top-down white car icon, rotated to heading.
+- Google Maps, muted light gray style, minimal POIs.
+- **Rider map (privacy, SPEC §3.14):** only the rider's **own pickup** (pink pin: pink
+  circle head, white center dot, thin stem) and **the destination** (purple-600 pin).
+  Never other riders' pins, no route line. Pulsing circles around the own pickup while
+  waiting or searching.
+- **Driver map:** every stop as a numbered pin in stop order (white 13/600 number in a
+  20px pink circle for pickups, purple pin for the destination), the route line in
+  `--route` (P1), and the car as a top-down white car icon.
 - Recenter button: 52px white rounded square radius 14px with accent navigation arrow
   (driver app: 56px white circle, black arrow).
+- **Map unavailable (P1):** if the map can't load, the map area becomes a gray-25 panel
+  with a 40px gray-500 map icon and "Map unavailable" 15/400 gray-500, centered. Every
+  sheet keeps working.
 
 ### Floating address cards (on the map)
 - White, radius 14px, shadow-md, padding 12px 16px.
@@ -265,9 +270,19 @@ Shadows are always soft and light.
   price in accent, name weight 600.
 - Inset 1px gray-200 dividers.
 - **Our row:** name "Shared", description "Split the fare, same gender only",
-  price "from JOD 2.35", ETA replaced by "Scheduled".
+  price "from JOD 2.35", ETA replaced by "Scheduled". Tapping it opens the
+  **Shared rides list** (below), not host setup.
 
-### Shared ride setup (host, after picking Shared)
+### Shared rides list (joiner first)
+- Nav header: back button, title "Shared rides" (18/500).
+- Trip strip under the header: gray-25 background, padding 12px 20px. Line 1:
+  "University Street → JUST" 16/500 gray-900. Line 2: "Arrive by 8:00 AM" 14/400 gray-500.
+  Trailing "Edit" text link.
+- List of **matching ride cards** (§7), 12px gaps, 20px screen padding.
+- Pinned at the bottom: secondary button **"Start your own shared ride"**.
+- Empty state: see Empty state (§5); its CTA is the same "Start your own shared ride".
+
+### Shared ride setup (host, from "Start your own shared ride")
 - Bottom sheet, title "Arrive by", a time picker (hour, minute, AM/PM wheels, 5-min steps).
 - Under it, a white info card:
   - "Be ready by 7:15 AM" 17/500 with a clock icon.
@@ -279,8 +294,8 @@ Shadows are always soft and light.
 ### Outstanding balance strip
 - Full width, gray-25 background, 1px gray-200 top and bottom borders, ~52px tall.
 - Amber warning circle 20px, "Outstanding balance JOD 2.30" 16/400 gray-700, chevron.
-- Shown on the next booking after a late cancellation or no-show. The amount is the
-  rider's share at the time they left.
+- Shown on the next booking after a late leave or no-show. The amount is the rider's share
+  at the time they left.
 
 ### Payment / promo row
 - Two halves split by a 1px vertical gray-200 divider, ~60px tall.
@@ -288,8 +303,8 @@ Shadows are always soft and light.
 - Directly above the primary button.
 
 ### Status sheet (after booking)
-- Map above with the pickup pins and route. **Pulsing blue circles** around the rider's own
-  pickup (2 rings scaling out and fading, ~1.5s loop) while waiting or searching.
+- Map above (rider map rules apply). Pulsing circles around the own pickup while waiting
+  or searching.
 - Header: grab handle, status title 26/700, subtitle 17/400 gray-500.
 - **4-segment progress bar:** 4 equal segments, 4px tall, radius pill, 8px gaps,
   filled = accent, empty = gray-200, one segment per stage, current one may shimmer.
@@ -304,10 +319,10 @@ Shadows are always soft and light.
 
 ### Stacked info cards (below the status header)
 - Sheet background gray-50. White cards, radius 20px, 8px gaps, full width. Order:
-1. **Seat card:** the seat row (section 7).
-2. **Chat card:** chat entry (section 7).
+1. **Seat card:** the seat row (§7).
+2. **Chat card:** chat entry (§7).
 3. **Location card:** three rows:
-   - "Be ready by 7:02 AM" 17/500 with a 24px clock icon in accent.
+   - "Be ready by 7:02 AM · Pickup 1 of 3" 17/500 with a 24px clock icon in accent.
    - Start location: 24px pink pin, label 15/400 gray-500 "Start Location", value 17/500, one line truncated.
    - Destination: 24px purple pin, label "Your Destination", value 17/500.
    - Inset dividers between rows.
@@ -332,7 +347,7 @@ Shadows are always soft and light.
 - Below: "2 of 4 seats filled · JOD 4.00 each" 16/500, price in accent.
 - Price change animates (number counts 300ms) when someone joins or leaves.
 
-### Matching ride card (joiner's list)
+### Matching ride card (Shared rides list)
 - White card, radius 20px, shadow-md, padding 16px.
 - Top: host first name 17/600 + mini seat row (24px slots) + "2 seats left" 14/500 accent.
 - Middle: pickup and destination rows (pink and purple dots, 15/400), **area names only**:
@@ -346,12 +361,11 @@ Shadows are always soft and light.
 - Row: 24px chat icon in accent + "Group chat" 17/500 + unread badge (count pill) + chevron.
 - Second line: last message preview 15/400 gray-500, one line truncated,
   e.g. "Dana: I'll be at the main gate".
-- Tapping opens the group chat screen.
 
 ### Group chat screen
 - **Header:** back button, centered title "To JUST · 8:00 AM" 18/500, under it the mini seat
   row (24px slots) centered. 1px gray-200 bottom border.
-- **Background:** gray-25.
+- **Background:** gray-25. Shows the last 100 messages.
 - **Others' messages:** left-aligned. 32px avatar on the left of the first bubble in a group.
   Sender first name 13/500 gray-500 above the bubble. Bubble gray-100, radius 16px with the
   bottom-left corner 4px, padding 10px 14px, text 16/400 gray-900, max width 75%.
@@ -360,16 +374,16 @@ Shadows are always soft and light.
 - **Time:** 12/400 gray-500 under the last bubble of a group ("6:12 AM").
 - **System messages:** centered, 13/400 gray-500, no bubble, 12px vertical margin:
   "Sara joined", "Lina started the ready check", "Dana is ready", "Omar is your driver",
-  "Pickup times are now fixed". Joins and leaves may use a 16px icon before the text.
+  "Pickup times are now fixed".
 - **Masked text:** phone numbers and links appear as "•••" in gray-500.
 - **Input bar:** pinned to the bottom, white, 1px gray-200 top border, padding 8px 12px.
-  Field: gray-100 fill, radius 20px, height 44px, placeholder "Message the group…".
+  Field: gray-100 fill, radius 20px, height 44px, 16px text, placeholder "Message the group…".
   Send button: 44px circle, `--accent` fill, white send icon. Disabled (gray-200) when empty.
   Character counter "280/300" 12/400 gray-500 appears only above 250 characters.
 - **Read-only state** (ride completed or canceled): the input bar is replaced by a gray-50
   strip with "This chat is closed" 14/400 gray-500, centered.
 
-### Driver chat
+### Driver chat (P1)
 - Same chat screen component, one-to-one.
 - Rider side: title "Omar · Driver" with a 32px avatar, placeholder "Message your driver…".
 - Driver side: purple accent, title is the rider's first name, placeholder
@@ -380,7 +394,8 @@ Shadows are always soft and light.
 - Title H2: "Ready to find a driver?"
 - Subtitle 15/400 gray-500: "Lina started the ready check. No answer counts as ready."
 - Countdown "4:32" Display 32/700 in accent (amber under 1:00), centered, with a thin
-  circular progress ring (4px, accent on gray-200) around it, 96px.
+  circular progress ring (4px, accent on gray-200) around it, 96px. Freezes while the
+  demo clock is paused.
 - Rider list: one row per rider, 32px avatar + first name 16/500 + status right-aligned:
   "Ready ✓" in success 15/500, "Waiting…" in gray-500, "Left" in danger.
 - Buttons stacked: primary "I'm ready", then secondary "Cancel ride for me".
@@ -388,15 +403,14 @@ Shadows are always soft and light.
 - After answering, buttons are replaced by "You're ready. Waiting for others…" 15/500
   success, centered. The sheet closes automatically when the ride goes to drivers.
 
-### Late-cancel confirmation sheet
-- Bottom sheet, title H2 "Leave this ride?"
-- Body 15/400 gray-700: "Your driver is already booked and pickup is in less than
-  30 minutes."
-- Amount row in a gray-25 box, radius 14px, padding 16px: "You'll pay your share"
-  15/400 gray-700 left, "JOD 2.30" 20/700 danger right. Under it 13/400 gray-500:
-  "Added as an outstanding balance on your next ride."
-- Buttons stacked: primary "Keep my seat", then secondary danger "Leave anyway".
-- **Free leave variant** (before a driver accepts, or ≥ 30 min before pickup): title
+### Leave sheet
+- **Late leave** (after a driver accepts and < 30 min before pickup): title H2
+  "Leave this ride?". Body 15/400 gray-700: "Your driver is already booked and pickup is
+  in less than 30 minutes." Amount row in a gray-25 box, radius 14px, padding 16px:
+  "You'll pay your share" 15/400 gray-700 left, "JOD 2.30" 20/700 danger right. Under it
+  13/400 gray-500: "Added as an outstanding balance on your next ride." Buttons stacked:
+  primary "Keep my seat", then secondary danger "Leave anyway".
+- **Free leave** (before a driver accepts, or ≥ 30 min before pickup): title
   "Leave this ride?", body "Leaving now is free. Others' shares will update.", buttons
   primary "Keep my seat" and secondary danger "Leave ride". No amount box.
 
@@ -416,20 +430,44 @@ Shadows are always soft and light.
 
 ### Driver active trip (stops list)
 - Status sheet in the driver app, purple accent, same stacked-card layout.
-- Header: "Shared Ride · 3 riders" 22/600, subtitle "Collect JOD 6.60 cash + JOD 2.30 credit".
+- Header: "Shared Ride · 3 riders" 22/600, subtitle
+  "Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
 - One row per stop, in order: time, first name, short address (full address visible to
-  the driver), share, and actions:
+  the driver), share, and actions (P1):
   - Pickup row: secondary small button "Picked up" (height 36px, radius 10px) and a
     44px chat icon button.
   - Drop-off row: small primary button "Dropped off · collected JOD 2.20".
   - Done rows: gray-500 text with a success check.
-- **Rider-left banner** (in-app banner, danger icon): "Sara canceled. New total: collect
-  JOD 6.60 + JOD 2.30 credit". Her stops fade out over 300ms and the route redraws.
+- **Rider-left banner** (in-app banner, danger icon): "Sara canceled. Collect JOD 6.60
+  cash · JOD 2.30 credit at trip end". Her stops fade out over 300ms. Other stop times
+  don't change.
+
+### Trip summary screen (P0)
+- Full screen, white. Top: 88px success-50 circle with a 40px success check icon, centered.
+- Title 22/600 centered: "You've arrived" (rider) / "Trip complete" (driver).
+- Subtitle 15/400 gray-500 centered: "To JUST · arrived 7:54 AM".
+- **Rider card** (white, radius 20px, 1px gray-200 border, padding 20px):
+  - "You paid" 15/400 gray-500, "JOD 2.20" Display 32/700 gray-900, "Cash" with cash-green icon.
+  - "3 riders shared this ride" 15/400 gray-700 with the mini seat row.
+  - "You saved JOD 5.65 vs riding solo" 15/500 success.
+  - Outstanding balance strip if the rider owes anything.
+- **Late leaver variant:** title "You left this ride", card shows "JOD 2.30 added to your
+  next ride" in danger.
+- **Driver card:** one row per rider (first name, "JOD 2.20 cash"), then "Credit from
+  Jeeny · JOD 2.30", divider, "Total · JOD 8.90" 20/700.
+- Bottom: primary button "Done" (back to home). Chat is read-only from here.
+
+### Demo menu (hidden, not part of the Jeeny look)
+- Plain functional screen: system font, simple buttons, no Jeeny styling needed.
+- Shows build stamp, server health, clock time and whether it's paused, data source.
+- Big buttons, one per action: +5 min, Next event, Jump to…, Pause/Resume,
+  Simulate rider, Complete trip, Reset.
 
 ## 8. Icons
 - Outline style, 1.75px stroke, rounded caps and joins, 24px default.
 - Use **Lucide**. Default gray-700, accent for highlights.
 - Chat: `message-circle`. Send: `send`. Ready: `check-circle-2`. Clock: `clock`.
+  Map unavailable: `map-off`. Summary: `circle-check`.
 - Vehicle images: 3/4-view white car on transparent background.
 
 ## 9. Motion
@@ -446,6 +484,7 @@ Shadows are always soft and light.
 - DO pin the main action to the bottom of the screen.
 - DO use pink for pickup and purple for destination everywhere.
 - DO show area names only (never exact addresses) to other riders.
+- DON'T show other riders' pins or the route line on a rider's map.
 - DON'T use gradients except promo banners, the MAX header and driver headers.
 - DON'T use pill-shaped primary buttons (they're 14px radius).
 - DON'T use dark or heavy shadows.

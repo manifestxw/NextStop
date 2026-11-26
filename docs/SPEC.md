@@ -1,42 +1,40 @@
-# SPEC.md: Jeeny Shared Ride (v4)
+# SPEC.md: Jeeny Shared Ride (v5)
 
 > Final feature definition. Wins over the pitch deck and brief on any conflict.
-> **Fare rules and formulas in this file are canonical.** Distances, travel times and
-> routes come from Google Maps (§4.2). The demo numbers in §2.2, §2.3 and §6 are
-> regenerated once from the saved demo snapshot (§4.2.2). Until then they are
-> placeholders computed from the fixed table. The §4.7 golden values always use the
-> fixed table and never change.
+> **Rules and formulas in this file are canonical.** Distances, travel times and routes
+> come from Google Maps (§4.2). Demo numbers in §2.2 and §2.3 are placeholders from the
+> fixed table until regenerated from the saved demo snapshot (§4.2.2).
+> **Golden values (§4.7) are whatever `docs/reference/fare_model.py` prints.** If this file
+> and the model disagree on a number, the model wins and this file gets fixed.
 > `[verify]` = assumption a teammate must check before the pitch. It does not block building.
 
 ## 0. What changed
 
-**v4:**
-- **Matching is now distance-based.** A joiner matches if their pickup is within 1.5 km of
-  the host's pickup or the host's route, their destination is within 1 km of the host's
-  destination, and their arrive-by is within ±5 min of the host's (§3.5).
-- **Auto-join.** No approval. The host can't remove anyone.
-- **Group chat** for riders (free text, phone numbers masked). The driver has a separate
-  one-to-one channel with each rider (§3.11).
-- **Ready check replaces automatic dispatch.** The host taps "Find driver", or it starts
-  automatically 45 min before the first pickup. Riders have 5 min to confirm or cancel;
-  no answer counts as ready. Then the ride goes to drivers (§3.8).
-- **Joining closes when the ready check starts.** No late joins and no replacement riders.
-- **Cancellation:** free until a driver accepts, and free after that until 30 min before
-  the first pickup. In the last 30 min the canceller pays **their own share** (§3.10).
-- Pickup times freeze when the ready check starts.
-- Demo script rewritten (§2.2). Rania's seed arrive-by is now 8:05.
+**v5 (review fixes):**
+- Pickup times shown after the ready check never change. If a rider leaves and the driver
+  would be early, the driver waits, and that wait isn't billed (§3.6).
+- Late-leave money is held as a credit on the ride and paid to the driver who **completes**
+  the trip. If the ride is canceled, the leaver's charge is reversed (§3.10).
+- Stop order uses the reference model's single score (§3.6).
+- Riders' maps show only their own pickup and the destination (§3.14).
+- Tapping Shared opens the matching list first; hosting is "Start your own shared ride" (§3.4).
+- Trip summary screen (§3.15) and a demo "Complete trip" button (§2.5).
+- P0 now includes: simulated riders auto-answering the ready check, chat masking, the
+  "Complete trip" button, the trip summary and seeded logins (§8).
+- Demo clock is paused by default and only the demo menu moves it (§2.1).
+- Golden values match the model: late-leave fare 8.86, Rain trip 59 min, Friday row removed.
+- Wording fixes: concurrency, 60 min (creating) vs 45 min (joining), chat history (last 100),
+  route interface with stops, pitch claims, what "offline" means.
 
-**v3:** Google Maps TravelProvider (Google / Snapshot / Fixed table), calibration against
-a Jeeny Economy quote, build priorities, reference implementation scope.
-
-**v2:** regulated 2026 smart-app tariff, canonical demo numbers, detour rule
-max(+10 min, +40%), state machines, no-show, driver cancel, rounding rule, privacy on the
-matching card, "Book Economy" fallback.
+**v4:** distance-based matching, auto-join, group chat + driver channel, ready check,
+joining closes at the ready check, late leaver pays their own share.
+**v3:** Google Maps TravelProvider, calibration against Jeeny, build priorities.
+**v2:** smart-app tariff, canonical demo numbers, detour rule, state machines.
 
 ## 1. Business & Judging Angle (BRD)
 
 **One line:** Schedule a Jeeny ride, and people of your gender going the same way at the
-same time join automatically and split one regulated fare, up to 4 riders per car.
+same time join automatically and split one fare, up to 4 riders per car.
 
 **Problem:** Daily commuters choose between unreliable, overcrowded buses and solo rides
 they can't afford every day. First example: Irbid students commuting to JUST (27,114
@@ -44,9 +42,10 @@ students, 2019; JUST is ~20 km east of Irbid). Bus ≈ JOD 0.60 `[verify]`. Solo
 ≈ JOD 7.85 at morning peak. The feature works anywhere Jeeny operates.
 
 **Positioning (important):** JOD 2.30 is about 4× the bus. Don't pitch "as cheap as the
-bus". Pitch **door-to-door, on time (arrive-by guarantee), safe (same gender), for 70% less
-than riding solo**. LTRC is piloting new public bus routes linking Irbid, Zarqa and
-Jerash (July 2026). Shared Ride complements better buses. It does not depend on buses staying bad.
+bus". Pitch **door-to-door, planned to arrive 5 min before your arrive-by, same gender,
+about 70% less than riding solo**. LTRC is piloting new public bus routes linking Irbid,
+Zarqa and Jerash (July 2026). Shared Ride complements better buses. It doesn't depend on
+buses staying bad.
 
 **Value (computed in §4.7, recheck after the snapshot):**
 | For | Number |
@@ -55,21 +54,25 @@ Jerash (July 2026). Shared Ride complements better buses. It does not depend on 
 | Drivers | +JOD 0.97 net per trip (+16%). Same per hour including the empty return (~JOD 4.0/h net) |
 | Jeeny | ~JOD 1.81 commission per shared trip from riders who pay Jeeny JOD 0 today (bus users) `[verify 20% commission]` |
 
-Each shared ride is **one normal Jeeny booking on one licensed vehicle with one regulated
-fare**. Jeeny keeps its usual commission.
+Each shared ride is **one normal Jeeny booking on one licensed vehicle with one fare**.
+Jeeny keeps its usual commission.
 
 **Why judges will care:** it fits Jeeny's existing app (scheduled rides, cash, the gender
 field on profiles, outstanding-balance fees). It demos live on several phones, including
 group chat and a ready check. It opens a segment Jeeny doesn't serve today. Prices use real
-road distances and traffic and are calibrated to Jeeny's own Economy price.
+road distances and traffic, the smart-app tariff, and a calibration to Jeeny's own Economy price.
 
 **Prepared answers for judge questions:**
-- *Is fare splitting legal?* The trip is charged at the normal regulated smart-app tariff
-  (taxi meter + 20%) as one booking. Riders split that one fare among themselves. We
-  **never** sell per-seat fares, because that's a separate licensed category (shared
-  "service" taxis). Jeeny legal confirms before launch.
+- *Is fare splitting legal?* The trip is priced with the LTRC smart-app tariff (taxi meter
+  + 20%) as one booking. Riders split that one fare among themselves. We **never** sell
+  per-seat fares, because that's a separate licensed category (shared "service" taxis).
+  Jeeny legal confirms before launch.
 - *Where do your prices come from?* Real Google road distances and traffic, the LTRC
   smart-app tariff, and a calibration against a real Jeeny Economy quote on this route.
+  The waiting-time rate is our estimate.
+- *What if traffic makes the ride late?* Pickup times come from traffic-aware travel times
+  and are planned so everyone arrives 5 min before their arrive-by. It's a plan, not a
+  guarantee. Delay alerts and a credit for late arrivals are roadmap items.
 - *Why same gender only?* Safety and cultural comfort, especially for women. It's the
   main reason people would share a car with strangers. Precedent: Uber's Women Preferences.
 - *What if someone joins that I'm not comfortable with?* Riders talk in the group chat,
@@ -95,101 +98,107 @@ road distances and traffic and are calibrated to Jeeny's own Economy price.
 ### 2.1 Setup
 - Pitch: 15 minutes. Problem 2 min, live demo 5 min, business and Jeeny fit 3 min,
   buffer and questions 5 min.
-- 3 phones on the same live URL: **Phone A Lina** (host, female), **Phone B Sara** (joiner,
-  female), **Phone C Omar** (driver).
+- 3 phones on the same live URL, logged in with seeded accounts (§2.6):
+  **Phone A Lina** (host, female), **Phone B Sara** (joiner, female), **Phone C Omar** (driver).
+  A laptop runs the hidden demo menu.
 - **Screens mirrored** to the projector (scrcpy, AirPlay, or a laptop showing all 3 views).
-- **Own mobile hotspot** for all 3 phones. Don't rely on venue wifi.
-- **One shared server-side demo clock.** Default start: Sun 29 Nov 2026, 6:10 AM (a
-  workday). Fast-forward moves this clock for everyone.
-- **Data source in the demo: Snapshot** (§4.2.2). No live Google calls on stage.
+- **Own mobile hotspot** for all 3 phones and the laptop. The phones need internet for the
+  map and the server. Don't rely on venue wifi.
+- **One server-side demo clock, paused by default.** It starts at Sun 29 Nov 2026, 6:10 AM
+  (a workday) and moves only when the demo menu moves it.
+- **Data source: Snapshot** (§4.2.2). No Google routing calls on stage.
 - Fallback: a recorded video of this exact flow.
 
 ### 2.2 Demo flow (6 steps)
-Numbers are placeholders until regenerated from the snapshot (§4.2.2).
-1. **Lina creates a shared ride (6:10).** Irbid City Center → JUST, arrive by 8:00 AM, picked
-   from quick-pick chips. She picks **Shared**, "from JOD 2.35", sees "If nobody joins:
-   JOD 7.85" and "Be ready by 7:15 AM". Status: 1 of 4 seats. The group chat opens.
-2. **Sara joins (6:12).** She searches University Street → JUST, arrive by 8:00. Lina's ride
-   appears ("City Center area → JUST", "JOD 4.00 each if you join"). She taps Join and is
-   in instantly. Both phones update live: 2 of 4 seats, JOD 4.00 each. Chat shows
+Numbers are placeholders until regenerated from the snapshot (§4.2.2). With the clock
+paused, steps 1–4 all happen at demo time 6:10. Only step 5 needs a clock jump.
+1. **Lina creates a shared ride.** Irbid City Center → JUST, arrive by 8:00 AM, places
+   picked from quick-pick chips. She taps **Shared** ("from JOD 2.35"), sees no matching
+   rides, and taps **Start your own shared ride**. She sees "If nobody joins: JOD 7.85" and
+   "Be ready by 7:15 AM", and confirms. Status: 1 of 4 seats. The group chat opens.
+2. **Sara joins.** She enters University Street → JUST, arrive by 8:00, and taps **Shared**.
+   Lina's ride appears ("City Center area → JUST", "JOD 4.00 each if you join"). She taps
+   Join and is in instantly. Both phones update live: 2 of 4 seats, JOD 4.00 each. Chat shows
    "Sara joined" and Sara types "Hi! I'm near University Street".
-3. **The ride fills and Lina finds a driver (6:14–6:16).** Tap "simulate rider" twice
-   (Rania, then Dana). They join and post a short chat message each. 4 of 4, JOD 2.30 each.
-   Lina taps **Find driver**. A ready check appears on every phone with a 5-min countdown.
-   Sara taps Ready, simulated riders answer Ready, and the ride goes to drivers.
-4. **Omar accepts (6:17).** Phone C shows the offer: JOD 9.03, 4 riders, cash, collect
-   JOD 9.20, 21.4 km · ~54 min, first pickup 7:02 AM, respond by 6:47 AM, all stops with
-   pickup times. He accepts. Phones A and B show "Omar · White Hyundai Elantra · 12-34567".
-5. **Late cancellation (6:35).** Fast-forward to 6:35 (27 min before the first pickup).
-   Sara cancels. She sees "Late cancellation: you'll pay your share, JOD 2.30", shown as
+3. **The ride fills and Lina finds a driver.** Tap "simulate rider" twice (Rania, then Dana).
+   They join and each posts a chat line. 4 of 4, JOD 2.30 each. Lina taps **Find driver**.
+   A ready check appears on every phone. The simulated riders answer Ready within a few
+   seconds, Sara taps Ready, and the ride goes to drivers.
+4. **Omar accepts.** Phone C shows the offer: JOD 9.03, 4 riders, cash, collect JOD 9.20,
+   21.4 km · ~54 min, first pickup 7:02 AM, respond by 6:47 AM, every stop with its pickup
+   time. He accepts. Phones A and B show "Omar · White Hyundai Elantra · 12-34567".
+5. **Late cancellation.** Jump the clock to 6:35 (27 min before the first pickup). Sara taps
+   Leave ride and sees "You'll pay your share: JOD 2.30". She confirms; it shows as
    "Outstanding balance JOD 2.30" on her next booking. Lina's share **drops** to JOD 2.20.
-   Omar's stop list and route update live without Sara's stop.
-6. **Trip summary.** Fast-forward to the end. Summary: 3 riders × JOD 2.20 cash, plus
-   JOD 2.30 credited to Omar by Jeeny.
+   Pickup times don't change. Omar's stop list drops Sara's stops, with the banner
+   "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
+6. **Trip summary.** The operator taps **Complete trip**. Every phone shows the summary:
+   3 riders × JOD 2.20 cash. Omar: JOD 6.60 cash + JOD 2.30 credit = JOD 8.90.
 
 ### 2.3 Canonical demo numbers
 Placeholders from the fixed table. **Regenerate from the snapshot (§4.2.2) and replace.**
-Demo date: Sun 29 Nov 2026. All destinations are JUST.
+Times are demo-clock times; with the clock paused, rows 1–7 can all run at 6:10.
+All destinations are JUST.
 
 | Moment | Riders | Full fare | Each pays | Pickups (ready by) |
 |---|---|---|---|---|
-| 6:10 Lina creates | Lina | 7.81 | 7.85 | Lina 7:15 |
-| 6:12 Sara joins | +Sara | 7.95 | 4.00 | Lina 7:12, Sara 7:21 |
-| 6:14 sim Rania | +Rania | 8.67 | 2.90 | Lina 7:05, Rania 7:13, Sara 7:20 |
-| 6:15 sim Dana | +Dana | 9.03 | 2.30 | Lina 7:02, Rania 7:10, Sara 7:17, Dana 7:22 |
-| 6:15 Lina taps Find driver | 4 | 9.03 | 2.30 | **Pickup times freeze** |
-| 6:16 Ready check done → dispatched | 4 | 9.03 | 2.30 | same. Respond-by 6:47 |
-| 6:17 Omar accepts (fare locks) | 4 | 9.03 | 2.30 | same |
-| 6:35 Sara leaves late (pays 2.30) | 3 | 8.88 | 2.20 | Lina 7:02, Rania 7:10, Dana 7:22 |
+| Lina creates | Lina | 7.81 | 7.85 | Lina 7:15 |
+| Sara joins | +Sara | 7.95 | 4.00 | Lina 7:12, Sara 7:21 |
+| Sim Rania joins | +Rania | 8.67 | 2.90 | Lina 7:05, Rania 7:13, Sara 7:20 |
+| Sim Dana joins | +Dana | 9.03 | 2.30 | Lina 7:02, Rania 7:10, Sara 7:17, Dana 7:22 |
+| Lina taps Find driver | 4 | 9.03 | 2.30 | **Pickup times freeze** |
+| Ready check done → dispatched | 4 | 9.03 | 2.30 | same. Respond-by 6:47 |
+| Omar accepts (fare locks) | 4 | 9.03 | 2.30 | same. Collect 9.20 |
+| 6:35 Sara leaves late (charged 2.30, held as credit) | 3 | 8.86 | 2.20 | Lina 7:02, Rania 7:10, Dana 7:22 (unchanged) |
+| Complete trip | 3 | 8.86 | 2.20 | Omar: 6.60 cash + 2.30 credit = 8.90 (remainder 0.04) |
 
 - All drop-offs at JUST between 7:53 and 7:55 AM.
 - Host estimate table at creation: 1 rider 7.85 · 2 riders 4.15 · 3 riders 2.95 · 4 riders 2.35 (est.).
-- Final: 3 × 2.20 = 6.60 cash, plus 2.30 credit = 8.90 to Omar (fare 8.88, remainder 0.02).
-- Driver: **Omar**, White Hyundai Elantra, plate 12-34567, starts near Arabella Mall.
-- After regenerating, check that every join still passes all §3.5 rules, especially rule 8
-  (Dana's join at 6:15 needs first pickup ≥ 7:00). If one fails, start the demo clock
-  earlier (e.g. 6:00) rather than changing rules.
+- Driver: **Omar**, White Hyundai Elantra, plate 12-34567.
+- After regenerating, check every join still passes all §3.5 rules, especially rule 11
+  (new first pickup ≥ now + 45 min). With the clock at 6:10 that needs first pickup ≥ 6:55.
 
 ### 2.4 Real vs mocked
 | Real (built) | Mocked |
 |---|---|
-| Accounts with gender | Phone/OTP login (name + gender signup) |
+| Accounts with gender | Phone/OTP login (name + gender signup, seeded demo logins) |
 | Creating and auto-joining rides, leaving | Driver GPS, car moving on the map |
 | Matching rules (§3.5) incl. distance to route | Payment (cash shown, nothing charged) |
-| Live sync across phones | Extra riders ("simulate rider") and their chat messages |
-| Group chat and driver channel | Driver supply ("drivers nearby" setting) |
-| Ready check and dispatch | |
-| Driver accept, reject, cancel | |
-| Fare (regulated formula, calibrated), split, fee math | |
+| Live sync across phones | Extra riders ("simulate rider"), their chat lines and Ready answers |
+| Group chat (P0) and driver channel (P1) | Driver supply ("drivers nearby" setting) |
+| Ready check and dispatch | Trip progress in the demo ("Complete trip" button) |
+| Driver accept, reject | |
+| Fare (smart-app tariff, calibrated), split, late-leave math | |
 | Stop order and pickup times | |
-| Place search, distances, routes, traffic-aware times (Google Maps) | |
-| Map display with pins and route line (Google Maps) | |
+| Distances, routes, traffic-aware times (Google, via the saved snapshot) | |
+| Map display (Google Maps, needs internet) | |
 
-During the live demo, distances, times and routes come from the **saved demo snapshot**.
-
-### 2.5 Demo controls (hidden menu)
-- **P0:** fast-forward clock (+5 min, jump to time, jump to the next event), simulate rider
-  (joins and posts one chat message), one-tap reset to the seeded state (also logs out all
-  phones, clears chats and balances).
-- **P1:** simulated riders auto-answer the ready check (default: Ready).
-- **P1:** data source switch: Snapshot (default in demo) / Live Google / Fixed table.
-  If a live Google call fails, the app falls back to Fixed table automatically and shows a
-  small "offline estimates" label in the demo menu only.
-- **P2:** traffic level (Normal / Heavy / Jam), weather (Clear / Rain).
-- **P2:** drivers nearby (2 / 8 / 20).
+### 2.5 Demo controls (hidden menu, PIN required)
+- **P0:**
+  - Clock: paused by default. +5 min, jump to time, jump to the next event, pause/resume.
+  - Simulate rider: the next valid seed rider joins and posts their chat line.
+  - Simulated riders auto-answer the ready check (on by default).
+  - **Complete trip:** marks every remaining stop done and opens the trip summary on all phones.
+  - Reset to the seeded state (also logs out all phones, clears chats and balances).
+  - Seeded logins for the 3 phones (§2.6).
+  - Shows the build stamp (git hash) and server health.
+- **P1:** data source switch: Snapshot (default) / Live Google / Fixed table. If a live
+  Google call fails, the app falls back to the fixed table and shows "offline estimates"
+  in the demo menu only.
+- **P2:** traffic level (Normal / Heavy / Jam), weather (Clear / Rain), drivers nearby (2 / 8 / 20).
 
 ### 2.6 Seed data
-Seed places are real Google Places. Store each one's Google `place_id`, name and exact
-coordinates. The approximate coordinates below are only for the fixed table source.
+Seed places are real Google Places. Store each one's Google `place_id`, name, exact
+coordinates and area name. The approximate coordinates below are only for the fixed table.
 
-| Key | Place | Approx. Lat, Lng (fixed table only) |
-|---|---|---|
-| CC | Irbid City Center | 32.5568, 35.8469 |
-| HS | Al-Hashmi Street | 32.5520, 35.8640 |
-| US | University Street | 32.5440, 35.8570 |
-| YU | Yarmouk University | 32.5366, 35.8556 |
-| AM | Arabella Mall | 32.5290, 35.8660 |
-| JUST | Jordan University of Science and Technology | 32.4789, 35.9850 |
+| Key | Place | Area name (shown to others) | Approx. Lat, Lng (fixed table only) |
+|---|---|---|---|
+| CC | Irbid City Center | City Center area | 32.5568, 35.8469 |
+| HS | Al-Hashmi Street | Al-Hashmi area | 32.5520, 35.8640 |
+| US | University Street | University Street area | 32.5440, 35.8570 |
+| YU | Yarmouk University | Yarmouk area | 32.5366, 35.8556 |
+| AM | Arabella Mall | Arabella area | 32.5290, 35.8660 |
+| JUST | Jordan University of Science and Technology | JUST | 32.4789, 35.9850 |
 
 In the demo, these appear as quick-pick chips above the search field.
 
@@ -201,6 +210,9 @@ In the demo, these appear as quick-pick chips above the search field.
 | Dana (sim) | F | YU | 8:00 AM | "I'll be at the main gate" |
 | Noor (sim, spare) | F | AM | 8:00 AM | "Hello!" |
 | Male seed riders (for gender filtering) | M | any | any | — |
+
+**Seeded demo logins** (P0): `/?as=lina`, `/?as=sara`, `/?as=omar`, each with the demo PIN.
+Opening the link logs that phone in as that account, so nobody signs up on stage.
 
 All seed pickups are within 1.5 km of the CC → JUST route (fixed table check: HS 0.8 km,
 US 0.3 km, YU 1.0 km, AM 0.9 km) `[verify with snapshot route]`.
@@ -221,6 +233,7 @@ the next valid seed rider is used. "Simulate rider" never fails silently.
 - Name and gender (male/female). Gender is set once and can't be changed.
 - One-line consent: "Your first name and pickup area are shown to riders in your ride,
   and you can chat with them."
+- Demo: seeded logins skip signup (§2.6).
 
 ### 3.3 State machines
 **Ride:** `OPEN → READY_CHECK → DISPATCHED → ACCEPTED → IN_PROGRESS → COMPLETED`, and
@@ -236,27 +249,30 @@ the next valid seed rider is used. "Simulate rider" never fails silently.
 | ACCEPTED | CANCELED | The driver cancels < 15 min before first pickup, or the last rider leaves |
 | ACCEPTED | IN_PROGRESS | First pickup done |
 | IN_PROGRESS | COMPLETED | Last drop-off done |
+| ACCEPTED / IN_PROGRESS | COMPLETED | Demo only: "Complete trip" marks every remaining stop done |
 
 **Rider in ride:** `JOINED → READY → PICKED_UP → DROPPED_OFF`. Also `JOINED/READY → LEFT`
 (free or late) and `READY → NO_SHOW`.
 
-### 3.4 Creating a ride (host)
-- Entry point: a **Shared** row in the normal ride options list, priced "from JOD x"
-  (the 4-rider estimate, §4.5).
-- The host sets pickup, destination and arrive-by. P0: quick-pick chips for the seed places.
-  P1: Google Places autocomplete as well.
-- The **first pickup** must be 60 min to 24 h from now. If the arrive-by is too soon:
-  "Too soon for a shared ride. Book Economy instead."
+### 3.4 Shared entry point and creating a ride
+- The rider sets pickup, destination and arrive-by. P0: quick-pick chips for the seed
+  places. P1: Google Places autocomplete as well.
+- The ride options list has a **Shared** row priced "from JOD x" (the 4-rider estimate, §4.5).
+- Tapping **Shared** opens **Shared rides near your trip**: the matching list for that
+  pickup, destination and arrive-by (§3.5).
+- At the bottom of the list, and as its empty state: **Start your own shared ride**. Only
+  this opens host setup.
+- Host setup shows: estimated price per person at 1, 2, 3 and 4 riders,
+  "If nobody joins: JOD 7.85", and "Be ready by 7:15 AM".
+- **Creating** a ride requires the first pickup to be 60 min to 24 h from now. Otherwise:
+  "Too soon for a shared ride. Book Economy instead." (Joining uses rule 11's 45 min.)
 - Max 4 riders including the host. `[open decision §7.1]`
-- The host sees: estimated price per person at 1, 2, 3 and 4 riders, "If nobody joins:
-  JOD 7.85", and "Be ready by 7:15 AM".
 - The host's route (pickup → destination) is fetched once and stored as the ride's
   **anchor route** for matching.
 
 ### 3.5 Finding and joining (joiner)
-The joiner opens Shared, enters pickup, destination and arrive-by, and sees a list of
-matching rides. Zero matches: "No rides yet. Start one" (they become a host with the same inputs).
-Tapping **Join** adds them instantly (auto-join). No approval.
+The joiner sees matching rides (§3.4). Tapping **Join** adds them instantly (auto-join).
+No approval.
 
 A ride appears only if **ALL** are true:
 1. **Gender:** same gender as everyone in the ride.
@@ -290,23 +306,28 @@ All matching runs **on the server**, never on the phones. Distances for rules 5 
 straight-line (haversine), point-to-polyline for the route.
 
 ### 3.6 Stop order and pickup times
-- Every rider has their own pickup and drop-off. Stop order is the order with the lowest
-  full fare (then shortest duration) where each pickup comes before that rider's drop-off
-  and rules 7–9 hold. Max 8 stops, so brute force is fine.
+- Every rider has their own pickup and drop-off. Every candidate stop order (each pickup
+  before that rider's drop-off) gets a score:
+  **score = full fare in piastres + trip minutes + 0.01 × total in-car minutes.**
+  The lowest score wins among orders that satisfy rules 7–9. (1 piastre and 1 minute weigh
+  the same. This is exactly what the reference model does.) Max 8 stops, so brute force is fine.
 - Stop orders are computed locally from **one** travel matrix per ride (§4.2). Never
   request distances per stop order.
 - The first pickup is the latest whole minute that satisfies the effective arrive-by.
-- Each rider sees "Be ready by h:mm AM". If it moves more than 3 min, the rider gets an
-  in-app banner and a system message in the chat.
-- **Pickup times freeze when the ready check starts.** After that, removing a rider only
-  removes their stops. Everyone else's pickup times stay the same.
-- The driver waits up to 5 min after a scheduled pickup time (see no-show, §3.10).
+- Each rider sees "Be ready by h:mm AM". Before the ready check, if it moves more than
+  3 min, the rider gets an in-app banner and a system message in the chat.
+- **Frozen at the ready check:** every rider's shown pickup time is final. If a rider
+  leaves later and the driver would reach a pickup early, the driver waits until the shown
+  time. **That wait isn't billed:** the fare is recalculated for the remaining stops in the
+  same order, starting from the same first pickup time.
+- The driver waits up to 5 min after a shown pickup time before a no-show (§3.10).
 
 ### 3.7 Fare (formula in §4.4)
-- Full fare = calibrated regulated smart-app tariff for the **whole route including all stops**.
+- Full fare = smart-app tariff formula for the **whole route including all stops**,
+  × CALIBRATION (§4.1.1).
 - Price per person = (full fare − credits) ÷ riders, **rounded up** to 0.05 JD. The
-  driver keeps the rounding remainder (max 0.19). Credits come from late cancellations
-  and no-shows (§3.10).
+  driver keeps the rounding remainder (max 0.19). Credits come from late leaves and
+  no-shows (§3.10).
 - Prices update live on every phone when someone joins or leaves.
 - **Lock:** when a driver accepts, the travel matrix, traffic and tariff freeze. After that
   the full fare changes only if stops are removed (a leave or no-show).
@@ -316,18 +337,19 @@ straight-line (haversine), point-to-polyline for the route.
 - **Start:** the host taps **Find driver** at any time while the ride is `OPEN`, or it starts
   automatically at **first pickup − 45 min**.
 - **When it starts:** joining closes, pickup times freeze, and every rider (including the
-  host) sees a "Ready?" sheet with a 5-min countdown and two buttons: **Ready** and
+  host) sees a "Ready?" sheet with a 5-min countdown and two buttons: **I'm ready** and
   **Cancel ride for me**.
   - Cancel during the ready check is always free.
   - No answer after 5 min counts as **Ready**.
   - The chat shows "Lina started the ready check" and each answer.
+  - Demo: simulated riders answer Ready a few seconds after it starts (P0, §2.5).
 - **End:** when all riders have answered or 5 min have passed, the ride goes to drivers
   (`DISPATCHED`) with the remaining riders.
 - **Drivers only see the ride once it's dispatched**, with the final riders, stops and
   pickup times.
-- The offer goes to eligible nearby drivers. **First accept wins.** It stays open until
-  first pickup − 15 min. A driver who rejects doesn't get it again. Riders see
-  "Finding your driver".
+- The offer goes to eligible drivers (live: within 5 km of the first pickup; demo mode: all
+  seeded drivers). **First accept wins.** It stays open until first pickup − 15 min. A
+  driver who rejects doesn't get it again. Riders see "Finding your driver".
 - **No driver by then:** the ride is canceled, no fees. Each rider sees "No driver found" and
   a **"Book Economy now"** button prefilled with their trip and solo estimate.
 - **Only the host remains:** the ride continues at the solo price (already shown at
@@ -337,13 +359,15 @@ straight-line (haversine), point-to-polyline for the route.
 - The offer sheet shows: "Shared Ride", first pickup time, full fare, rider count, cash,
   **total cash to collect**, stops in order (first name + short address + pickup time),
   km · min, and respond-by.
+- After accepting, the driver sees every stop on the map with the route line (§3.14).
 - The stop list shows each rider's share. At each stop the driver taps "Picked up Lina" or
-  "Dropped off Lina · collected JOD 2.20".
+  "Dropped off Lina · collected JOD 2.20" (P1; the demo uses "Complete trip").
 - When a rider leaves after accept, the driver's stop list, route and cash total update
-  live with a banner: "Sara canceled. New total: collect JOD 6.60 + JOD 2.30 credit".
+  live with a banner: "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
 - Only the driver and the rider themselves see exact pickup addresses.
 - Driver cancels after accepting: back to `DISPATCHED` if ≥ 15 min before first pickup,
-  otherwise canceled with no rider fees and the "Book Economy now" button.
+  otherwise canceled with no rider fees and the "Book Economy now" button. Any credit stays
+  on the ride and goes to whichever driver completes it.
 
 ### 3.10 Cancellation, no-show and money flow
 - **Free leave:**
@@ -356,28 +380,29 @@ straight-line (haversine), point-to-polyline for the route.
 - **Late leave:** after a driver accepts and **< 30 min** before the first pickup.
   - The leaver is charged **their current share**, shown as "Outstanding balance JOD x"
     on their next booking (Jeeny's existing mechanism).
-  - Jeeny credits that amount to the driver's in-app balance and recovers it from the
-    leaver's next trip.
-  - Remaining shares = (new full fare − credit) ÷ remaining riders. They usually go
+  - Jeeny holds that amount as a **credit on the ride**. The driver who completes the trip
+    receives it with the trip. If the ride is canceled before completion, nobody receives
+    it and the leaver's outstanding balance is reversed.
+  - Remaining shares = (new full fare − credits) ÷ remaining riders. They usually go
     **down**, and they never go up (if the formula gives a higher share, keep the old share).
-  - The driver always receives ≥ the new full fare.
-- **No-show:** after waiting 5 min the driver taps "No-show". Same money flow as a late
-  leave, and the trip continues.
+  - The completing driver always receives ≥ the new full fare (cash + credit).
+- **No-show:** after waiting 5 min past the shown pickup time, the driver taps "No-show" (P1).
+  Same money flow as a late leave, and the trip continues.
 - **No replacements:** a seat that empties after the ready check stays empty.
 - **Host leaves:** the ride continues, and the host label and button pass on (§3.1).
 - **Last rider leaves:** the ride is canceled and the driver is notified.
 
 ### 3.11 Chat
-**Group chat (riders only):**
-- Opens for a rider when they join. Shows all messages since the ride was created.
-- Free text, max 300 characters per message. Phone numbers (7+ digits in a row, with or
-  without spaces or dashes) and links are masked as "•••" before sending.
+**Group chat (riders only, P0):**
+- Opens for a rider when they join. Shows the **last 100 messages** of the ride's chat.
+- Free text, max 300 characters per message. Phone numbers (7+ digits, with or without
+  spaces or dashes) and links are masked as "•••" before they're stored (P0).
 - Shows first names and avatars (initials) only.
 - System messages: "Sara joined", "Sara left", "Lina started the ready check",
   "Dana is ready", "Omar is your driver", pickup time changes.
 - Read-only after the ride is `COMPLETED` or `CANCELED`. Deleted 24 h later.
 
-**Driver channel:**
+**Driver channel (P1):**
 - After a driver accepts, each rider has a separate one-to-one chat with the driver.
   Same masking and limits. Riders can't see each other's driver chats.
 
@@ -390,26 +415,45 @@ ride status screen. No push, no inbox.
 ### 3.13 Edge cases
 | Case | Behavior |
 |---|---|
-| Two people take the last seat at the same moment | First commit wins. The second sees "This ride just filled up" |
-| A join and the ready check start at the same moment | Ready check wins. The joiner sees "This ride just closed" |
+| Two people take the last seat at the same moment | Whichever commits first wins. The second sees "This ride just filled up" |
+| A join and the ready check start at the same moment | Whichever commits first wins. If the ready check committed first, the joiner sees "This ride just closed" |
 | Host taps Find driver while alone | Allowed. Ready check with just the host, then dispatch at the solo price |
 | Rider answers Cancel in the ready check | Free leave. Remaining shares recalculated before dispatch |
 | Everyone cancels in the ready check | Ride canceled, no fees |
 | Rider of a different gender | The ride never appears in their list |
 | Rider already in a ride in the same time window | Can't join a second one |
-| First pickup would be under 60 min away, or arrive-by is in the past | Not allowed, error shown |
+| **Creating** a ride with first pickup under 60 min away, or arrive-by in the past | Not allowed, error shown |
 | Driver rejects | The offer stays with the other drivers |
-| Driver cancels | §3.9 |
-| Phone loses connection | Shows "Reconnecting", then catches up (including missed chat messages) |
+| Driver cancels after a late leave | Ride goes back to drivers. The credit stays on the ride for whoever completes it |
+| Ride canceled after a late leave | Credit paid to nobody. The leaver's outstanding balance is reversed |
+| Phone loses connection | Shows "Reconnecting", then catches up (including missed chat messages, up to 100) |
 | Opens a ride that's canceled, completed or expired (stale tab) | "This ride is no longer available" |
-| Message contains a phone number | Masked before it's stored or shown |
+| Message contains a phone number or link | Masked before it's stored or shown |
 | Google call fails or times out (live source) | Fall back to the fixed table for that evaluation. Never block the user |
-| Place search returns a place outside Jordan | Not selectable (autocomplete restricted to Jordan) |
+| The map can't load (no internet) | P1: show "Map unavailable" in place of the map. Every sheet keeps working |
+| Place search returns a place outside Jordan | Not selectable (search restricted to Jordan) |
+
+### 3.14 Privacy on maps and screens
+- **Riders** see on the map only **their own pickup** (pink pin) and **the destination**
+  (purple pin), plus their position in the order ("Pickup 2 of 3"). Never other riders'
+  pins, exact addresses or the full route line.
+- **Other riders** appear only as first names and initials (seat row, chat).
+- **The driver** (after dispatch) sees every stop as a numbered pin, the route line, and
+  each rider's short address and share.
+- **Matching cards** show area names only (§2.6).
+
+### 3.15 Trip summary (P0)
+Shown on every phone when the ride completes. Chat becomes read-only.
+- **Rider:** "To JUST · arrived 7:54 AM", "You paid JOD 2.20 cash", "3 riders shared this
+  ride", "You saved JOD 5.65 vs riding solo", and "Outstanding balance JOD x" if any.
+- **Leaver (late):** "You left this ride · JOD 2.30 added to your next ride".
+- **Driver:** riders and the cash each paid, credit from Jeeny, total ("JOD 6.60 cash +
+  JOD 2.30 credit = JOD 8.90").
 
 ## 4. Fare, Time & Supply Model
-A reference implementation (§4.9) produced the numbers in this file. Any implementation
-with these constants and the fixed table source must reproduce the §4.7 golden values
-within ±0.01 JD and ±1 min.
+`docs/reference/fare_model.py` (§4.9) produced the numbers in this file. Any
+implementation with these constants and the fixed table source must reproduce what it
+prints within ±0.01 JD and ±1 min.
 
 ### 4.1 Tariff (LTRC, effective 11 May 2026)
 Smart apps charge the yellow-taxi tariff + 20% (taxi day 0.39 flag-fall + 0.28/km;
@@ -420,16 +464,16 @@ night 0.40 flag-fall + 0.33/km).
 | Night (00:00–06:00 `[verify hours]`) | JOD 0.480 | JOD 0.396 | JOD 0.0679 `[verify]` |
 - Tariff is chosen by the first-pickup time. Minimum fare JOD 1.00 `[verify]`.
 - Confirmed by LTRC sources: flag-fall and per-km values, and the 20% smart-app premium.
-  Not confirmed: waiting rate, night hours, minimum fare.
+  Not confirmed: waiting rate, night hours, minimum fare. Don't claim these on stage.
 
 ### 4.1.1 Calibration against Jeeny
-- `full_fare = CALIBRATION × regulated_formula(...)`. Default `CALIBRATION = 1.00`.
+- `full_fare = CALIBRATION × tariff_formula(...)`. Default `CALIBRATION = 1.00`.
 - Shared Ride is priced against Jeeny's **Economy** tier.
 - To set it, a teammate opens Jeeny (no booking needed), sets Irbid City Center → JUST,
   and screenshots the **Economy** price, once at a normal time and once at ~7:30 AM.
 - `CALIBRATION = Jeeny Economy quote ÷ our formula for the same route and time`,
   using Google's km and minutes for that route. Round to 2 decimals.
-- If it's between 0.90 and 1.10, keep 1.00 and say "matches the regulated tariff".
+- If it's between 0.90 and 1.10, keep 1.00 and say "matches the smart-app tariff".
   Otherwise use the factor and say "calibrated to Jeeny's live Economy price".
 - Reference point (different route, from our screenshots): a real Irbid quote showed
   Ecolite 5.55, Economy 6.21, Taxi 5.91. Economy is ~5% above Taxi.
@@ -441,7 +485,8 @@ All km, minutes and route shapes come from one server-side interface:
 ```
 getMatrix(points[], departureTime) → for every pair (a, b):
   km, minutes_with_traffic, minutes_free_flow
-getRoute(a, b, departureTime) → polyline (list of lat/lng points)
+getRoute(points[], departureTime) → polyline (list of lat/lng points)
+  points = the ordered stops; the first and last are the endpoints, the rest are stops in between
 ```
 
 The rules engine never calls Google directly.
@@ -450,32 +495,31 @@ The rules engine never calls Google directly.
 - **Matrix:** one Google route-matrix request per ride evaluation, covering every
   pickup and drop-off point in that ride (max 8 points = 64 pairs). Stop orders are then
   computed locally. Never call Google per stop order.
-- **Route:** one route request when a ride is created (the anchor route, §3.4), and one
-  whenever the stop order changes (for the map line, P1).
+- **Route:** one route request when a ride is created (anchor route: host pickup →
+  destination), and one whenever the stop order changes (the driver's route line, P1).
 - **Traffic:** request traffic-aware durations for the departure time. Use Google's
   traffic duration as `minutes_with_traffic` and its no-traffic (static) duration as
   `minutes_free_flow`. Check the exact field names in the current Google docs.
-- **Departure time:** use the ride's estimated first pickup (arrive-by − 60 min for the
+- **Departure time:** the ride's estimated first pickup (arrive-by − 60 min for the
   first call). All legs in one ride use that single departure time (trips are under ~1 h).
 - **Future dates:** Google only predicts traffic for future times. Map the demo clock to
   the next real date with the **same weekday and time** before calling Google.
-- **Places:** Google Places autocomplete for pickup and destination, restricted to Jordan
-  and biased to Irbid.
-- **Map:** Google Maps for display, styled to match DESIGN.md (muted gray). P0: pins only.
-  P1: route line.
+- **Places:** Google Places search for pickup and destination goes through the server
+  (`GET /api/places`), restricted to Jordan and biased to Irbid.
+- **Map:** Google Maps JavaScript API in the browser, styled to match DESIGN.md.
 - **Cache:** key = (rounded coordinates, 15-min time bucket).
-- **Keys:** the server key (routes/matrix) lives in `.env` and never reaches the browser.
-  The browser key (map + autocomplete) is restricted to our domain. Set a billing
-  budget alert. Check current pricing and free usage limits before Friday.
+- **Keys:** the **server key** (routes, matrix, places) lives in `.env` and never reaches
+  the browser. The **browser key** is for the Maps JavaScript API only, restricted to our
+  domain. Set a billing budget alert. Check current pricing and free usage limits before Friday.
 
 #### 4.2.2 Snapshot source (demo)
 - A script calls Google once for all seed places (all pairs, plus the CC → JUST anchor
   route) at the demo time (Sunday 6:00–8:30 AM, in 15-min buckets) and saves the results
   to `data/demo_snapshot.json`.
-- Demo mode reads only this file. No network needed.
-- After generating the snapshot, rerun the reference model with it and **regenerate the
-  §2.2 numbers, the §2.3 table, the §1 value table and the §6 DESIGN.md text.** Re-check
-  the §2.6 route distances. Commit the snapshot.
+- Demo mode reads only this file for distances and times. No Google routing calls.
+- After generating the snapshot, rerun the reference model with it and **regenerate §2.2,
+  §2.3 and the §1 value table, and the example numbers in DESIGN.md.** Re-check the §2.6
+  route distances. Commit the snapshot.
 
 #### 4.2.3 Fixed table source (tests and fallback)
 - Road km = straight-line (haversine) distance × circuity: **urban 1.35**, **highway 1.15**.
@@ -501,7 +545,7 @@ The urban part of each JUST leg: CC 7.8 · HS 5.8 · US 5.5 · YU 5.0 · AM 3.3 
 The Google and Snapshot sources use Google's traffic-aware durations instead.
 - Free-flow speed: **urban 30 km/h**, **highway 70 km/h**.
 - Leg time = urban km / 30 × 60 × urban factor + highway km / 70 × 60 × highway factor,
-  using the factor at the **leg's start time**.
+  using the factor at the **leg's start time** (Amman local time).
 - Weekday (Sun–Thu) congestion factors. Interpolate linearly between anchors:
 
 | Hour | 0–5 | 6 | 7 | 7:30–8 | 9 | 11 | 13 | 14:30 | 16 | 18 | 20 | 22 | 24 |
@@ -523,6 +567,7 @@ full_fare = max(MIN_FARE, CALIBRATION × (flag + km_total × per_km + wait_min �
 wait_min  = Σ legs (minutes_with_traffic − minutes_free_flow) + Σ dwell_min
 ```
 - Congestion delay is billed at the waiting rate, as a meter does when the car is slow.
+- Waiting caused by frozen pickup times after a leave is **not** billed (§3.6).
 
 ### 4.5 Split and estimates
 - `share = ceil_to_0.05((full_fare − credits) / riders)`
@@ -535,16 +580,17 @@ wait_min  = Σ legs (minutes_with_traffic − minutes_free_flow) + Σ dwell_min
   15 min.
 - `P(no driver) = (1 − p)^(N × W / 15)`, where N = drivers within 5 km and W = time the
   offer stays open (dispatch time → first pickup − 15 min).
-- P2 only: the automatic ready check starts earlier when few drivers are nearby:
+- The automatic ready check starts earlier when few drivers are nearby:
   ≥ 10 drivers → first pickup − 45 min · 5–9 → − 60 min · ≤ 4 → − 75 min, with a
   "Few drivers nearby" note for the host at ≤ 2.
 - Driver ETA (for "Driver on the way"): nearest-driver distance = 0.5 / √(N / 78.5 km²) ×
   1.35, at urban speed × current factor, + 1 min.
 
-### 4.7 Golden values (use as unit tests)
-These values test the **fare engine with the fixed table source** and CALIBRATION = 1.00.
-They never change when Google data changes. The test fixture uses Rania's old arrive-by
-(8:15); the demo seed uses 8:05, which produces the same 4-rider plan.
+### 4.7 Golden values (unit tests)
+These test the **fare engine with the fixed table source** and CALIBRATION = 1.00. They
+never change when Google data changes. **Source of truth: what `fare_model.py` prints.**
+The test fixture uses Rania's old arrive-by (8:15); the demo seed uses 8:05, which produces
+the same 4-rider plan.
 
 **Solo, Irbid City Center → JUST, Sunday:**
 | Arrive by | First pickup | Trip | Km | Full fare | Rounded |
@@ -558,25 +604,27 @@ They never change when Google data changes. The test fixture uses Rania's old ar
 
 **Solo fare per seeded rider (fixture arrive-bys):** Lina 7.85 · Sara 6.90 · Rania 7.10 · Dana 6.70 · Noor 6.05.
 
-**Full 4-rider demo ride (Lina, Sara, Rania, Dana) by condition:**
-| Condition | First pickup | Trip | Full fare | Each | Lina solo |
-|---|---|---|---|---|---|
-| Normal (demo) | 7:02 | 54 min | 9.03 | 2.30 | 7.81 |
-| Heavy | 6:54 | 61 min | 9.49 | 2.40 | 8.18 |
-| Jam | 6:42 | 72 min | 10.12 | 2.55 | 8.72 |
-| Rain | 6:56 | 60 min | 9.38 | 2.35 | 8.09 |
-| Same times, Friday | 7:09 | 46 min | 8.60 | 2.15 | 7.46 |
+**Full 4-rider fixture (Lina, Sara, Rania, Dana) by condition:**
+| Condition | First pickup | Trip | Full fare | Each |
+|---|---|---|---|---|
+| Normal | 7:02 | 54 min | 9.03 | 2.30 |
+| Heavy | 6:54 | 61 min | 9.49 | 2.40 |
+| Jam | 6:42 | 72 min | 10.12 | 2.55 |
+| Rain | 6:56 | 59 min | 9.38 | 2.35 |
 Normal route: CC → HS → US → YU → JUST, 21.4 km.
 
-**Leave math (demo ride after accept, Sara leaves, 3 riders, new full fare 8.88):**
-| Case | Formula | Each |
-|---|---|---|
-| Free leave (≥ 30 min before pickup) | 8.88 / 3 | 3.00 |
-| Late leave (< 30 min, credit 2.30) | min(2.30, (8.88 − 2.30) / 3) | 2.20 |
+**Demo joins (seed, Rania 8:05):** 7.81/7.85 → 7.95/4.00 → 8.67/2.90 → 9.03/2.30.
+Host estimates: 7.85 · 4.15 · 2.95 · 2.35.
+
+**Leave math (demo ride after accept, Sara leaves, 3 riders, frozen order and first pickup):**
+| Case | New full fare | Formula | Each | Pickups |
+|---|---|---|---|---|
+| Free leave at 6:20 | 8.86 | 8.86 / 3 | 3.00 | Lina 7:02, Rania 7:10, Dana 7:22 |
+| Late leave at 6:35 (credit 2.30) | 8.86 | min(2.30, (8.86 − 2.30) / 3) | 2.20 | same |
+Late leave totals: 3 × 2.20 = 6.60 cash + 2.30 credit = 8.90 (remainder 0.04).
 
 **Detour check (demo ride, in-car time vs cap):** Lina 51.5 vs cap 55.7 · Rania 43.8 vs
 48.5 · Sara 36.9 vs 46.0 · Dana 32.7 vs 43.8.
-Solo in-car baselines: Lina 39.8 · Sara 32.9 · Rania 34.6 · Dana 31.3 · Noor 25.9 min.
 
 **Distance to the CC → JUST fixed route (rule 5, threshold 1.5 km):** HS 0.8 · US 0.3 ·
 YU 1.0 · AM 0.9 km. All pass.
@@ -596,18 +644,17 @@ YU 1.0 · AM 0.9 km. All pass.
 3. Bus fare and typical bus time Irbid → JUST.
 4. Waiting rate, night tariff hours and minimum fare.
 5. Jeeny's commission rate. Ask at the briefing or say "usual commission".
-6. Seed places resolve to the right Google place (especially Al-Hashmi Street and Arabella Mall),
-   and all seed pickups are within 1.5 km of the real CC → JUST route.
+6. Seed places resolve to the right Google place (especially Al-Hashmi Street and Arabella
+   Mall), and all seed pickups are within 1.5 km of the real CC → JUST route.
 7. A rough count of Irbid-based JUST commuters, if available. Don't invent it.
 
 ### 4.9 Reference implementation
 - `docs/reference/fare_model.py` is a **spec**, not app code. Port it, don't import it.
-- It covers: tariff, fare formula, travel times (fixed table source), stop-order search,
-  first pickup time, and the arrive-by checks (rule 7).
-- It does **not** cover: rules 4–6 and 8–12 (arrive-by window, distance to route,
-  destination radius, detour cap, pickup shift, price, timing), state machines, the ready
-  check, chat, CALIBRATION, late-leave math, or the Google/Snapshot sources.
-  **§3.5 is the source of truth for matching.**
+- It covers: tariff, CALIBRATION, the fixed table and traffic curve, the stop-order score,
+  first pickup time, matching rules 1, 2 and 4–11, and free and late leave with frozen
+  pickup times.
+- It does **not** cover: rule 3 (ride state), rule 12, state machines, the ready check,
+  dispatch, chat, credits paid at completion, or the Google/Snapshot sources.
 - To regenerate demo numbers, feed it the snapshot's km and minutes instead of the fixed table.
 
 ## 5. Do Not Build
@@ -617,44 +664,23 @@ YU 1.0 · AM 0.9 km. All pass.
 - Live trip sharing with family
 - Online payment, wallet, or cards (credits and balances are displayed numbers only)
 - Real GPS tracking, live driver movement, or turn-by-turn navigation
-- Google route or matrix calls from the browser (server only)
+- Other riders' pins, addresses or the full route on a rider's map
+- Google route, matrix or places calls from the browser (server only; the browser loads the map only)
 - Host approval of joiners, or the host removing riders
 - Joining after the ready check starts, or replacement riders
 - Chat extras: photos, voice, reactions, typing indicators, read receipts, reporting
 - Ratings, support or report screens
+- Late-arrival compensation or guarantees
 - Arabic UI or RTL layout
 - Real phone/OTP login
 - MAX subscription, promotions, notifications inbox, push notifications
 - Invite-by-link, recurring rides, female-driver preference (roadmap slide only)
 
-## 6. Required changes in DESIGN.md
-Placeholder values until regenerated from the snapshot (§4.2.2).
-| Where | Old | New |
-|---|---|---|
-| Ride option row | "from JOD 1.30" | "from JOD 2.35" |
-| Seat row | "2 of 4 seats filled · JOD 3.10 each" | "2 of 4 seats filled · JOD 4.00 each" |
-| Matching card | "Arrives by 7:55", "JOD 1.65 each", full addresses | "Arrives by 8:00", "JOD 4.00 each if you join", **area names only** ("City Center area"), "Pickup ~7:21 AM", button "Join" |
-| Trip offer | "JOD 6.20", "Scheduled · 7:20 AM", "12.4 km · ~28 min", "Respond by 6:50 AM" | "JOD 9.03" + "Collect JOD 9.20", "First pickup · 7:02 AM", "21.4 km · ~54 min", "Respond by 6:47 AM", pickup time per stop |
-| Location card | (none) | Add row "Be ready by 7:02 AM" |
-| Driver stops list | name + address | + each rider's share, "Picked up" / "Dropped off · collected" actions |
-| Search screen | (none) | Quick-pick chips for seed places above "Where to?" |
-| Status sheet stages | Waiting for riders / Finding your driver / Driver on the way | Waiting for riders / **Ready check** / Finding your driver → Driver on the way (4 stages: use a 4-segment progress bar) |
-
-**New components to design in Jeeny's style:**
-- **Group chat screen:** nav header with ride title ("To JUST · 8:00") and seat row; message
-  bubbles (own = accent-soft background, others = gray-100, radius 16, sender first name
-  13/500 gray-500 above); centered gray system messages 13/400; input bar with 1px
-  gray-200 top border, rounded field (radius 20) and accent send button.
-- **Chat entry on the status sheet:** a white info card "Group chat" with last message
-  preview and an unread count badge.
-- **Ready check sheet:** bottom sheet with title "Ready to find a driver?", countdown
-  "4:32" in accent 32/700, rider list with status (Ready ✓ in success, Waiting in gray-500),
-  buttons "Cancel ride for me" (secondary) and "I'm ready" (primary), and the note
-  "No answer = ready".
-- **Find driver button:** primary button on the host's status sheet while `OPEN`, with
-  helper text "Starts automatically at 6:17 AM".
-- **Late-cancel confirmation:** sheet with "You'll pay your share: JOD 2.30" in danger
-  color, explanation line, buttons "Keep my seat" (primary) and "Cancel anyway" (secondary, danger text).
+## 6. DESIGN.md
+DESIGN.md is up to date with v5. Its example numbers are placeholders. After the snapshot,
+update them from §2.3: the Shared row "from" price, seat row share, matching card share and
+pickup time, trip offer (fare, collect, km · min, first pickup, respond-by, per-stop times),
+late-cancel amount, driver totals and the trip summary amounts.
 
 ## 7. Open decisions (team must choose, not blocking the build)
 1. **Front seat:** with 4 women and a male driver, one rider sits in front. Locally, women
@@ -666,27 +692,29 @@ Placeholder values until regenerated from the snapshot (§4.2.2).
 3. **Deck alignment (must do before the pitch):** slides 2, 3, 5 and 8 still show
    JOD 1.25 shared and 4–5 JD solo. Replace them with the regenerated §2.3 numbers.
    Slide 8 also claims the shared ride is cheaper than "taxi + bus (2.10)", which is no
-   longer true. Reposition it as door-to-door, on time, safe, ~70% less than solo.
-   Remove the AI/bus slides (6, 7) and the "Verified students" and "Family sharing" badges.
-   Add group chat and the ready check to the solution slide.
+   longer true. Reposition it as door-to-door, planned to arrive on time, same gender,
+   ~70% less than solo. Remove the AI/bus slides (6, 7) and the "Verified students" and
+   "Family sharing" badges. Add group chat and the ready check to the solution slide.
 
 ## 8. Build Priorities
 Build all P0 before starting any P1. P2 only if time remains before feature freeze (9:30 PM).
 
 | P0: demo path | P1: hardening | P2: extras |
 |---|---|---|
-| Signup (name + gender) | Google Places autocomplete (P0 uses seed chips) | Traffic / weather controls |
-| Shared row, create ride, host estimates, anchor route | Route line on the map | Supply-aware ready check time (§4.6) |
+| Signup (name + gender) + seeded demo logins | Google Places autocomplete (P0 uses seed chips) | Traffic / weather controls |
+| Shared row → matching list → "Start your own" → host setup with estimates | Route line on the driver's map | Supply-aware ready check time (§4.6) |
 | Matching list + auto-join (all §3.5 rules) | Driver one-to-one chat | "Drivers nearby" control |
-| Live sync across 3 phones | Phone number masking in chat | Live Google source in demo |
-| Group chat (free text, system messages) | No-show, driver cancel | Driver ETA model |
-| Stop order, pickup times, fare split | "Book Economy now" fallback | |
-| Find driver + ready check (manual and automatic) | Pickup-time banners | |
-| Dispatch, driver offer, accept, reject | Driver pickup/drop-off taps | |
-| Free and late leave with money flow | Simulated riders auto-answer ready check | |
-| Snapshot TravelProvider + Fixed table | Data source switch + auto fallback | |
-| Google map display with pins | Stale-tab and reconnect handling | |
-| Demo menu: clock, simulate rider (+ chat line), reset | | |
+| Live sync across 3 phones | No-show, driver cancel | Live Google source in demo |
+| Group chat with masking and system messages | "Book Economy now" fallback | Driver ETA model |
+| Stop order, pickup times (frozen at ready check), fare split | Pickup-time banners | |
+| Find driver + ready check (manual and automatic) | Driver pickup/drop-off taps | |
+| Simulated riders auto-answer the ready check | Data source switch + auto fallback | |
+| Dispatch, driver offer, accept, reject | Stale-tab and reconnect handling | |
+| Free and late leave, credit held on the ride | "Map unavailable" fallback | |
+| Snapshot TravelProvider + Fixed table | Live search updates on the matching list | |
+| Google map: own pins for riders, all stops for the driver | | |
+| Demo menu: clock (paused), simulate rider, Complete trip, reset, build stamp | | |
+| Trip summary screen | | |
 
 Sources: LTRC 2026 smart-app tariff (Jordan News / Al Mamlaka, 11 May 2026; jo.motory.com,
 12 May 2026; Petra, 3 Feb 2026). JUST location and enrollment (Wikipedia, JUST site). LTRC
