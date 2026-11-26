@@ -1,16 +1,18 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Thu 26 Nov, 6:30 PM · **By:** planning (no code yet)
+**Updated:** Thu 26 Nov · **By:** Codex (planning and reference model)
 **Milestone:** M0 setup → next: M1 walking skeleton
 **Deployed URL:** none yet · **Build stamp:** none
 
 ## Just shipped
 - Docs: SPEC v5, DESIGN, ARCHITECTURE (React + Node/TS), AGENTS, fare_model.py
 - Skills installed in `.agents/skills/`: ponytail, test-driven-development, impeccable, grill-me
+- Aligned the demo, booking overlap, cancellation, restart and skill instructions.
 
 ## Verification
-- `npm run check`: n/a (no code yet)
+- Reference model printed the §4.7 fixture and demo values. Three cancellation regression tests passed.
+- `npm run check`: unavailable until the npm workspace is scaffolded.
 - Works on 3 phones (deployed): no
 
 ## Next task
@@ -26,8 +28,8 @@
 - [verify] Replit plan supports a Reserved VM deployment.
 - [verify] Google Cloud billing + server key + browser key work.
 - Owner name in AGENTS.md is still `[OWNER]`.
-- Run `python docs/reference/fare_model.py` once and check its output matches SPEC §4.7.
 
 ## Decisions (this session)
+- Leaving during redispatch is free. Create and join require a 15-minute gap between bookings.
 - Stack: React + Vite, Node 20 + TS, Fastify, Socket.IO, Prisma + SQLite.
 - Replit: hosting only. Demo clock paused by default.

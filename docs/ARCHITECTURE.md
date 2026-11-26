@@ -149,6 +149,7 @@ interface Place { key?: string; placeId?: string; name: string; area: string; la
 interface User {
   id: string; token: string; epoch: number;        // epoch bumps on reset → logs everyone out
   role: Role; firstName: string; gender: Gender;   // gender immutable after signup
+  viewSeq: number;                 // persisted across server restarts, scoped to user + epoch
   outstandingP: number;                            // late-leave/no-show debt shown on next booking
   isSim?: boolean; seedLogin?: 'lina' | 'sara' | 'omar';
 }
@@ -236,6 +237,7 @@ model User {
   role         String
   firstName    String
   gender       String
+  viewSeq      Int      @default(0)
   outstandingP Int      @default(0)
   isSim        Boolean  @default(false)
   seedLogin    String?  @unique
@@ -329,7 +331,7 @@ model DemoState {            // exactly one row, id = 1
 
 **Invariants (asserted in tests):**
 - At most 4 active members. All members share `ride.gender`.
-- A user has at most one active ride in any ±15 min window (rule 12).
+- Creating or joining must leave at least 15 minutes between active bookings for each affected rider (SPEC rule 12).
 - After `frozen`, every active member's `shownPickup` never changes, and pickup `Stop.at` = `shownPickup`.
 - After `locked`, fare re-evaluation uses `locked.matrix` and `locked.tariff`.
 - `cash to collect + creditsP ≥ new full fare` after any leave.
@@ -432,7 +434,7 @@ affected gets a Socket.IO `view` push (§9).
 | P1 | `GET /api/places?q=` | rider | — | Places search proxy (Jordan, biased to Irbid). Debounce 300 ms, 3+ chars |
 | P0 | `POST /api/quote` | rider | `{pickup, dest, arriveBy}` | Solo fare, host estimates 1–4 riders, "Be ready by", "from" price |
 | P0 | `POST /api/search` | rider | `{pickup, dest, arriveBy}` | Returns `MatchCard[]`. P1: keep the search live for 60 s with `search` pushes |
-| P0 | `POST /api/rides` | rider | `{pickup, dest, arriveBy}` | Create (become host). First pickup 60 min–24 h away |
+| P0 | `POST /api/rides` | rider | `{pickup, dest, arriveBy}` | Create (become host). First pickup 60 min–24 h away. Check rule 12 on the solo plan |
 | P0 | `POST /api/rides/:id/join` | rider | `{pickup, dest, arriveBy}` | Auto-join. Re-runs every rule at commit |
 | P0 | `POST /api/rides/:id/leave` | rider | `{acceptCharge?: boolean}` | Late leave without `acceptCharge` → `409 LATE_CONFIRM_REQUIRED {chargeJod}` |
 | P0 | `POST /api/rides/:id/find-driver` | host | — | Starts the ready check |
@@ -480,7 +482,9 @@ Node runs one thread, but handlers `await` the TravelProvider. So:
 2. **Commit (inside `store.withLock(fn)`):** one global async mutex wraps one
    `prisma.$transaction`. Inside: re-read the ride, check `ride.version === preparedVersion`
    and that the state still allows the action, re-run the pure checks, write, `version++`,
-   collect domain events. **No network calls inside the lock.** If the version changed,
+   collect domain events. For create and join, check rule 12 on the final candidate plan against
+   fresh memberships inside this transaction. A conflict returns `ALREADY_IN_RIDE`.
+   **No network calls inside the lock.** If the version changed,
    release, retry prepare once, then fail with `RIDE_FULL` / `RIDE_CLOSED`.
 3. **Publish (after the lock):** recompute views for affected users, return the caller's
    view, push views to everyone else.
@@ -524,14 +528,14 @@ stateDiagram-v2
 ### 7.4 Money flow (`domain/money.ts`)
 - **Free leave:** while `OPEN`, re-plan without the leaver. After `READY_CHECK`, keep the
   same order and first pickup (`leave.ts`); other members' `shownPickup` stays unchanged.
-  Share = `up05(fare / n)`. If that pushes someone above their solo fare, give them a
+  Leaving during redispatch is free. Share = `up05(max(0, fare − credits) / n)`, including previously held credits. If that pushes someone above their solo fare, give them a
   "you can leave free" banner and allow one free leave.
 - **Late leave / no-show:** `chargedP = current shareP`, `user.outstandingP += chargedP`,
-  `ride.creditsP += chargedP`, new share = `min(old, up05((fare − credits)/n))`.
+  `ride.creditsP += chargedP`, new share = `min(old, up05(max(0, fare − credits)/n))`.
   **The driver is not credited yet.**
 - **At COMPLETED:** `driver.creditBalanceP += ride.creditsP` (whoever completed the ride).
 - **At CANCELED:** each late leaver's `outstandingP -= chargedP`, `leave.reversed = true`.
-- Leave type is decided **at commit time** from `clock.now()` vs `plan.firstPickup − 30`.
+- At commit, check current driver assignment and the 30-minute cutoff. If the last rider leaves, cancel and reverse prior charges before pricing or dividing.
 
 ---
 
@@ -596,9 +600,11 @@ only decide who gets an event. The socket is **push-only**.
 "Reconnecting…" shows while disconnected > 2 s. `pingInterval` 10 s, `pingTimeout` 8 s.
 Socket.IO connection-state recovery stays off.
 
-**Stale views:** the server keeps a **per-user `viewSeq`** that increases by 1 for every
-view it produces for that user (HTTP responses and pushes). The client ignores any view
-whose `viewSeq` is lower than the one it holds.
+**Stale views:** persist `User.viewSeq` in SQLite. Inside one locked transaction, read the
+current state, project the view and increment its counter. Send the resulting snapshot and
+sequence after commit. HTTP and socket views share this counter across server restarts.
+The client accepts only a newer sequence for its authenticated user and epoch. On a new
+login or reset, discard the old session baseline and ignore responses from that session.
 
 ### 9.3 Views and privacy (`server/src/views/`)
 The **only** place that decides what a user sees. Tests assert each rule.
@@ -612,7 +618,7 @@ The **only** place that decides what a user sees. Tests assert each rule.
 
 ```ts
 interface RiderView {
-  viewSeq: number;
+  epoch: number; viewSeq: number;
   me: { id; firstName; gender; outstandingJod: number };
   ride?: {
     id; state; isHost; seats: {initials; isMe; ready?}[]; seatsLeft; shareJod; soloJod;
@@ -724,8 +730,8 @@ the contract.**)
 |---|---|---|
 | Engine | Vitest (`TZ=UTC`) | §6 golden values, `pyRound`, each matching rule (pass and fail), leave with frozen pickups |
 | Time | Vitest (`TZ=UTC`) | `ammanParts` on 6:10 AM Amman (hour 6, day tariff), Fri/Sat detection, 15-min buckets |
-| Domain | Vitest + `memoryRepo` | every state machine row, ready check timeout, sim auto-Ready, dispatch expiry, host hand-off, credit paid at COMPLETED, charges reversed at CANCELED, SPEC §3.13 cases |
-| Store | Vitest + temp SQLite | `prismaRepo` round-trip. Concurrent joins on the last seat: exactly one wins |
+| Domain | Vitest + `memoryRepo` | every state machine row, ready check timeout, sim auto-Ready, dispatch expiry, host hand-off, cumulative charges on repeated leaves, free leave during redispatch, last-rider refund, credit paid at COMPLETED, SPEC §3.13 cases |
+| Store | Vitest + temp SQLite | `prismaRepo` round-trip. Concurrent joins on the last seat: exactly one wins. Conflicting create/join requests by the same rider cannot both succeed. A restart preserves the view sequence |
 | Demo script | Vitest | replays SPEC §2.2 steps 1–6 (paused clock, jump to 6:35, Complete trip) and asserts the numbers at each step |
 | Views | Vitest | the §9.3 privacy table, especially: no other member's coordinates in a rider view |
 | Chat | Vitest | masking cases, 300-character limit |
@@ -746,16 +752,16 @@ the contract.**)
 | Step | Trigger | Server action | What the phones see |
 |---|---|---|---|
 | Quote | Rider sets a trip | `POST /api/quote` | Ride options with the Shared row "from JOD 2.35" |
-| Search | Rider taps Shared | `POST /api/search`: rules 1–6 and 12 on every OPEN ride, then one matrix + plan + rules 7–11 for the survivors | Matching cards (area names, real share) or the empty state, plus "Start your own shared ride" |
-| Create | Rider taps "Start your own" and confirms | `POST /api/rides`: first pickup 60 min–24 h away, fetch the anchor route, store the ride | Host: status sheet, 1 of 4 seats, group chat |
+| Search | Rider taps Shared | `POST /api/search`: rules 1–6 on every OPEN ride, then one matrix + plan + rules 7–12 for the survivors | Matching cards (area names, real share) or the empty state, plus "Start your own shared ride" |
+| Create | Rider taps "Start your own" and confirms | `POST /api/rides`: first pickup 60 min–24 h away, fetch the anchor route, check rule 12 at commit, store the ride | Host: status sheet, 1 of 4 seats, group chat |
 | Join | Joiner taps Join | `POST /rides/:id/join`: prepare, commit with version check, re-plan, new shares, system message | Joiner: in the ride. Others: seat row + share update, "Sara joined" |
 | Chat | Rider sends a message | `POST /rides/:id/chat`: limit, mask, store | All members: the masked message |
 | Ready check | Host taps Find driver, **or** tick at first pickup − 45 | → `READY_CHECK`: joining closes, pickup times freeze, `endsAt = now + 5 min` | Every member: the ready sheet |
 | Ready answers | Rider taps, or sims after 3 s real time | `POST /rides/:id/ready` / sim tick. `CANCEL` = free leave | Every member: statuses update |
 | Dispatch | All answered, **or** tick at `endsAt` | → `DISPATCHED`: offer to eligible drivers (live: within 5 km of the first pickup and not rejected; **demo mode: all seeded drivers**), `expiresAt = first pickup − 15` | Riders: "Finding your driver". Drivers: the offer sheet |
 | Accept | Driver taps Accept | First commit wins → `ACCEPTED`, lock matrix + tariff | Riders: driver, car, plate |
-| Free leave | Before accept, or ≥ 30 min before first pickup | Remove member and stops, re-price. After the freeze, other pickup times unchanged | Others: new shares. Driver: new stop list |
-| Late leave | After accept, < 30 min before first pickup | First call → `409 LATE_CONFIRM_REQUIRED`. Second with `acceptCharge` → charge the leaver, hold the credit on the ride, `min(old, (fare − credits) ÷ n)` | Leaver: "Outstanding balance JOD 2.30". Others: share drops to 2.20. Driver: "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end" |
+| Free leave | No assigned driver (including redispatch), or ≥ 30 min before first pickup | Remove member and stops, re-price. After the freeze, other pickup times unchanged | Others: new shares. Driver: new stop list |
+| Late leave | After accept, < 30 min before first pickup | First call → `409 LATE_CONFIRM_REQUIRED`. Second with `acceptCharge` → charge the leaver, hold the credit on the ride, recalculate shares per SPEC §4.5 | Leaver: "Outstanding balance JOD 2.30". Others: share drops to 2.20. Driver: "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end" |
 | Complete (demo) | Operator taps Complete trip | All stops done → `COMPLETED`: pay `creditsP` to the driver, write the summary, chat read-only | Everyone: the trip summary |
 | Pickup / drop-off (P1) | Driver taps | Stop `done`. First pickup → `IN_PROGRESS`. Last drop-off → `COMPLETED` | Same as above |
 | Driver cancel (P1) | Driver taps Cancel | ≥ 15 min before first pickup → `DISPATCHED`, credit stays on the ride. Otherwise → `CANCELED`, charges reversed | Riders: "Finding your driver" or "No driver found" + "Book Economy now" |
@@ -770,9 +776,9 @@ sequenceDiagram
   participant T as TravelProvider
   participant A as Lina's phone
   B->>S: POST /api/search {pickup, dest, arriveBy}
-  S->>S: rules 1–6, 12 on every OPEN ride (cheap)
+  S->>S: rules 1–6 on every OPEN ride (cheap)
   S->>T: getMatrix(ride points + Sara's points)
-  S->>S: plan() + rules 7–11 → MatchCard
+  S->>S: plan() + rules 7–12 → MatchCard
   S-->>B: 200 [card: "JOD 4.00 each if you join"]
   B->>S: POST /api/rides/r1/join
   S->>T: getMatrix (cached)

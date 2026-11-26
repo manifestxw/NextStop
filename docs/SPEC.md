@@ -123,7 +123,7 @@ paused, steps 1–4 all happen at demo time 6:10. Only step 5 needs a clock jump
 3. **The ride fills and Lina finds a driver.** Tap "simulate rider" twice (Rania, then Dana).
    They join and each posts a chat line. 4 of 4, JOD 2.30 each. Lina taps **Find driver**.
    A ready check appears on every phone. The simulated riders answer Ready within a few
-   seconds, Sara taps Ready, and the ride goes to drivers.
+   seconds. Lina and Sara each tap **I’m ready**, then the ride goes to drivers.
 4. **Omar accepts.** Phone C shows the offer: JOD 9.03, 4 riders, cash, collect JOD 9.20,
    21.4 km · ~54 min, first pickup 7:02 AM, respond by 6:47 AM, every stop with its pickup
    time. He accepts. Phones A and B show "Omar · White Hyundai Elantra · 12-34567".
@@ -266,6 +266,7 @@ the next valid seed rider is used. "Simulate rider" never fails silently.
   "If nobody joins: JOD 7.85", and "Be ready by 7:15 AM".
 - **Creating** a ride requires the first pickup to be 60 min to 24 h from now. Otherwise:
   "Too soon for a shared ride. Book Economy instead." (Joining uses rule 11's 45 min.)
+- Creating a ride also requires the rule 12 availability check on the proposed solo plan.
 - Max 4 riders including the host. `[open decision §7.1]`
 - The host's route (pickup → destination) is fetched once and stored as the ride's
   **anchor route** for matching.
@@ -295,8 +296,11 @@ A ride appears only if **ALL** are true:
     own solo fare.
 11. **Timing:** the new first pickup is ≥ now + 45 min (otherwise the automatic ready
     check would already have started).
-12. **One ride at a time:** the joiner has no other active ride within ±15 min of this
-    ride's time window.
+12. **One ride at a time:** on create and join, compare the candidate plan with each rider’s other active
+    bookings, including those of existing riders whose times change on a join. A booking runs from
+    the ride’s first pickup through its final drop-off. Require at least 15 min between the end
+    of one ride and the start of the next. Exactly 15 min is allowed. Exclude this ride, closed
+    rides, and bookings the rider left or finished. Recheck under the commit lock.
 
 The card shows: host first name, mini seat row, seats left, **pickup area and destination
 area only**, effective arrive-by, "JOD x each if you join" (the real recomputed share) and
@@ -339,7 +343,7 @@ straight-line (haversine), point-to-polyline for the route.
 - **When it starts:** joining closes, pickup times freeze, and every rider (including the
   host) sees a "Ready?" sheet with a 5-min countdown and two buttons: **I'm ready** and
   **Cancel ride for me**.
-  - Cancel during the ready check is always free.
+  - Cancel during the ready check is always free, including after answering Ready.
   - No answer after 5 min counts as **Ready**.
   - The chat shows "Lina started the ready check" and each answer.
   - Demo: simulated riders answer Ready a few seconds after it starts (P0, §2.5).
@@ -371,13 +375,12 @@ straight-line (haversine), point-to-polyline for the route.
 
 ### 3.10 Cancellation, no-show and money flow
 - **Free leave:**
-  - any time before a driver accepts (including during the ready check), or
+  - while no driver is currently assigned, including ready check and redispatch, or
   - after a driver accepts, if it's **≥ 30 min** before the first pickup.
-  - The new full fare is recalculated without the leaver's stops. Remaining shares =
-    new full fare ÷ remaining riders (they usually go up).
+  - Remove the leaver’s stops and apply §4.5 to the new fare using all credits already held.
   - If a free leave raises any remaining rider's share above their own solo fare, that
     rider can also leave free.
-- **Late leave:** after a driver accepts and **< 30 min** before the first pickup.
+- **Late leave:** while a driver is assigned and **< 30 min** before the first pickup.
   - The leaver is charged **their current share**, shown as "Outstanding balance JOD x"
     on their next booking (Jeeny's existing mechanism).
   - Jeeny holds that amount as a **credit on the ride**. The driver who completes the trip
@@ -390,7 +393,7 @@ straight-line (haversine), point-to-polyline for the route.
   Same money flow as a late leave, and the trip continues.
 - **No replacements:** a seat that empties after the ready check stays empty.
 - **Host leaves:** the ride continues, and the host label and button pass on (§3.1).
-- **Last rider leaves:** the ride is canceled and the driver is notified.
+- **Last rider leaves:** cancel before calculating a share, reverse held charges, and notify the assigned driver.
 
 ### 3.11 Chat
 **Group chat (riders only, P0):**
@@ -424,7 +427,7 @@ ride status screen. No push, no inbox.
 | Rider already in a ride in the same time window | Can't join a second one |
 | **Creating** a ride with first pickup under 60 min away, or arrive-by in the past | Not allowed, error shown |
 | Driver rejects | The offer stays with the other drivers |
-| Driver cancels after a late leave | Ride goes back to drivers. The credit stays on the ride for whoever completes it |
+| Driver cancels after a late leave | At least 15 min before pickup: redispatch with credit held. Under 15 min: cancel and reverse charges |
 | Ride canceled after a late leave | Credit paid to nobody. The leaver's outstanding balance is reversed |
 | Phone loses connection | Shows "Reconnecting", then catches up (including missed chat messages, up to 100) |
 | Opens a ride that's canceled, completed or expired (stale tab) | "This ride is no longer available" |
@@ -570,8 +573,9 @@ wait_min  = Σ legs (minutes_with_traffic − minutes_free_flow) + Σ dwell_min
 - Waiting caused by frozen pickup times after a leave is **not** billed (§3.6).
 
 ### 4.5 Split and estimates
-- `share = ceil_to_0.05((full_fare − credits) / riders)`
-- After a late leave or no-show: `new_share = min(old_share, ceil_to_0.05((new_full_fare − credits) / riders))`
+- For a nonempty ride, add the current charge (zero for a free leave) to all previously held credits.
+  `share = ceil_to_0.05(max(0, full_fare − total_credits) / remaining_riders)`.
+- After a late leave or no-show, cap this result at the previous share. With zero riders, cancel under §3.10.
 - Host estimates before anyone joins: `ceil_to_0.05(solo_fare × A[k] / k)`, with detour
   allowance A = {1: 1.00, 2: 1.05, 3: 1.12, 4: 1.20}. "From JOD x" = the k = 4 value.
 

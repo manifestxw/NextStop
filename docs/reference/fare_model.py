@@ -226,26 +226,30 @@ def check_join(ride, j, now, **kw):
     return (True, 'ok', p, share)
 
 # ---------- Leaving after the freeze (SPEC §3.6, §3.10, §4.5) ----------
-def leave(p, leaver_idx, n_riders, locked_share, now, **kw):
-    """A rider leaves after pickup times froze (ready check) and a driver accepted.
+def leave(p, leaver_idx, n_riders, locked_share, now, *, existing_credits=0.0,
+          driver_assigned=True, **kw):
+    """A rider leaves the current active plan after pickup times froze.
     - Pickup times shown to the other riders don't change: they stay p['pick'][i].
     - The fare is recomputed for the remaining stops in the same order, driving continuously
       from the same first pickup p['T0']. If the driver reaches a frozen pickup early, they
       wait; that wait is NOT billed (SPEC §3.6, §4.4).
     - Late leave: the leaver's current share becomes a credit held on the ride
       (paid to the completing driver at COMPLETED, reversed if the ride is CANCELED).
-    Returns (new_fare, new_share, credit, late, frozen_pickups)."""
+    existing_credits is the amount in JD held before this leave.
+    Returns (new_fare, new_share, incremental_charge, late, frozen_pickups).
+    With no riders left, the caller cancels the ride and reverses previous charges."""
+    if n_riders == 1:
+        return 0.0, 0.0, 0.0, False, {}
     remaining = [s for s in p['stops'] if s[1] != leaver_idx]
     ev = evaluate(remaining, p['T0'], **kw)
     frozen = {i: t for i, t in p['pick'].items() if i != leaver_idx}
     n = n_riders - 1
-    late = (p['T0'] - now).total_seconds()/60 < LATE_LEAVE_MIN
+    late = driver_assigned and (p['T0'] - now).total_seconds()/60 < LATE_LEAVE_MIN
+    credit = locked_share if late else 0.0
+    cash_due = max(0.0, ev['fare'] - existing_credits - credit)
+    share = up05(cash_due / n)
     if late:
-        credit = locked_share
-        share = min(locked_share, up05((ev['fare'] - credit) / n))
-    else:
-        credit = 0.0
-        share = up05(ev['fare'] / n)
+        share = min(locked_share, share)
     return ev['fare'], share, credit, late, frozen
 
 def fmt(t): return t.strftime('%H:%M')
