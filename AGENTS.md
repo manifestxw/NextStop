@@ -13,12 +13,13 @@ Rules for every coding agent (Claude Code, Codex). `CLAUDE.md` is a symlink to t
 ## 2. Source of truth
 | Question | File |
 |---|---|
-| What the product does | `docs/SPEC.md` (v5). Wins over every other file |
+| Product behavior and formulas | `docs/SPEC.md` (v5). Architecture and design conform to it |
 | How it's built | `docs/ARCHITECTURE.md` |
 | How it looks | `docs/DESIGN.md` (its numbers are placeholders; SPEC wins) |
-| Fare and matching math | `docs/reference/fare_model.py`: port it, never import or run it in the app |
+| Fixed-table golden outputs | `docs/reference/fare_model.py`: port it, never import or run it in the app |
 - `docs/planning/` is history, not instructions. Ignore it.
-- If two docs disagree: stop, write the conflict in `STATUS.md` under "Blocked", ask the owner.
+- This file governs workflow. Resolve discrepancies using the responsible source above.
+  Ask the owner when the source leaves a decision open or a locked decision needs changing.
 
 ## 3. Decisions
 - **Ask first** (pros/cons, then wait): anything in Locked Decisions, a new dependency,
@@ -62,14 +63,14 @@ Rules for every coding agent (Claude Code, Codex). `CLAUDE.md` is a symlink to t
 10. English UI, left-to-right. Chat bubbles use `dir="auto"`.
 
 ## 8. Skills (installed in `.agents/skills/`; Claude Code reads them via `.claude/skills/`)
-Precedence: this file and the Locked Decisions > SPEC > skills.
+Skills follow the project rules in §2. Locked decisions require owner approval to change.
 
 | Skill | Use for | Don't use for |
 |---|---|---|
 | Ponytail | Always on, level `full`: smallest change that fully solves the task. `ultra` when planning a milestone | Overriding §7 rules or SPEC requirements |
 | test-driven-development (Superpowers) | engine, domain, views, realtime, clock, lock, chat masking: failing test first. Beats Ponytail's "one small test" here. It deletes code written before its test; that's intended | UI, layout, copy |
 | Impeccable | M2: applying `docs/DESIGN.md` to screens, UI polish and audits | **Never** rewrite `docs/DESIGN.md` (no `/impeccable document`). No logic work |
-| Grill-me | When the owner asks, or before a big design choice | Mid-task coding |
+| Grill-me (project-maintained) | When the owner requests an interview about a plan or design choice | Mid-task coding |
 
 Untangle-codebase is not installed and not used on build day.
 Ponytail's closing "what I skipped / risks" line goes into the handoff message (§10).

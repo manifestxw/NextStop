@@ -43,9 +43,7 @@ Driver header gradient: `linear-gradient(135deg, #8A3FC8, #4A1E78)`.
 | Token | Hex | Use |
 |---|---|---|
 | `--purple-600` | ≈ #6B2D8F | Destination color (drop-off pins, "Dropoff" label) in both apps |
-| `--purple-700` | ≈ #5B2D90 | "Drive with Jeeny" link, promo banners |
-| `--teal-500` | ≈ #12A5B5 | MAX badge |
-| `--teal-600` | ≈ #0B8A9C | MAX promo strip (gradient to ≈ #0E9AAE) |
+| `--purple-700` | ≈ #5B2D90 | "Drive with Jeeny" link |
 
 **Location color rule:** pickup = pink-500, destination = purple-600, in both apps.
 
@@ -208,7 +206,6 @@ Shadows are always soft and light.
 ### Badges and status
 - Count / "New": pill, accent-soft background, accent text 13/500, padding 2px 8px.
   Also used for unread chat counts.
-- MAX badge: teal-500 background, white text and logo, radius 8px.
 - Online: 8px success dot + "You're Online" 22/600 + chevron.
 - "Active" banner: success-50 background, success dot + text 17/500, centered.
 
@@ -297,9 +294,8 @@ Shadows are always soft and light.
 - Shown on the next booking after a late leave or no-show. The amount is the rider's share
   at the time they left.
 
-### Payment / promo row
-- Two halves split by a 1px vertical gray-200 divider, ~60px tall.
-- Left: cash-green icon + "Cash" 17/400 + chevron. Right: ticket icon + "Add promo" + chevron.
+### Payment row
+- Show the cash-green icon and "Cash" in 17/400 text in a single ~60px row.
 - Directly above the primary button.
 
 ### Status sheet (after booking)
@@ -329,10 +325,6 @@ Shadows are always soft and light.
 4. **Booking Details card:** label 15/400 gray-500, rows of 40px icon + 18/400 label
    ("Shared", "Cash").
 5. **Leave card:** red circled no-car icon + "Leave ride" 18/500 danger. Last card.
-
-### Promo strip (optional, skip unless time allows)
-- Teal strip above the booking sheet, top radius 24px, ~56px tall, white MAX pill +
-  white text + close ×. The white sheet overlaps it with its own 24px radius.
 
 ## 7. Feature Components (new, designed in Jeeny's style)
 
@@ -400,8 +392,8 @@ Shadows are always soft and light.
   "Ready ✓" in success 15/500, "Waiting…" in gray-500, "Left" in danger.
 - Buttons stacked: primary "I'm ready", then secondary "Cancel ride for me".
   Footnote 13/400 gray-500 under them: "Leaving now is free."
-- After answering, buttons are replaced by "You're ready. Waiting for others…" 15/500
-  success, centered. The sheet closes automatically when the ride goes to drivers.
+- After Ready, replace the primary button with "You’re ready. Waiting for others…" in
+  15/500 success text. Keep "Cancel ride for me" available until dispatch closes the sheet.
 
 ### Leave sheet
 - **Late leave** (after a driver accepts and < 30 min before pickup): title H2
@@ -410,7 +402,7 @@ Shadows are always soft and light.
   "You'll pay your share" 15/400 gray-700 left, "JOD 2.30" 20/700 danger right. Under it
   13/400 gray-500: "Added as an outstanding balance on your next ride." Buttons stacked:
   primary "Keep my seat", then secondary danger "Leave anyway".
-- **Free leave** (before a driver accepts, or ≥ 30 min before pickup): title
+- **Free leave** (while no driver is assigned, including redispatch, or ≥ 30 min before pickup): title
   "Leave this ride?", body "Leaving now is free. Others' shares will update.", buttons
   primary "Keep my seat" and secondary danger "Leave ride". No amount box.
 
@@ -485,7 +477,7 @@ Shadows are always soft and light.
 - DO use pink for pickup and purple for destination everywhere.
 - DO show area names only (never exact addresses) to other riders.
 - DON'T show other riders' pins or the route line on a rider's map.
-- DON'T use gradients except promo banners, the MAX header and driver headers.
+- Use gradients only on driver headers.
 - DON'T use pill-shaped primary buttons (they're 14px radius).
 - DON'T use dark or heavy shadows.
 - DON'T use purple as an action color on rider screens, or pink on driver screens.
