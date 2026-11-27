@@ -2,13 +2,18 @@
 
 > Final feature definition. Wins over the pitch deck and brief on any conflict.
 > **Rules and formulas in this file are canonical.** Distances, travel times and routes
-> come from Google Maps (§4.2). Demo numbers in §2.2 and §2.3 are placeholders from the
-> fixed table until regenerated from the saved demo snapshot (§4.2.2).
+> come from Google Maps (§4.2). Demo numbers in §1, §2.2 and §2.3 come from the saved demo
+> snapshot (§4.2.2, generated 27 Nov 2026) and are asserted by `server/test/demo-script.test.ts`.
 > **Golden values (§4.7) are whatever `docs/reference/fare_model.py` prints.** If this file
 > and the model disagree on a number, the model wins and this file gets fixed.
 > `[verify]` = assumption a teammate must check before the pitch. It does not block building.
 
 ## 0. What changed
+
+**v8.1 (real data, 27 Nov):** seed places are Google Places; demo numbers regenerated from the
+snapshot (Aydoun → JUST is 14 km, ~18 min). With real roads only 4 riders fit if two share a
+pickup, so the simulated riders are now Rania at Arabella Mall and Dana at University Street
+(with Sara). Shares: 5.35 solo → 1.70 with 4 riders.
 
 **v8 (Uni plans):**
 - **Uni plans** (§3.19, P1): a **weekly** plan (3–5 rides that week) and a **semester**
@@ -67,9 +72,9 @@ same-gender with one toggle. Runs on Jeeny's drivers.
 **Problem:** Daily commuters choose between unreliable, overcrowded buses and solo rides
 they can't afford every day. First example: Irbid students commuting to JUST (27,114
 students, 2019; JUST is ~20 km east of Irbid). Bus ≈ JOD 0.60 `[verify]`. Solo Jeeny ride
-≈ JOD 7.85 at morning peak. RideSync works anywhere Jeeny operates.
+≈ JOD 5.35 at morning peak (smart-app tariff on Google's road data). RideSync works anywhere Jeeny operates.
 
-**Positioning (important):** JOD 2.30 is about 4× the bus. Don't pitch "as cheap as the
+**Positioning (important):** JOD 1.70 is about 3× the bus. Don't pitch "as cheap as the
 bus". Pitch **door-to-door, planned to arrive 5 min before your arrive-by, same gender if
 you want it, about 70% less than riding solo**. LTRC is piloting new public bus routes linking Irbid,
 Zarqa and Jerash (July 2026). RideSync complements better buses. It doesn't depend on
@@ -78,9 +83,9 @@ buses staying bad.
 **Value (computed in §4.7, recheck after the snapshot):**
 | For | Number |
 |---|---|
-| Riders | JOD 7.85 solo → JOD 2.30 shared (−71%) |
-| Drivers | +JOD 0.97 net per trip (+16%). Same per hour including the empty return (~JOD 4.0/h net) |
-| Jeeny | ~JOD 1.81 commission per shared trip from riders who pay Jeeny JOD 0 today (bus users) `[verify 20% commission]` |
+| Riders | JOD 5.35 solo → JOD 1.70 shared (−68%) |
+| Drivers | +JOD 1.11 net per trip (JOD 5.37 vs 4.26, +26%) for a 35-min trip instead of 29 `[recheck per hour]` |
+| Jeeny | ~JOD 1.34 commission per shared trip from riders who pay Jeeny JOD 0 today (bus users) `[verify 20% commission]` |
 
 **RideSync and Jeeny:** RideSync is its own app and brand. Each synced ride is **one normal
 Jeeny booking on one licensed vehicle with one fare**, dispatched to Jeeny's drivers.
@@ -121,9 +126,9 @@ road distances and traffic, the smart-app tariff, and a calibration to Jeeny's o
 - *What if someone cancels at the last minute?* In the last 30 min they pay their own share,
   so the others aren't punished. Their shares usually go down.
 - *What if the ride doesn't fill?* It goes with whoever joined. Each pays a bigger share.
-  Before booking, the host already sees "If nobody joins: JOD 7.85".
-- *Doesn't this cannibalize solo rides?* The worst case is 4 solo riders worth JOD 5.70 in
-  commission becoming one JOD 1.81 trip. We target the bus segment (scheduled, ≥ 60 min
+  Before booking, the host already sees "If nobody joins: JOD 5.35".
+- *Doesn't this cannibalize solo rides?* The worst case is 4 solo riders worth JOD 4.57 in
+  commission becoming one JOD 1.34 trip. We target the bus segment (scheduled, ≥ 60 min
   ahead, commute routes), where today's revenue is zero.
 - *Why would drivers take it?* More per trip, a guaranteed scheduled booking at peak, and
   the same per hour.
@@ -149,50 +154,52 @@ Numbers are placeholders until regenerated from the snapshot (§4.2.2). With the
 paused, steps 1–4 all happen at demo time 6:10. Only step 5 needs a clock jump.
 1. **Lina creates a ride.** Irbid City Center → JUST, arrive by 8:00 AM, places picked
    from quick-pick chips. "Same gender only" stays on. She picks **Economy** ("from
-   JOD 2.35"), taps **Find rides**, sees no matching rides, and taps **Start your own sync**.
-   She sees "If nobody joins: JOD 7.85", "Be ready by 7:15 AM" and "Sync zone · 1.5 km",
+   JOD 1.60"), taps **Find rides**, sees no matching rides, and taps **Start your own sync**.
+   She sees "If nobody joins: JOD 5.35", "Be ready by 7:36 AM" and "Sync zone · 1.5 km",
    and confirms. Status: 1 of 4 seats. The group chat opens.
 2. **Sara joins.** She enters University Street → JUST, arrive by 8:00, keeps Economy and
-   "Same gender only", and taps **Find rides**. Lina's ride appears (badge "Women only") ("City Center area → JUST", "JOD 4.00 each if you join"). She taps
-   Join and is in instantly. Both phones update live: 2 of 4 seats, JOD 4.00 each. Chat shows
+   "Same gender only", and taps **Find rides**. Lina's ride appears (badge "Women only") ("City Center area → JUST", "JOD 3.10 each if you join", pickup ~7:26). She taps
+   Join and is in instantly. Both phones update live: 2 of 4 seats, JOD 3.10 each. Chat shows
    "Sara joined" and Sara types "Hi! I'm near University Street".
 3. **The ride fills and Lina finds a driver.** Tap "simulate rider" twice (Rania, then Dana).
-   They join and each posts a chat line. 4 of 4, JOD 2.30 each. Lina taps **Find driver**.
+   Rania (Arabella) then Dana (University Street, with Sara) join and each posts a chat line. 4 of 4, JOD 1.70 each. Lina taps **Find driver**.
    A ready check appears on every phone. The simulated riders answer Ready within a few
    seconds. Lina and Sara each tap **I’m ready**, then the ride goes to drivers.
-4. **Omar accepts.** Phone C shows the offer: JOD 9.03, 4 riders, cash, collect JOD 9.20,
-   21.4 km · ~54 min, first pickup 7:02 AM, respond by 6:47 AM, every stop with its pickup
+4. **Omar accepts.** Phone C shows the offer: JOD 6.71, 4 riders, cash, collect JOD 6.80,
+   17.2 km · ~35 min, first pickup 7:20 AM (Sara, then Dana, Rania, Lina), respond by 7:05 AM, every stop with its pickup
    time. He accepts. Phones A and B show "Omar · White Hyundai Elantra · 12-34567".
-5. **Late cancellation.** Jump the clock to 6:35 (27 min before the first pickup). Sara taps
-   Leave ride and sees "You'll pay your share: JOD 2.30". She confirms; it shows as
-   "Outstanding balance JOD 2.30" on her next booking. Lina's share **drops** to JOD 2.20.
+5. **Late cancellation.** Jump the clock to 6:53 (27 min before the first pickup). Sara taps
+   Leave ride and sees "You'll pay your share: JOD 1.70". She confirms; it shows as
+   "Outstanding balance JOD 1.70" on her next booking. Lina's share **drops** to JOD 1.65.
    Pickup times don't change. Omar's stop list drops Sara's stops, with the banner
-   "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
+   "Sara canceled. Collect JOD 4.95 cash · JOD 1.70 credit at trip end".
 6. **Trip summary.** The operator taps **Complete trip**. Every phone shows the summary:
-   3 riders × JOD 2.20 cash. Omar: JOD 6.60 cash + JOD 2.30 credit = JOD 8.90.
+   3 riders × JOD 1.65 cash. Omar: JOD 4.95 cash + JOD 1.70 credit = JOD 6.65.
 
 ### 2.3 Canonical demo numbers
-Placeholders from the fixed table. **Regenerate from the snapshot (§4.2.2) and replace.**
-Times are demo-clock times; with the clock paused, rows 1–7 can all run at 6:10.
+From the snapshot (§4.2.2) with the Google seed places, exactly what `demo-script.test.ts`
+asserts. Times are demo-clock times; with the clock paused, rows 1–7 all run at 6:10.
 All destinations are JUST.
 
 | Moment | Riders | Full fare | Each pays | Pickups (ready by) |
 |---|---|---|---|---|
-| Lina creates | Lina | 7.81 | 7.85 | Lina 7:15 |
-| Sara joins | +Sara | 7.95 | 4.00 | Lina 7:12, Sara 7:21 |
-| Sim Rania joins | +Rania | 8.67 | 2.90 | Lina 7:05, Rania 7:13, Sara 7:20 |
-| Sim Dana joins | +Dana | 9.03 | 2.30 | Lina 7:02, Rania 7:10, Sara 7:17, Dana 7:22 |
-| Lina taps Find driver | 4 | 9.03 | 2.30 | **Pickup times freeze** |
-| Ready check done → dispatched | 4 | 9.03 | 2.30 | same. Respond-by 6:47 |
-| Omar accepts (fare locks) | 4 | 9.03 | 2.30 | same. Collect 9.20 |
-| 6:35 Sara leaves late (charged 2.30, held as credit) | 3 | 8.86 | 2.20 | Lina 7:02, Rania 7:10, Dana 7:22 (unchanged) |
-| Complete trip | 3 | 8.86 | 2.20 | Omar: 6.60 cash + 2.30 credit = 8.90 (remainder 0.04) |
+| Lina creates | Lina | 5.32 | 5.35 | Lina 7:36 |
+| Sara joins | +Sara | 6.18 | 3.10 | Sara 7:26, Lina 7:34 |
+| Sim Rania joins | +Rania | 6.59 | 2.20 | Sara 7:22, Rania 7:29, Lina 7:33 |
+| Sim Dana joins | +Dana | 6.71 | 1.70 | Sara 7:20, Dana 7:21, Rania 7:29, Lina 7:33 |
+| Lina taps Find driver | 4 | 6.71 | 1.70 | **Pickup times freeze** |
+| Ready check done → dispatched | 4 | 6.71 | 1.70 | same. Respond-by 7:05 |
+| Omar accepts (fare locks) | 4 | 6.71 | 1.70 | same. Collect 6.80. 17.2 km · ~35 min |
+| 6:53 Sara leaves late (charged 1.70, held as credit) | 3 | 6.59 | 1.65 | Dana 7:21, Rania 7:29, Lina 7:33 (unchanged) |
+| Complete trip | 3 | 6.59 | 1.65 | Omar: 4.95 cash + 1.70 credit = 6.65 (remainder 0.06) |
 
-- All drop-offs at JUST between 7:53 and 7:55 AM.
-- Host estimate table at creation: 1 rider 7.85 · 2 riders 4.15 · 3 riders 2.95 · 4 riders 2.35 (est.).
+- Drop-offs at JUST 7:52–7:54 AM (Lina arrives 7:52).
+- Host estimates at creation: 1 rider 5.35 · 2 riders 2.80 · 3 riders 2.00 · 4 riders 1.60 ("from JOD 1.60").
+- Lina's summary: paid 1.65, saved 3.70 vs solo. Solo fares: Lina 5.35 · Sara 6.00 · Rania 5.50 · Dana 6.00.
 - Driver: **Omar**, White Hyundai Elantra, plate 12-34567.
-- After regenerating, check every join still passes all §3.5 rules, especially rule 11
-  (new first pickup ≥ now + 45 min). With the clock at 6:10 that needs first pickup ≥ 6:55.
+- Every join passes all §3.5 rules, incl. rule 11: first pickup 7:20 ≥ 6:10 + 45 min.
+- Auto ready check would start at 6:35 (first pickup − 45); in the script Lina starts it at 6:10.
+- After regenerating the snapshot, rerun the test, then update this section, §1 and §2.2 from it.
 
 ### 2.4 Real vs mocked
 | Real (built) | Mocked |
@@ -230,17 +237,18 @@ All destinations are JUST.
   without moving the clock).
 
 ### 2.6 Seed data
-Seed places are real Google Places. Store each one's Google `place_id`, name, exact
-coordinates and area name. The approximate coordinates below are only for the fixed table.
+Seed places are Google Places (resolved 27 Nov; owner chose Google's places over our
+estimates). `data/seed.json` stores each `place_id`, name, Google coordinates and area name.
+The fixed-table approximations stay only for the §4.7 golden tests.
 
-| Key | Place | Area name (shown to others) | Approx. Lat, Lng (fixed table only) |
-|---|---|---|---|
-| CC | Irbid City Center | City Center area | 32.5568, 35.8469 |
-| HS | Al-Hashmi Street | Al-Hashmi area | 32.5520, 35.8640 |
-| US | University Street | University Street area | 32.5440, 35.8570 |
-| YU | Yarmouk University | Yarmouk area | 32.5366, 35.8556 |
-| AM | Arabella Mall | Arabella area | 32.5290, 35.8660 |
-| JUST | Jordan University of Science and Technology | JUST | 32.4789, 35.9850 |
+| Key | Place | Area name (shown to others) | Google Lat, Lng (seed.json) | Fixed table only |
+|---|---|---|---|---|
+| CC | Irbid City Center (mall, Aydoun) | City Center area | 32.53575, 35.86534 | 32.5568, 35.8469 |
+| HS | Al-Hashmi Street | Al-Hashmi area | 32.55759, 35.86503 | 32.5520, 35.8640 |
+| US | University Street | University Street area | 32.53770, 35.85201 | 32.5440, 35.8570 |
+| YU | Yarmouk University | Yarmouk area | 32.53518, 35.85669 | 32.5366, 35.8556 |
+| AM | Arabella Mall | Arabella area | 32.53841, 35.86214 | 32.5290, 35.8660 |
+| JUST | Jordan University of Science and Technology | JUST | 32.49500, 35.99117 | 32.4789, 35.9850 |
 
 | QAIA (P1) | Queen Alia International Airport | Queen Alia Airport | 31.7225, 35.9932 |
 
@@ -252,9 +260,9 @@ Google source.
 |---|---|---|---|---|
 | Lina (host) | F | CC | 8:00 AM | — |
 | Sara | F | US | 8:00 AM | — (typed live) |
-| Rania (sim) | F | HS | 8:05 AM | "Hi everyone 👋" |
-| Dana (sim) | F | YU | 8:00 AM | "I'll be at the main gate" |
-| Noor (sim, spare) | F | AM | 8:00 AM | "Hello!" |
+| Rania (sim) | F | AM | 8:05 AM | "Hi everyone 👋" |
+| Dana (sim) | F | US (same pickup as Sara) | 8:00 AM | "I'll be at the main gate" |
+| Noor (sim, spare) | F | YU | 8:00 AM | "Hello!" |
 | Male seed riders (for gender filtering) | M | any | any | — |
 
 All seed riders book Economy with "Same gender only" on.
@@ -278,8 +286,9 @@ Irbid City Center.
 **Seeded demo logins** (P0): `/?as=lina`, `/?as=sara`, `/?as=omar`, each with the demo PIN.
 Opening the link logs that phone in as that account, so nobody signs up on stage.
 
-All seed pickups are within the Economy sync zone for CC → JUST (1.5 km, §3.16) of the route (fixed table check: HS 0.8 km,
-US 0.3 km, YU 1.0 km, AM 0.9 km) `[verify with snapshot route]`.
+Distance to the real CC → JUST road (snapshot polyline; Economy zone 1.5 km, §3.16): AM 0.40 ·
+YU 0.81 · US 1.27 km pass; **HS 2.31 km is outside**, so Al-Hashmi can't join this ride (it's a
+male-rider/other-ride seed only). Fixed table (golden tests only): HS 0.8 · US 0.3 · YU 1.0 · AM 0.9 km.
 Simulated riders are taken in this order and must pass every matching rule. If one fails,
 the next valid seed rider is used. "Simulate rider" never fails silently.
 
@@ -332,7 +341,7 @@ the next valid seed rider is used. "Simulate rider" never fails silently.
 - At the bottom of the list, and as its empty state: **Start your own sync**. Only this
   opens host setup.
 - Host setup shows: estimated price per person for 1 rider up to the category's max,
-  "If nobody joins: JOD 7.85", "Be ready by 7:15 AM", the ride's sync zone
+  "If nobody joins: JOD 5.35", "Be ready by 7:36 AM", the ride's sync zone
   ("Sync zone · 1.5 km"), and the toggle (editable).
 - **Creating** a ride requires the first pickup to be 60 min to 24 h from now. Otherwise:
   "Too soon to sync. Book a solo ride instead." (Joining uses rule 11's 45 min.)
@@ -386,7 +395,7 @@ A ride appears only if **ALL** are true:
 
 The card shows: host first name, gender badge ("Women only", "Men only" or "Mixed"),
 mini seat row, seats left, **pickup area and destination area only**, effective arrive-by, "JOD x each if you join" (the real recomputed share) and
-"Pickup ~7:21 AM".
+"Pickup ~7:26 AM".
 
 All matching runs **on the server**, never on the phones. Distances for rules 5 and 6 are
 straight-line (haversine), point-to-polyline for the route.
@@ -447,10 +456,10 @@ straight-line (haversine), point-to-polyline for the route.
   km · min, and respond-by.
 - After accepting, the driver sees every stop on the map with the route line (§3.14).
 - The stop list shows each rider's share. At each stop the driver taps "Picked up Lina" or
-  "Dropped off Lina · collected JOD 2.20" (P1; the demo uses "Complete trip").
+  "Dropped off Lina · collected JOD 1.65" (P1; the demo uses "Complete trip").
 - When a rider leaves after accept, the driver's stop list, route and cash total update
-  live with a banner: "Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
-- A rider with a +1 is one stop with two shares ("Lina +1 · JOD 4.60", collected as 2 × 2.30).
+  live with a banner: "Sara canceled. Collect JOD 4.95 cash · JOD 1.70 credit at trip end".
+- A rider with a +1 is one stop with two shares ("Lina +1 · JOD 3.40", collected as 2 × 1.70).
 - Only the driver and the rider themselves see exact pickup addresses.
 - Driver cancels after accepting: back to `DISPATCHED` if ≥ 15 min before first pickup,
   otherwise canceled with no rider fees and the "Book a solo ride" button. Any credit stays
@@ -548,11 +557,11 @@ ride status screen. No push, no inbox.
 
 ### 3.15 Trip summary (P0)
 Shown on every phone when the ride completes. Chat becomes read-only.
-- **Rider:** "To JUST · arrived 7:54 AM", "You paid JOD 2.20 cash", "3 riders shared this
-  ride", "You saved JOD 5.65 vs riding solo", and "Outstanding balance JOD x" if any.
-- **Leaver (late):** "You left this ride · JOD 2.30 added to your next ride".
-- **Driver:** riders and the cash each paid, credit from RideSync, total ("JOD 6.60 cash +
-  JOD 2.30 credit = JOD 8.90").
+- **Rider:** "To JUST · arrived 7:52 AM", "You paid JOD 1.65 cash", "3 riders synced this
+  ride", "You saved JOD 3.70 vs riding solo", and "Outstanding balance JOD x" if any.
+- **Leaver (late):** "You left this ride · JOD 1.70 added to your next ride".
+- **Driver:** riders and the cash each paid, credit from RideSync, total ("JOD 4.95 cash +
+  JOD 1.70 credit = JOD 6.65").
 
 ### 3.16 Categories and sync zones
 A **sync zone** is how far from the host's trip a joiner may be picked up (rule 5) and
@@ -670,7 +679,7 @@ marketed to students. The discount applies only to uni rides, never to other tri
   1. Join the OPEN ride with the most riders that passes every §3.5 rule.
   2. Otherwise host a new ride (§3.4 rules except the 60-min/24-h window, which is always met here).
   Later planned rides in the same bucket can join the rides just made. Result: one notice
-  per rider, "Tomorrow · Be ready by 7:02 AM · 3 of 4 synced". Placed rides are normal
+  per rider, "Tomorrow · Be ready by 7:20 AM · 3 of 4 synced". Placed rides are normal
   OPEN rides: anyone can still join until the ready check.
 - **If a planned ride can't be placed** (rule 12 or no valid plan): "We couldn't plan
   Tuesday's ride" and it returns as a replacement (doesn't use the limit).
@@ -686,10 +695,10 @@ marketed to students. The discount applies only to uni rides, never to other tri
   pays the difference to the driver at `COMPLETED`, with the other credits. If the ride is
   canceled, nothing is paid. Rule 10 and all money rules use the undiscounted share.
   A late leave charges the subscriber their discounted share.
-- Cards and summaries show it: "JOD 1.85 · −20% Uni plan" (share 2.30), and the driver's
-  summary lists "Uni plan credit from RideSync · JOD 0.45".
-- **Business check:** at a 2.30 share the discount is 0.45 per ride, so 4 rides a week cost
-  RideSync ~1.80, covered by the weekly fee. Recheck after the snapshot and the commission answer.
+- Cards and summaries show it: "JOD 1.40 · −20% Uni plan" (share 1.70), and the driver's
+  summary lists "Uni plan credit from RideSync · JOD 0.30".
+- **Business check:** at the demo's 1.70 share the discount is 0.30 per ride, so 4 rides a week cost
+  RideSync ~1.20, covered by the JOD 2.00 weekly fee. Recheck after the commission answer.
 
 ## 4. Fare, Time & Supply Model
 `docs/reference/fare_model.py` (§4.9) produced the numbers in this file. Any
@@ -909,8 +918,8 @@ YU 1.0 · AM 0.9 km. All pass.
 3. Bus fare and typical bus time Irbid → JUST.
 4. Waiting rate, night tariff hours and minimum fare.
 5. Jeeny's commission rate. Ask at the briefing or say "usual commission".
-6. Seed places resolve to the right Google place (especially Al-Hashmi Street and Arabella
-   Mall), and all seed pickups are within 1.5 km of the real CC → JUST route.
+6. ~~Seed places resolve to the right Google place~~ Done 27 Nov: owner chose Google's places.
+   Still worth a look on a map: CC resolved to the Irbid City Center mall in Aydoun.
 7. A rough count of Irbid-based JUST commuters, if available. Don't invent it.
 8. Jeeny **Comfort** quote on the same route (sets COMFORT), and any airport fee or
    surcharge for Queen Alia trips.
@@ -959,8 +968,8 @@ YU 1.0 · AM 0.9 km. All pass.
   in one ride; changing a ride's gender mode after creation
 
 ## 6. DESIGN.md
-DESIGN.md is RideSync's own design language ("Converge"), up to date with v8. Its example
-numbers are placeholders. After the snapshot, update them from §2.3: the Economy tile "from" price, seat row share, matching card share and
+DESIGN.md is RideSync's own design language ("Converge"), up to date with v8.1. Its example
+numbers match the §2.3 snapshot values (27 Nov). After a new snapshot, update them from §2.3: the Economy tile "from" price, seat row share, matching card share and
 pickup time, trip offer (fare, collect, km · min, first pickup, respond-by, per-stop times),
 late-cancel amount, driver totals and the trip summary amounts.
 

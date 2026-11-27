@@ -464,8 +464,14 @@ interface TimedMatrix { km(i: number, j: number): number; legMin(i: number, j: n
 - Fixed: `legMin` evaluates the traffic curve at `t`, using `ammanParts(t)` (exact port).
 - Snapshot/Google: `legMin` returns the cell for the ride's departure bucket.
 
-**Snapshot generation** (`npm run snapshot`, needs the server key): all ordered pairs of
-seed places × buckets Sun 06:00–08:30, plus the CC → JUST anchor route. Then rerun the
+**Snapshot generation** (`npm run snapshot`, needs the server key): one 6×6 route matrix per
+15-min bucket Sun 06:00–08:30 (departure mapped to the next real date with the same weekday and
+time), plus the road polyline of every ordered seed pair (41 calls). `data/demo_snapshot.json`
+stores `places`, `buckets["07:15"]["CC>JUST"] = {km, minTraffic, minFree}` and `routes["CC>JUST"]`.
+Cells: km rounded to 0.1 like the model; `minFree = min(static, traffic)` so a delay is never negative.
+Points are matched to seed places within 50 m; others fall back to the fixed table per cell.
+`server/test/demo-script.test.ts` replays SPEC §2.2 on this file (the stage numbers); the fixed-table
+tests use `test/fixtures/places.ts` so golden values never depend on Google data. Then rerun the
 model with the snapshot data and update SPEC §2.2/§2.3/§1 and DESIGN.md's example numbers.
 Commit the JSON.
 

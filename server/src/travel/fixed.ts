@@ -39,7 +39,8 @@ export function factors(t: Us, { level = 'normal', weather = 'clear' }: Conditio
 }
 
 const same = (a: LatLng, b: LatLng) => a.lat === b.lat && a.lng === b.lng;
-const isJust = (p: LatLng) => hav(p, JUST) <= 1.0;   // ARCH §5: "is JUST" = within 1 km of JUST
+// ARCH §5 "is JUST" = near the campus. 2.5 km covers both the table point and Google's campus point.
+const isJust = (p: LatLng) => hav(p, JUST) <= 2.5;
 
 /** [urban km, highway km], each rounded to 0.1 like the model. */
 export function legKm(a: LatLng, b: LatLng): [number, number] {

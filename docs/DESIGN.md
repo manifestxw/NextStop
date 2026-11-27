@@ -104,20 +104,20 @@ Pickup = **ring** (hollow circle, 3px stroke, `--text-1`). Destination = **fille
 - Stacks: `"Bricolage Grotesque", "Noto Sans Arabic", system-ui, sans-serif` and
   `"Inter", "Noto Sans Arabic", system-ui, sans-serif`.
 - All numbers use `font-variant-numeric: tabular-nums` so times and prices don't jitter.
-- Money is always `JOD 2.30`: in big numbers, "JOD" is set in the Eyebrow style before
-  the number. Times are always `7:02 AM` (12-hour, no leading zero).
+- Money is always `JOD 1.70`: in big numbers, "JOD" is set in the Eyebrow style before
+  the number. Times are always `7:33 AM` (12-hour, no leading zero).
 
 | Style | Font · Size / Line · Weight | Example |
 |---|---|---|
-| Hero number | Display 52/52 800, letter-spacing −0.02em | "7:02" on the Sync Pass, "JOD 2.30" on the summary, countdown "4:32" |
-| Big number | Display 32/36 800 | Trip offer fare "JOD 9.03", share on a matching card |
+| Hero number | Display 52/52 800, letter-spacing −0.02em | "7:33" on the Sync Pass, "JOD 1.65" on the summary, countdown "4:32" |
+| Big number | Display 32/36 800 | Trip offer fare "JOD 6.71", share on a matching card |
 | H1 | Display 26/30 700 | "Rides going your way", "You're online" |
 | H2 (sheet title) | Display 21/26 700 | "Ready to ride?" |
 | Eyebrow | UI 12/16 600, uppercase, letter-spacing 0.08em | "CITY CENTER → JUST", "BE READY BY", "ECONOMY" |
 | Body L | UI 17/24 400 | Addresses, list labels, chat messages (16) |
 | Body | UI 15/22 400 | Descriptions, helper text |
 | Caption | UI 13/18 500 | Times under chat, small meta |
-| Button | UI 17/24 600 | "Join · JOD 4.00" |
+| Button | UI 17/24 600 | "Join · JOD 3.10" |
 | Link | UI 16/24 600, `--accent-text`, underline offset 3px | "Edit", "Change" |
 
 ## 4. Space, Shape, Depth
@@ -153,11 +153,11 @@ A boarding-pass card. It is the rider's main status surface.
 - **Top half:**
   - Eyebrow row: "CITY CENTER → JUST" left, category badge right ("ECONOMY", accent-soft
     background, ink text, pill).
-  - "BE READY BY" Eyebrow, then **"7:02"** Hero number with "AM" in Body L 600 beside it.
+  - "BE READY BY" Eyebrow, then **"7:33"** Hero number with "AM" in Body L 600 beside it.
   - "Pickup 1 of 3 · Arrive by 8:00 AM" Body `--text-2`.
 - **Perforation:** a dashed 1px `--line` rule with a 20px semicircle notch cut into each
   edge (`mask` with two radial gradients). The notches show the screen background.
-- **Bottom half:** the Seat meter (below), then on one line "JOD 2.30 each" (number in
+- **Bottom half:** the Seat meter (below), then on one line "JOD 1.70 each" (number in
   Big number style) and the gender badge ("Women only" / "Men only" / "Mixed").
 - The Pass sits at the top of the status sheet. While the ride is OPEN, the time and
   share roll (split-flap) when they change.
@@ -188,7 +188,7 @@ A boarding-pass card. It is the rider's main status surface.
 ### Category tiles
 - Three equal tiles in one row, 8px gaps, radius 16px, height ~128px, padding 14px.
 - Each tile: category glyph (24px Lucide: `car` Economy, `armchair` Comfort, `plane`
-  Airport), name Display 17/700, "from JOD 2.35" Body 15/600, "up to 4" Caption `--text-2`.
+  Airport), name Display 17/700, "from JOD 1.60" Body 15/600, "up to 4" Caption `--text-2`.
 - Unselected: white, 1px `--line` border, and a 4px top edge in that category's accent
   (the only place all three accents show at once).
 - Selected: that category's accent fill, ink text, no border. Selecting a tile re-tints
@@ -224,7 +224,7 @@ A boarding-pass card. It is the rider's main status surface.
   a physical key.
 - Pressed: `--accent-strong`, `translateY(2px)`, keel `0 1px 0`. 90ms.
 - Disabled: `--raised` background, `--text-2` text, no keel.
-- Label names the action and may carry the price: "Join · JOD 4.00", "Confirm · JOD 7.85".
+- Label names the action and may carry the price: "Join · JOD 3.10", "Confirm · JOD 5.35".
 - Pinned to the bottom of action screens, 16px above the safe area.
 
 ### Secondary button
@@ -285,7 +285,7 @@ A boarding-pass card. It is the rider's main status surface.
 - Slides down from the top, `--ink-900` background, white text Body 15/500, radius 16px,
   12px margin, padding 12px 16px, a 4px left edge in `--accent` (info), `--warn` or
   `--danger`. Auto-hides after 4s, tap to dismiss. Same dark style in both roles.
-- Examples: "Your pickup moved to 7:02 AM", "Sara left the ride".
+- Examples: "Your pickup moved to 7:33 AM", "Sara left the ride".
 
 ### Avatar
 - Circle, `--raised` fill, initials Inter 600 `--text-1`. 64px profile, 44px seat meter,
@@ -335,26 +335,26 @@ Top to bottom, in one bottom sheet over the map:
 - Row 2: mini Seat meter (28px seats).
 - Row 3: two-line route with marks, **area names only**: ring "City Center area",
   square "JUST", joined by a 2px `--line` connector.
-- Row 4: "Arrives by 8:00 AM · Pickup ~7:21 AM" Body `--text-2`.
-- Row 5: "JOD 4.00" Big number + "each if you join" Body `--text-2`.
-- Full-width primary button "Join · JOD 4.00". Tapping joins instantly.
+- Row 4: "Arrives by 8:00 AM · Pickup ~7:26 AM" Body `--text-2`.
+- Row 5: "JOD 3.10" Big number + "each if you join" Body `--text-2`.
+- Full-width primary button "Join · JOD 3.10". Tapping joins instantly.
 
 ### Host setup ("Start your own sync")
 - Bottom sheet, title H2 "Start your own sync", category badge beside it.
 - "Arrive by" row (opens the Time picker).
 - Info card:
-  - "BE READY BY" Eyebrow + "7:15 AM" Big number.
+  - "BE READY BY" Eyebrow + "7:36 AM" Big number.
   - Price ladder: one row per rider count, the count as small seats, price right-aligned:
-    "Just you · JOD 7.85", "2 riders · JOD 4.15 each", "3 riders · JOD 2.95 each",
-    "4 riders · JOD 2.35 each" (Comfort and Airport stop at 3). The 1-rider row carries
+    "Just you · JOD 5.35", "2 riders · JOD 2.80 each", "3 riders · JOD 2.00 each",
+    "4 riders · JOD 1.60 each" (Comfort and Airport stop at 3). The 1-rider row carries
     the label "If nobody joins".
 - Sync zone chip (§5).
 - Gender switch row (repeated, editable here; default from the trip screen).
-- Primary button "Confirm · JOD 7.85" (the solo price, the most a host can pay).
+- Primary button "Confirm · JOD 5.35" (the solo price, the most a host can pay).
 
 ### Outstanding balance strip
 - Full width, `--raised` band, 52px. 20px `alert-circle` in `--warn`, "Outstanding balance
-  JOD 2.30" Body L `--text-1`, chevron. Shown on the next booking after a late leave or no-show.
+  JOD 1.70" Body L `--text-1`, chevron. Shown on the next booking after a late leave or no-show.
 
 ### Payment row
 - 56px row: `banknote` icon in `--success`, "Cash" Body L. Directly above the primary button.
@@ -371,7 +371,7 @@ Top to bottom, in one bottom sheet over the map:
   4. "Driver on the way" / "Omar · White Hyundai Elantra · 12-34567" (plate in a white
      pill with a 1px `--ink-900` border, Inter 600, like a plate)
 - **Host only, while syncing:** primary button "Find driver" pinned at the bottom, with
-  Caption `--text-2` above it: "Starts automatically at 6:17 AM".
+  Caption `--text-2` above it: "Starts automatically at 6:35 AM".
 
 ### Stacked cards (under the status header), 8px gaps
 1. **Sync Pass** (§5).
@@ -380,7 +380,7 @@ Top to bottom, in one bottom sheet over the map:
 3. **Locations card:** ring + "Start location" Caption + address Body L (one line, truncated);
    square + "Your destination" + address. 2px connector between the marks.
 4. **Friends card** (P1, while syncing only): two list rows, `user-plus` "Add a friend (+1)"
-   and `ticket` "Invite with a friend code". After adding: "Maya rides with you · JOD 2.30
+   and `ticket` "Invite with a friend code". After adding: "Maya rides with you · JOD 1.70
    (pays own share)" with a "Remove" link. Pending invites: "Invited Noor · waiting".
    Hidden after the ready check.
 5. **Booking details:** "Economy · Shared" and "Cash" rows.
@@ -429,7 +429,7 @@ Top to bottom, in one bottom sheet over the map:
 - **Late leave** (after a driver accepts and < 30 min before pickup): title H2 "Leave this ride?".
   Body: "Your driver is already booked and pickup is in less than 30 minutes."
   Amount box `--danger-soft`, radius 16px, padding 16px: "You'll pay your share" Body left,
-  "JOD 2.30" Big number `--danger` right. Caption under it: "Added as an outstanding
+  "JOD 1.70" Big number `--danger` right. Caption under it: "Added as an outstanding
   balance on your next ride." Buttons: primary "Keep my seat", secondary danger "Leave anyway".
 - **Free leave** (no driver assigned, including redispatch, or ≥ 30 min before pickup):
   title "Leave this ride?", body "Leaving now is free. Others' shares will update.",
@@ -438,40 +438,40 @@ Top to bottom, in one bottom sheet over the map:
 ### Trip offer sheet (driver, Cockpit)
 - Sheet `--card`, top radius 28px.
 - Eyebrow row: category badge ("ECONOMY", accent fill, ink text) + gender badge, right:
-  "FIRST PICKUP 7:02 AM".
-- "JOD 9.03" Hero number, under it Body `--text-2` "4 riders · cash · collect JOD 9.20".
+  "FIRST PICKUP 7:20 AM".
+- "JOD 6.71" Hero number, under it Body `--text-2` "4 riders · cash · collect JOD 6.80".
 - **Merge timeline:** stops in order on a vertical line. Each pickup is a ring with a short
   side branch merging into the main line (the line thickens by 1px per rider on board).
   Destination is a square at the bottom. Each stop: time Inter 15/600 `--text-1`
-  ("7:02"), first name + short area Body `--text-2` (truncated), and for pickups the share
-  right-aligned ("JOD 2.30").
-- "21.4 km · ~54 min" Body `--text-2`.
+  ("7:20"), first name + short area Body `--text-2` (truncated), and for pickups the share
+  right-aligned ("JOD 1.70").
+- "17.2 km · ~35 min" Body `--text-2`.
 - Buttons side by side: secondary "Reject" (1/3) and primary "Accept" (2/3).
-- Caption `--text-2`: "Respond by 6:47 AM". No seconds countdown for scheduled trips.
+- Caption `--text-2`: "Respond by 7:05 AM". No seconds countdown for scheduled trips.
 
 ### Driver active trip
 - Cockpit status sheet. Header H1 "Economy · 3 riders", subtitle Body `--text-2`
-  "Collect JOD 6.60 cash · JOD 2.30 credit at trip end".
+  "Collect JOD 4.95 cash · JOD 1.70 credit at trip end".
 - The merge timeline, one row per stop, with actions (P1):
   - Pickup: small secondary button "Picked up" (36px, pill) + chat icon button.
-  - Drop-off: small primary button "Dropped off · collected JOD 2.20".
+  - Drop-off: small primary button "Dropped off · collected JOD 1.65".
   - Done rows: `--text-2` text with a `--success` check; their branch turns solid.
-- **Rider-left banner** (§6, danger edge): "Sara canceled. Collect JOD 6.60 cash · JOD 2.30
+- **Rider-left banner** (§6, danger edge): "Sara canceled. Collect JOD 4.95 cash · JOD 1.70
   credit at trip end". Her branch un-merges and fades out over 300ms. Other times don't change.
 
 ### Trip summary screen (P0)
 - Full screen, `--surface`. Top: the Merge mark animating once to completion (lines meet,
   square fills `--success`), 96px.
 - Title H1 centered: "You've arrived" (rider) / "Trip complete" (driver).
-  Subtitle Body `--text-2`: "To JUST · arrived 7:54 AM".
+  Subtitle Body `--text-2`: "To JUST · arrived 7:52 AM".
 - **Rider card** (Sync Pass style with perforation):
-  - Top: "YOU PAID" Eyebrow, "JOD 2.20" Hero number, "Cash" with `banknote` icon.
-  - Bottom: Seat meter, "3 riders synced this ride", then "You saved JOD 5.65 vs riding solo"
+  - Top: "YOU PAID" Eyebrow, "JOD 1.65" Hero number, "Cash" with `banknote` icon.
+  - Bottom: Seat meter, "3 riders synced this ride", then "You saved JOD 3.70 vs riding solo"
     Body 600 `--success`. Outstanding balance strip if any.
-- **Late leaver:** title "You left this ride", card shows "JOD 2.30 added to your next ride"
+- **Late leaver:** title "You left this ride", card shows "JOD 1.70 added to your next ride"
   in `--danger`.
-- **Driver card:** one row per rider ("Lina · JOD 2.20 cash"), then "Credit from RideSync ·
-  JOD 2.30", divider, "Total · JOD 8.90" Big number.
+- **Driver card:** one row per rider ("Lina · JOD 1.65 cash"), then "Credit from RideSync ·
+  JOD 1.70", divider, "Total · JOD 6.65" Big number.
 - Bottom: primary "Done". Chat is read-only from here.
 
 ### Add a friend sheet (+1, P1)
@@ -480,9 +480,9 @@ Top to bottom, in one bottom sheet over the map:
 - First name input, then chips "Woman · Man". On a `same` ride only the ride's gender is
   selectable; the other is disabled with Caption "This ride is women only".
 - Preview: the Seat meter with the new +1 seat dashed in, and "Everyone's share
-  JOD 2.90 → JOD 2.30" (split-flap roll on confirm).
+  JOD 2.20 → JOD 1.70" (split-flap roll on confirm).
 - Caption `--text-2`: "If you leave late, their share goes on your balance."
-- Primary button "Add Maya · JOD 2.30".
+- Primary button "Add Maya · JOD 1.70".
 
 ### Invite sheet (friend code, P1)
 - Title H2 "Invite a friend". Body: "Ask for the code on their RideSync profile."
@@ -564,9 +564,9 @@ Top to bottom, in one bottom sheet over the map:
 ### Uni discount display
 - Wherever a subscriber's own price shows (Sync Pass, matching card, summary): the paid
   amount in the usual style, then a `--accent-soft` pill "−20% UNI" and the full share
-  struck through in `--text-2` ("~~2.30~~"). Others in the car never see your discount.
-- Driver: the stop's share shows the cash due ("JOD 1.85") with Caption "+ 0.45 from
-  RideSync"; summary line "Uni plan credit from RideSync · JOD 0.45".
+  struck through in `--text-2` ("~~1.70~~"). Others in the car never see your discount.
+- Driver: the stop's share shows the cash due ("JOD 1.40") with Caption "+ 0.30 from
+  RideSync"; summary line "Uni plan credit from RideSync · JOD 0.30".
 
 ### Demo menu (hidden, not part of the RideSync look)
 - Plain functional screen: system font, simple buttons, no RideSync styling needed.
@@ -614,14 +614,14 @@ paper. Everything important sits within thumb reach at the bottom.
 | **Signup** | Merge mark logo, H1 "Ride together, pay less", first name, gender chips "Woman · Man", one-line consent (SPEC §3.2) | "Continue" |
 | **Home** | Full-bleed Paper map with your own ring once a pickup is set. Sheet: Invite card (if any), Trip input card, quick-pick chips. Top bar: logo left, profile icon button right (friend code, outstanding balance) | Fill in the trip |
 | **Trip screen** | Same sheet expanded: trip card, "Same gender only" switch, three category tiles with "from" prices. The screen re-tints to the selected category | "Find rides" |
-| **Rides going your way** | Trip strip, matching cards (host, gender badge, mini seat meter, area names, "JOD 4.00 each if you join"), Merge-mark empty state | "Join · JOD 4.00" or "Start your own sync" |
-| **Host setup** | Arrive-by, Be ready by, price ladder, sync zone chip, gender switch | "Confirm · JOD 7.85" |
+| **Rides going your way** | Trip strip, matching cards (host, gender badge, mini seat meter, area names, "JOD 3.10 each if you join"), Merge-mark empty state | "Join · JOD 4.00" or "Start your own sync" |
+| **Host setup** | Arrive-by, Be ready by, price ladder, sync zone chip, gender switch | "Confirm · JOD 5.35" |
 | **Uni plans (P1)** | Plan picker (weekly / semester) → week grid builder → demo card → My plan (upcoming rides, states, replacements) | "Pay with card", "Plan a replacement" |
 | **Ride status** | Map (own ring + destination square only). Sheet: stage track, status title, Sync Pass, chat card, friends card (while syncing), locations, booking details, leave row | Host: "Find driver" |
 | **Ready check** | Countdown ring, seat meter with ready badges, rider rows | "I'm ready" |
 | **Driver set** | Stage 4, driver, car and plate pill on the Sync Pass | Wait |
 | **Group chat** | Paper background, raised bubbles, accent-soft own bubbles, Eyebrow system pills | Send |
-| **Trip summary** | Merge mark completes, "You paid JOD 2.20", savings in success | "Done" |
+| **Trip summary** | Merge mark completes, "You paid JOD 1.65", savings in success | "Done" |
 
 **Journey:** Home → (Uni plan, once) → Trip screen → Rides going your way → (Join | Start your own sync) →
 Ride status ⇄ Chat → Ready check → Driver set → Summary.
@@ -633,7 +633,7 @@ length on a car mount. Accent appears only for the trip's category and the best 
 | Screen | What's on it | Main action |
 |---|---|---|
 | **Idle** | Cockpit map, "You're online" with a success dot, demand spots + best spot card (P2). Without P2: map + "Waiting for scheduled offers" with the Merge loader | Head to the best spot (advice) |
-| **Trip offer** | Category + gender badges, "JOD 9.03" hero, collect total, merge timeline with per-stop shares ("Lina +1 · JOD 4.60" for a +1), km · min, respond-by | "Accept" / "Reject" |
+| **Trip offer** | Category + gender badges, "JOD 6.71" hero, collect total, merge timeline with per-stop shares ("Lina +1 · JOD 3.40" for a +1), km · min, respond-by | "Accept" / "Reject" |
 | **Active trip** | "Economy · 3 riders", collect + credit line, numbered rings and the route line (P1), merge timeline with stop actions | "Picked up" / "Dropped off" (P1) |
 | **Rider left** | Dark banner with danger edge, the branch un-merges, totals roll | — |
 | **Driver chat (P1)** | Same chat component in Cockpit colors | Send |

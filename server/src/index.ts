@@ -10,6 +10,7 @@ import { registerRoutes } from './http/routes.js';
 import { attachRealtime } from './realtime/io.js';
 import { createPrismaStore } from './store/prismaRepo.js';
 import { seedIfEmpty } from './store/seed.js';
+import { configureGoogle } from './travel/select.js';
 import { clockView } from './views/common.js';
 
 // Local dev reads the repo-root .env. Deploys use Replit Secrets (real env vars) instead.
@@ -18,6 +19,7 @@ try { process.loadEnvFile(fileURLToPath(new URL('../../.env', import.meta.url)))
 const cfg = parseConfig(process.env);
 process.env.DATABASE_URL = cfg.databaseUrl;   // Prisma reads it from the env
 const store = createPrismaStore(new PrismaClient());
+configureGoogle(cfg.googleServerKey);   // live source (P1) only; the demo uses the snapshot
 
 if (await store.withLock((r) => seedIfEmpty(r, cfg))) console.log('seeded an empty database');
 const demo = (await store.withLock((r) => r.getDemoState()))!;

@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p . --noEmit",
     "start": "DATABASE_URL=${DATABASE_URL:-file:../../data/app.db} prisma db push --skip-generate --schema prisma/schema.prisma && node dist/index.js",
-    "seed:reset": "tsx scripts/seed-reset.ts"
+    "seed:reset": "tsx scripts/seed-reset.ts",
+    "snapshot": "tsx scripts/make-snapshot.ts"
   },
   "dependencies": {
     "@fastify/static": "^11.0.0",

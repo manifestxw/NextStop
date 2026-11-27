@@ -41,8 +41,9 @@ describe('TravelProvider', () => {
     expect(calls).toBe(3);
   });
 
-  it('select: fixed works; snapshot/google fall back to fixed until T11', () => {
+  it('select: fixed, the committed snapshot, and google falls back to fixed without a configured key', () => {
     expect(selectProvider('fixed').name).toBe('fixed');
-    expect(selectProvider('snapshot').name).toBe('fixed');
+    expect(selectProvider('snapshot').name).toBe('snapshot');   // data/demo_snapshot.json is committed
+    expect(selectProvider('google').name).toBe('fixed');
   });
 });

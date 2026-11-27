@@ -6,10 +6,12 @@ import { createMemoryStore } from '../src/store/memoryRepo.js';
 import { seedIfEmpty } from '../src/store/seed.js';
 import type { Publisher } from '../src/realtime/publisher.js';
 import type { ChatMessageView, RiderView, DriverView, View } from '@nextstop/shared';
-import { sun } from './fixtures/places.js';
+import { sun, LOC } from './fixtures/places.js';
+import { loadSeed } from '../src/store/seed.js';
 
-export async function makeHarness() {
-  const cfg = parseConfig({ TRAVEL_SOURCE: 'fixed' });
+/** `stage: true` = the demo as it runs on stage: Snapshot source and seed.json's Google places. */
+export async function makeHarness({ stage = false } = {}) {
+  const cfg = parseConfig({ TRAVEL_SOURCE: stage ? 'snapshot' : 'fixed' });
   const store = createMemoryStore();
   await store.withLock((r) => seedIfEmpty(r, cfg));
   const real = { ms: 1_000_000 };
@@ -22,7 +24,9 @@ export async function makeHarness() {
     clock: () => undefined,
     logout: () => undefined,
   };
-  const ctx: Ctx = { store, clock, cfg, publisher, realNowMs: () => real.ms };
+  // Fixed-table coordinates (SPEC §2.6), not seed.json's Google points: these tests check the engine's golden numbers.
+  const places = stage ? loadSeed().places : loadSeed().places.map((p) => ({ ...p, ...LOC[p.key as keyof typeof LOC] }));
+  const ctx: Ctx = { store, clock, cfg, publisher, realNowMs: () => real.ms, places };
   const cmd = createCommands(ctx);
   const login = async (as: 'lina' | 'sara' | 'omar') => (await cmd.demoLogin({ as })).token;
   return { cfg, store, clock, real, pushed, chats, ctx, cmd, login };

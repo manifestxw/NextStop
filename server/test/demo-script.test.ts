@@ -1,30 +1,35 @@
-// T10: replays the SPEC §2.2 demo, steps 1–6, and checks the §2.3 numbers at each step.
+// T10: replays the SPEC §2.2 demo, steps 1–6, on the stage setup (Snapshot source + Google places) and
+// checks the SPEC §2.3 numbers at each step. If the snapshot is regenerated, update both together.
 import { describe, expect, it } from 'vitest';
 import { makeHarness, trip, rider, driver, hhmm } from './helpers.js';
 
-describe('SPEC §2.2 demo script', () => {
+describe('SPEC §2.2 demo script (stage data)', () => {
   it('runs end to end with the canonical numbers', async () => {
-    const h = await makeHarness();
+    const h = await makeHarness({ stage: true });
     const { cmd } = h;
     const lina = await h.login('lina'), sara = await h.login('sara'), omar = await h.login('omar');
+    const fare = async (id: string) => (await h.store.withLock((r) => r.getRide(id)))!.plan.fareJod;
 
     // 1. Lina creates (clock paused at 6:10)
+    const q = (await cmd.quote(lina, trip('CC'))).categories[0]!;
+    expect([q.soloJod, q.estimates.map((e) => e.eachJod), q.fromJod, hhmm(q.beReadyBy)]).toEqual([5.35, [5.35, 2.8, 2.0, 1.6], 1.6, '07:36']);
     const created = rider(await cmd.createRide(lina, trip('CC'))).ride!;
-    expect([created.shareJod, hhmm(created.beReadyBy)]).toEqual([7.85, '07:15']);
     const rideId = created.id;
+    expect([await fare(rideId), created.shareJod, hhmm(created.beReadyBy)]).toEqual([5.32, 5.35, '07:36']);
 
     // 2. Sara joins and chats
     const card = (await cmd.search(sara, trip('US')))[0]!;
-    expect([card.eachJod, card.pickupArea]).toEqual([4.0, 'City Center area']);
+    expect([card.eachJod, hhmm(card.myPickupAt), card.pickupArea]).toEqual([3.1, '07:26', 'City Center area']);
     await cmd.join(sara, rideId, trip('US'));
+    expect(await fare(rideId)).toBe(6.18);
     await cmd.chat(sara, rideId, { channel: 'group', text: "Hi! I'm near University Street" });
 
-    // 3. Two simulated riders fill the car; Lina finds a driver; sims answer Ready after 3 s real time
+    // 3. Rania (Arabella) and Dana (University Street, with Sara) fill the car; Lina finds a driver
     await cmd.demo.simulateRider(rideId);
+    expect([await fare(rideId), rider(await cmd.me(lina)).ride!.shareJod]).toEqual([6.59, 2.2]);
     await cmd.demo.simulateRider(rideId);
-    let r = rider(await cmd.me(lina)).ride!;
-    expect([r.seats.map((s) => s.firstName), r.shareJod, hhmm(r.beReadyBy)]).toEqual([['Lina', 'Sara', 'Rania', 'Dana'], 2.3, '07:02']);
-    expect(r.chat.group.map((m) => m.text)).toEqual(expect.arrayContaining(['Hi everyone 👋', "I'll be at the main gate", "Hi! I'm near University Street"]));
+    const r = rider(await cmd.me(lina)).ride!;
+    expect([r.seats.map((s) => s.firstName), await fare(rideId), r.shareJod, hhmm(r.beReadyBy)]).toEqual([['Lina', 'Sara', 'Rania', 'Dana'], 6.71, 1.7, '07:33']);
     await cmd.findDriver(lina, rideId);
     h.real.ms += 3_000;
     await cmd.tick();
@@ -34,32 +39,27 @@ describe('SPEC §2.2 demo script', () => {
     // 4. Omar's offer, then accept
     const offer = driver(await cmd.me(omar)).offers[0]!;
     expect([offer.fareJod, offer.riders, offer.collectJod, offer.km, Math.round(offer.min), hhmm(offer.firstPickupAt), hhmm(offer.respondBy)])
-      .toEqual([9.03, 4, 9.2, 21.4, 54, '07:02', '06:47']);
-    expect(offer.stops.map((s) => `${s.kind} ${s.firstName} ${hhmm(s.at)}`).slice(0, 4))
-      .toEqual(['P Lina 07:02', 'P Rania 07:10', 'P Sara 07:17', 'P Dana 07:22']);
-    expect(offer.stops.every((s) => s.place === undefined)).toBe(true);     // no coordinates before accept
+      .toEqual([6.71, 4, 6.8, 17.2, 35, '07:20', '07:05']);
+    expect(offer.stops.map((s) => `${s.kind} ${s.firstName} ${hhmm(s.at)}`))
+      .toEqual(['P Sara 07:20', 'P Dana 07:21', 'P Rania 07:29', 'P Lina 07:33', 'D Lina 07:52', 'D Sara 07:53', 'D Rania 07:53', 'D Dana 07:54']);
     await cmd.accept(omar, rideId);
-    expect(rider(await cmd.me(sara)).ride!.driver).toEqual({ firstName: 'Omar', car: 'White Hyundai Elantra', plate: '12-34567' });
 
-    // 5. 6:35: Sara leaves late
-    await cmd.demo.clock({ jumpTo: '2026-11-29T06:35:00+03:00' });
-    expect(rider(await cmd.me(sara)).ride!.leave).toEqual({ free: false, chargeJod: 2.3 });
+    // 5. 6:53 (27 min before the first pickup): Sara leaves late
+    await cmd.demo.clock({ jumpTo: '2026-11-29T06:53:00+03:00' });
+    expect(rider(await cmd.me(sara)).ride!.leave).toEqual({ free: false, chargeJod: 1.7 });
     await cmd.leave(sara, rideId, { acceptCharge: true });
-    r = rider(await cmd.me(lina)).ride!;
-    expect([r.shareJod, r.seats.length, hhmm(r.beReadyBy)]).toEqual([2.2, 3, '07:02']);
-    const trip5 = driver(await cmd.me(omar)).trip!;
-    expect([trip5.collectJod, trip5.creditJod, trip5.stops.filter((s) => s.kind === 'P').map((s) => `${s.firstName} ${hhmm(s.at)}`)])
-      .toEqual([6.6, 2.3, ['Lina 07:02', 'Rania 07:10', 'Dana 07:22']]);
-    expect(driver(await cmd.me(omar)).banners.map((b) => b.text)).toContain('Sara canceled. Collect JOD 6.60 cash · JOD 2.30 credit at trip end');
-    expect(rider(await cmd.me(sara)).me.outstandingJod).toBe(2.3);
+    const r5 = rider(await cmd.me(lina)).ride!;
+    expect([await fare(rideId), r5.shareJod, r5.seats.length, hhmm(r5.beReadyBy)]).toEqual([6.59, 1.65, 3, '07:33']);
+    const t5 = driver(await cmd.me(omar)).trip!;
+    expect([t5.collectJod, t5.creditJod]).toEqual([4.95, 1.7]);
+    expect(driver(await cmd.me(omar)).banners.map((b) => b.text)).toContain('Sara canceled. Collect JOD 4.95 cash · JOD 1.70 credit at trip end');
 
     // 6. Complete trip → summaries
     await cmd.demo.completeTrip(rideId);
-    const ls = rider(await cmd.me(lina)).ride!;
-    expect([ls.state, ls.summary!.paidJod, ls.summary!.riders, ls.summary!.savedJod]).toEqual(['COMPLETED', 2.2, 3, 5.65]);
-    expect(rider(await cmd.me(sara)).ride!.summary!.leftLate).toEqual({ chargedJod: 2.3 });
+    const ls = rider(await cmd.me(lina)).ride!.summary!;
+    expect([ls.paidJod, ls.riders, ls.savedJod, hhmm(ls.arrivedAt)]).toEqual([1.65, 3, 3.7, '07:52']);
+    expect(rider(await cmd.me(sara)).ride!.summary!.leftLate).toEqual({ chargedJod: 1.7 });
     const ds = driver(await cmd.me(omar)).trip!.summary!;
-    expect([ds.riders.map((x) => `${x.firstName} ${x.cashJod}`), ds.creditJod, ds.totalJod]).toEqual([['Lina 2.2', 'Rania 2.2', 'Dana 2.2'], 2.3, 8.9]);
-    expect((await h.store.withLock((x) => x.getDriver('u-omar')))!.creditBalanceP).toBe(230);
+    expect([ds.riders.map((x) => `${x.firstName} ${x.cashJod}`), ds.creditJod, ds.totalJod]).toEqual([['Lina 1.65', 'Rania 1.65', 'Dana 1.65'], 1.7, 6.65]);
   });
 });

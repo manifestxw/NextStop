@@ -30,7 +30,10 @@ import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
 import { riderView } from '../views/riderView.js';
 
-export interface Ctx { store: Store; clock: Clock; cfg: Config; publisher: Publisher; realNowMs: () => number }
+export interface Ctx {
+  store: Store; clock: Clock; cfg: Config; publisher: Publisher; realNowMs: () => number;
+  places?: Place[];   // seed places; tests pass the fixed-table points so golden numbers don't depend on seed.json
+}
 
 type Body<T extends z.ZodType> = z.input<T>;
 interface Trip { pickup: Place; dest: Place; arriveBy: string; by: Us; category: Ride['category']; sameGenderOnly: boolean }
@@ -61,7 +64,7 @@ const lastDrop = (p: Plan) => Math.max(...Object.values(p.drop));
 
 export function createCommands(ctx: Ctx) {
   const { store, clock, cfg, publisher } = ctx;
-  const seedPlaces = loadSeed().places;
+  const seedPlaces = ctx.places ?? loadSeed().places;
   const campuses = seedPlaces.filter((p) => CAMPUSES.includes(p.key ?? ''));
   const pf = (category: Ride['category']) => cfg.calibration * CATEGORY[category].price;
 
