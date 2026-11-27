@@ -33,10 +33,8 @@
 - [verify] JUST semester dates. Zone, k-means, plan numbers are first guesses.
 
 ## Decisions (this session)
-- Node 20 EOL but locked (`engines >=20.19`); use Node 22 on Replit if offered. npm 12 `allowScripts`.
-- `npm audit`: 4 highs in the Prisma 6 CLI (fix needs Prisma 7). Engine times are µs, Python-exact.
+- Node 20 EOL but locked (use Node 22 on Replit if offered). `npm audit`: 4 highs in the Prisma 6 CLI.
 - Prisma Member has a storage-only `pos` column. Repo gained `listRidesByDriver`. `locked.order` maps matrix points.
 - Commands live in one module (`commands/index.ts`), not one file each: shared prepare/commit/retry helpers.
 - Shortcuts: `chat.unread` = 0 (client counts), demo dispatch offers every seeded driver, a +1's
   late charge rides on the member, Google places use their name as the area (P1), chat purge after 24 h not built.
-- Late leaver sees the ride again only as the summary; a free leaver never sees it again.
