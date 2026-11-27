@@ -17,7 +17,12 @@ function stopMarks(stops: DriverStop[]): Mark[] {
   let n = 0;
   for (const s of stops) {
     if (!s.place || s.done) continue;
-    if (s.kind === 'P') marks.push({ kind: 'pickup', ...s.place, label: `${s.firstName} · ${s.shortAddress}`, n: ++n });
+    if (s.kind === 'P') {
+      n++;
+      const same = marks.find((m) => m.kind === 'pickup' && m.lat === s.place!.lat && m.lng === s.place!.lng);
+      if (same) { same.n = `${same.n}·${n}`; same.label += `, ${s.firstName}`; }   // two riders at one spot: one marker "1·2"
+      else marks.push({ kind: 'pickup', ...s.place, label: `${s.firstName} · ${s.shortAddress}`, n: String(n) });
+    }
     else if (!marks.some((m) => m.kind === 'dest' && m.lat === s.place!.lat && m.lng === s.place!.lng)) marks.push({ kind: 'dest', ...s.place, label: s.shortAddress });
   }
   return marks;
@@ -129,7 +134,7 @@ export function DriverTrip() {
   }
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapView dark marks={stopMarks(t.stops)} />
+      <MapView dark fit="pickups" marks={stopMarks(t.stops)} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <h1 className="t-h1">{t.category[0]!.toUpperCase() + t.category.slice(1)} · {t.riders} riders</h1>
         <p className="t-body text-2">Collect {fmtJod(t.collectJod)} cash{t.creditJod > 0 ? ` · ${fmtJod(t.creditJod)} credit at trip end` : ''}</p>

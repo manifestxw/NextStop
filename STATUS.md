@@ -1,7 +1,7 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13; T14 in progress)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13, T14)
 **Milestone:** M1 code done; only **T12** (deploy + 3 real phones) left · M2: T13 done
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
@@ -19,16 +19,16 @@
 - `npm run check`: green, 130 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests stay on the fixed table (`test/fixtures/places.ts`). Key-leak check: ok.
 - Booted on the snapshot; headless Chromium shows the new numbers. Real phones: not yet (T12).
-- **T14 (doing):** Google map (`MapView`, Paper/Cockpit styles, ring/square/numbered SVG marks, one provider,
-  key-rejection → marks panel). Real map NOT seen yet: browser key rejects localhost (RefererNotAllowedMapError).
+- **T14:** real Google map seen on localhost:3000: Paper (riders: own pickup + halo, destination only),
+  Cockpit (driver: numbered pickups fit to view, "1·2" for a shared spot). Key rejection → marks panel.
 
 ## Next task
 - **T12 (owner/CC):** deploy to Replit (Reserved VM, Node 22 if offered), set Secrets from `.env`
   (incl. `GOOGLE_SERVER_KEY`, `VITE_GOOGLE_BROWSER_KEY` at build time), open `/?as=lina|sara|omar&pin=…`
-  on 3 phones over a hotspot, run §2.2. Then T14 (Google map), T15–T20 (P1).
+  on 3 phones over a hotspot, run §2.2. Then P1: T19, T17, T15 (and T20 route line).
 
 ## Blocked / waiting
-- **Owner: add browser-key referrers** `http://localhost:3000/*`, `http://10.100.3.63:3000/*`, `https://*.replit.app/*`.
+- Browser-key referrers set by owner (localhost:3000, 10.100.3.63:3000, *.replit.app). New hotspot IP → add it.
 - O2 Replit (T12). O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.
 - **Keys were pasted in chat:** restrict the server key to Routes + Places; rotate both after the event.
 - [verify] JUST semester dates. Zone/k-means/plan numbers are first guesses. Pitch deck numbers → §2.3.

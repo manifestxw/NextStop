@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { APIProvider, Map, Marker, useApiLoadingStatus, useMap, APILoadingStatus } from '@vis.gl/react-google-maps';
 import { MapPanel } from './ui.js';
 
-export interface Mark { kind: 'pickup' | 'dest'; lat: number; lng: number; label: string; n?: number; me?: boolean }
+export interface Mark { kind: 'pickup' | 'dest'; lat: number; lng: number; label: string; n?: string; me?: boolean }   // n: "1" or "1·2" (shared spot)
 
 export const MAPS_KEY = import.meta.env.VITE_GOOGLE_BROWSER_KEY as string | undefined;
 
@@ -53,7 +53,7 @@ function iconFor(m: Mark): google.maps.Icon {
   } else if (m.n !== undefined) {
     size = 28;
     svg = `<circle cx="14" cy="14" r="11.5" fill="${card}" stroke="${ink}" stroke-width="2.5"/>
-      <text x="14" y="18.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="${ink}">${m.n}</text>`;
+      <text x="14" y="18.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="${m.n.length > 1 ? 10 : 13}" font-weight="700" fill="${ink}">${m.n}</text>`;
   } else {
     size = m.me ? 34 : 20;
     const c = size / 2;
@@ -68,8 +68,10 @@ function iconFor(m: Mark): google.maps.Icon {
 }
 
 /** Keep every mark in view (one mark: centre on it). */
-function FitBounds({ marks }: { marks: Mark[] }) {
+function FitBounds({ marks: all, pickupsOnly }: { marks: Mark[]; pickupsOnly?: boolean }) {
   const map = useMap();
+  const pick = all.filter((m) => m.kind === 'pickup');
+  const marks = pickupsOnly && pick.length > 0 ? pick : all;
   const key = marks.map((m) => `${m.lat},${m.lng}`).join('|');
   useEffect(() => {
     if (!map || marks.length === 0) return;
@@ -81,7 +83,7 @@ function FitBounds({ marks }: { marks: Mark[] }) {
   return null;
 }
 
-function Inner({ marks, dark, fallback }: { marks: Mark[]; dark?: boolean; fallback: React.ReactNode }) {
+function Inner({ marks, dark, fit, fallback }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; fallback: React.ReactNode }) {
   const status = useApiLoadingStatus();
   const rejected = useAuthFailed();
   if (rejected || status === APILoadingStatus.FAILED || status === APILoadingStatus.AUTH_FAILURE) return <>{fallback}</>;
@@ -89,19 +91,20 @@ function Inner({ marks, dark, fallback }: { marks: Mark[]; dark?: boolean; fallb
     <Map className="map map--live" defaultCenter={IRBID} defaultZoom={13} styles={dark ? COCKPIT : PAPER}
       disableDefaultUI gestureHandling="greedy" clickableIcons={false} keyboardShortcuts={false}>
       {status === APILoadingStatus.LOADED && marks.map((m, i) => (
-        <Marker key={`${m.kind}-${i}-${m.lat}`} position={m} icon={iconFor(m)} title={m.label} zIndex={m.me ? 10 : m.n ?? 1} />
+        <Marker key={`${m.kind}-${i}-${m.lat}`} position={m} icon={iconFor(m)} title={m.label} zIndex={m.me ? 10 : 2} />
       ))}
-      <FitBounds marks={marks} />
+      <FitBounds marks={marks} pickupsOnly={fit === 'pickups'} />
     </Map>
   );
 }
 
-export function MapView({ marks, dark }: { marks: Mark[]; dark?: boolean }) {
-  const pickup = marks.find((m) => m.kind === 'pickup' && (m.me || m.n === 1)) ?? marks.find((m) => m.kind === 'pickup');
+/** `fit="pickups"`: frame the pickups (driver), not the far-away destination too. */
+export function MapView({ marks, dark, fit = 'all' }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups' }) {
+  const pickup = marks.find((m) => m.kind === 'pickup' && (m.me || m.n?.startsWith('1'))) ?? marks.find((m) => m.kind === 'pickup');
   const dest = marks.find((m) => m.kind === 'dest');
   const fallback = <MapPanel pickup={pickup?.label} dest={dest?.label} pulse={pickup?.me} />;
   if (!MAPS_KEY) return fallback;
-  return <Inner marks={marks} dark={dark} fallback={fallback} />;
+  return <Inner marks={marks} dark={dark} fit={fit} fallback={fallback} />;
 }
 
 /** One provider for the whole app (main.tsx): one script load and one auth-failure callback. */
