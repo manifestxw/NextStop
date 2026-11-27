@@ -26,6 +26,7 @@ export function createMemoryStore(): Store {
     getRide: async (id) => c(s.rides.get(id) ?? null),
     listActiveRides: async () => c([...s.rides.values()].filter((r) => ACTIVE_STATES.includes(r.state))),
     listRidesForUser: async (uid) => c([...s.rides.values()].filter((r) => r.members.some((m) => m.userId === uid))),
+    listRidesByDriver: async (did) => c([...s.rides.values()].filter((r) => r.driverUserId === did)),
     putRide: async (r) => { s.rides.set(r.id, c(r)); },
     addMessage: async (m) => {
       const seq = Math.max(0, ...s.messages.filter((x) => x.rideId === m.rideId).map((x) => x.seq)) + 1;

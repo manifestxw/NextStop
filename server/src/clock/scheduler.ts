@@ -1,31 +1,13 @@
-// Scheduler tick every 1 s inside the write lock (ARCH §8). Due ride events plug in via `onTick` (T6);
-// every tick also saves the clock so a restart resumes at the same demo time.
-import { toIso } from './amman.js';
-import type { Clock } from './clock.js';
-import type { Us } from '../engine/types.js';
-import type { Repo, Store } from '../store/repo.js';
-
-export interface SchedulerOptions {
-  store: Store; clock: Clock;
-  onTick?: (repo: Repo, now: Us) => Promise<void>;
-  intervalMs?: number;
-}
-
-export function createScheduler({ store, clock, onTick, intervalMs = 1000 }: SchedulerOptions) {
+// Runs the domain tick every second (ARCH §8). The tick itself (due events, sim Ready, saving the clock)
+// lives in the commands layer, which takes the write lock. A slow tick never overlaps the next one.
+export function createScheduler({ tick, intervalMs = 1000 }: { tick: () => Promise<unknown>; intervalMs?: number }) {
   let timer: NodeJS.Timeout | undefined, running = false;
-  const tickOnce = () => store.withLock(async (repo) => {
-    const now = clock.now();
-    if (onTick) await onTick(repo, now);
-    const demo = await repo.getDemoState();
-    if (demo) await repo.putDemoState({ ...demo, nowIso: toIso(clock.now()), paused: clock.snapshot().paused });
-  });
   return {
-    tickOnce,
     start() {
       timer ??= setInterval(() => {
-        if (running) return;   // a slow tick never overlaps the next one
+        if (running) return;
         running = true;
-        tickOnce().catch((e) => console.error('scheduler tick failed:', e)).finally(() => { running = false; });
+        tick().catch((e) => console.error('scheduler tick failed:', e)).finally(() => { running = false; });
       }, intervalMs);
     },
     stop() { clearInterval(timer); timer = undefined; },

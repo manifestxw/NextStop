@@ -1,0 +1,613 @@
+// One function per user action (ARCH §7). Each: auth → prepare (reads + travel data, OUTSIDE the lock)
+// → commit (inside store.withLock: re-read, version check, pure rules, write) → publish views after the lock.
+// HTTP (T7) maps ConflictError → 409, LoggedOutError → 401, zod failures → 422.
+import { randomBytes, randomUUID } from 'node:crypto';
+import type { AuthResponse, CategoryQuote, ChatMessageView, DemoView, MatchCard, QuoteView, View, req } from '@nextstop/shared';
+import type { z } from 'zod';
+import { fromIso, toIso } from '../clock/amman.js';
+import type { Clock } from '../clock/clock.js';
+import type { Config } from '../config.js';
+import { ACTIVE_MEMBER, activeMembers, jod, lastDropUs, piastres, points, riderIn, seatsOf } from '../domain/bridge.js';
+import { maskChat } from '../domain/chat.js';
+import { applyEffects, newEffects, system, type Effects } from '../domain/effects.js';
+import { ConflictError, LoggedOutError, illegal } from '../domain/errors.js';
+import * as rides from '../domain/rides.js';
+import { ACTIVE_STATES, type Member, type Place, type Ride, type User } from '../domain/types.js';
+import { checkJoin, type RideIn } from '../engine/matching.js';
+import { plan, solo } from '../engine/plan.js';
+import { hav } from '../engine/geo.js';
+import { up05 } from '../engine/pyRound.js';
+import { US_PER_MIN } from '../engine/time.js';
+import type { Plan, Us } from '../engine/types.js';
+import { CATEGORY, zone } from '../engine/zone.js';
+import type { Publisher } from '../realtime/publisher.js';
+import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
+import type { Repo, Store } from '../store/repo.js';
+import { loadSeed, resetToSeed } from '../store/seed.js';
+import { selectProvider } from '../travel/select.js';
+import { toTimed, type MatrixSpec } from '../travel/provider.js';
+import { chatView, clockView } from '../views/common.js';
+import { driverView } from '../views/driverView.js';
+import { riderView } from '../views/riderView.js';
+
+export interface Ctx { store: Store; clock: Clock; cfg: Config; publisher: Publisher; realNowMs: () => number }
+
+type Body<T extends z.ZodType> = z.input<T>;
+interface Trip { pickup: Place; dest: Place; arriveBy: string; by: Us; category: Ride['category']; sameGenderOnly: boolean }
+
+const MIN = US_PER_MIN, HOUR = 60 * MIN;
+const RETRY = Symbol('retry');
+const isAirport = (p: Place) => p.key === 'QAIA' || /queen alia/i.test(p.name);
+const CAMPUSES = ['JUST', 'YU'];
+
+/** Engine reason → the user-facing message (SPEC §3.5). Rule 2 is its own code. */
+function ruleError(reason: string): ConflictError {
+  if (reason === 'rule 2 full') return new ConflictError('RIDE_FULL');
+  const msg: Record<string, string> = {
+    'rule 1 gender': "This ride isn't available to you",
+    'rule 1 category': 'This ride is a different category',
+    'rule 4 arrive-by': "Your arrive-by time is too far from this ride's",
+    'rule 5 pickup far': "Your pickup is outside this ride's sync zone",
+    'rule 6 destination far': "Your destination is too far from this ride's",
+    'rules 7-9 no valid stop order': "This ride can't fit your trip on time",
+    'rule 10 share goes up': "Joining would raise the others' shares",
+    'rule 10 not cheaper than solo': 'Your share would be higher than riding solo',
+    'rule 11 too late to join': 'Too late to join this ride',
+  };
+  return new ConflictError('NOT_ELIGIBLE', msg[reason] ?? reason);
+}
+
+const lastDrop = (p: Plan) => Math.max(...Object.values(p.drop));
+
+export function createCommands(ctx: Ctx) {
+  const { store, clock, cfg, publisher } = ctx;
+  const seedPlaces = loadSeed().places;
+  const campuses = seedPlaces.filter((p) => CAMPUSES.includes(p.key ?? ''));
+  const pf = (category: Ride['category']) => cfg.calibration * CATEGORY[category].price;
+
+  // ---------- plumbing ----------
+
+  const demo = () => store.withLock(async (r) => (await r.getDemoState())!);
+
+  async function auth(token: string, role?: User['role']): Promise<User> {
+    const u = await store.withLock(async (r) => {
+      const [user, d] = [await r.getUserByToken(token), await r.getDemoState()];
+      return user && d && user.epoch === d.epoch ? user : null;
+    });
+    if (!u) throw new LoggedOutError();
+    if (role && u.role !== role) throw illegal(`Only ${role}s can do that`);
+    return u;
+  }
+
+  function resolvePlace(ref: Body<typeof req.PlaceRef>): Place {
+    if ('key' in ref) {
+      const p = seedPlaces.find((x) => x.key === ref.key);
+      if (!p) throw new ConflictError('NOT_ELIGIBLE', 'Unknown place');
+      return p;
+    }
+    // shortcut: Google places (P1) use their name as the area until the places proxy returns a neighborhood.
+    return { placeId: ref.placeId, name: ref.name, area: ref.name, lat: ref.lat, lng: ref.lng };
+  }
+
+  function tripOf(b: Body<typeof req.TripBody>): Trip {
+    const dest = resolvePlace(b.dest);
+    // A destination at the airport always means Airport (SPEC §3.4); Airport needs the airport.
+    if (b.category === 'airport' && !isAirport(dest)) throw new ConflictError('NOT_ELIGIBLE', 'Airport rides go to Queen Alia Airport');
+    return { pickup: resolvePlace(b.pickup), dest, arriveBy: toIso(fromIso(b.arriveBy)), by: fromIso(b.arriveBy),
+      category: isAirport(dest) ? 'airport' : b.category, sameGenderOnly: b.sameGenderOnly };
+  }
+
+  async function fetchMatrix(members: Pick<Member, 'pickup' | 'dest'>[], departure: Us): Promise<MatrixSpec> {
+    const s = (await demo()).settings;
+    return selectProvider(s.source).getMatrix(points(members), departure, { level: s.traffic, weather: s.weather });
+  }
+
+  async function viewFor(repo: Repo, u: User, epoch: number): Promise<View> {
+    if (u.role === 'driver') return driverView(repo, u, (await repo.getDriver(u.id))!, clock, epoch);
+    return riderView(repo, u, clock, epoch);
+  }
+
+  /** Project fresh views (viewSeq + 1, inside the lock), push to everyone but the caller, return the caller's. */
+  async function publish(ids: Iterable<string>, callerId?: string): Promise<View | undefined> {
+    const views = await store.withLock(async (repo) => {
+      const d = (await repo.getDemoState())!;
+      const out: [string, View][] = [];
+      for (const id of new Set(ids)) {
+        const u = await repo.getUser(id);
+        if (!u || u.epoch !== d.epoch || (u.isSim && id !== callerId)) continue;   // sims have no phone
+        const next = { ...u, viewSeq: u.viewSeq + 1 };
+        await repo.putUser(next);
+        out.push([id, await viewFor(repo, next, d.epoch)]);
+      }
+      return out;
+    });
+    let mine: View | undefined;
+    for (const [id, v] of views) { if (id === callerId) mine = v; else publisher.view(id, v); }
+    return mine;
+  }
+
+  /** Run `fn` + its effects in one locked transaction, then push chat events and views. */
+  async function commit(callerId: string | undefined, fn: (repo: Repo, fx: Effects) => Promise<void>): Promise<View> {
+    const fx = newEffects();
+    const chats: [string, ChatMessageView][] = [];
+    await store.withLock(async (repo) => {
+      await fn(repo, fx);
+      await applyEffects(repo, fx, clock.now());
+      for (const m of fx.created) {
+        const ride = await repo.getRide(m.rideId);
+        const users = new Map<string, User>();
+        for (const x of ride?.members ?? []) { const u = await repo.getUser(x.userId); if (u) users.set(u.id, u); }
+        for (const x of ride ? activeMembers(ride) : []) chats.push([x.userId, chatView(m, users)]);
+      }
+    });
+    for (const [id, m] of chats) publisher.chat(id, m);
+    // With a caller there is always a view; system commits (tick) ignore the result.
+    return (await publish([...fx.touched, ...(callerId ? [callerId] : [])], callerId)) as View;
+  }
+  const myView = async (userId: string) => (await publish([userId], userId))!;
+
+  const usersOf = async (repo: Repo, ids: string[]) => {
+    const m = new Map<string, User>();
+    for (const id of ids) { const u = await repo.getUser(id); if (u) m.set(id, u); }
+    return m;
+  };
+
+  /** Rule 12: every affected rider keeps ≥ 15 min between this booking and their other active ones. */
+  async function assertFree(repo: Repo, userIds: string[], start: Us, end: Us, excludeRideId?: string) {
+    for (const u of userIds) {
+      for (const r of await repo.listRidesForUser(u)) {
+        if (r.id === excludeRideId || !ACTIVE_STATES.includes(r.state)) continue;
+        const m = r.members.find((x) => x.userId === u);
+        if (!m || !ACTIVE_MEMBER.includes(m.state)) continue;
+        const s = fromIso(r.plan.firstPickup), e = lastDropUs(r.plan);
+        if (!(e + 15 * MIN <= start || end + 15 * MIN <= s)) throw new ConflictError('ALREADY_IN_RIDE');
+      }
+    }
+  }
+
+  const rideIn = (ride: Ride, active: Member[], order: string[], users: Map<string, User>): RideIn => ({
+    riders: active.map((x) => riderIn(x, order, users.get(x.userId)!, ride)),
+    firstShown: Object.fromEntries(active.map((x) => [x.userId, fromIso(x.firstShownPickup)])),
+    share: jod(ride.plan.shareP), anchorRoute: ride.anchor.route, category: ride.category, genderMode: ride.genderMode,
+    zone: [ride.zone.pickupKm, ride.zone.destKm],
+  });
+
+  // ---------- joining (shared by riders and "Simulate rider") ----------
+
+  async function joinAs(user: User, rideId: string, t: Trip): Promise<View> {
+    for (let attempt = 0; ; attempt++) {
+      const snap = await store.withLock((r) => r.getRide(rideId));
+      if (!snap || !ACTIVE_STATES.includes(snap.state)) throw new ConflictError('RIDE_GONE');
+      if (activeMembers(snap).some((m) => m.userId === user.id)) return myView(user.id);   // double tap
+      if (snap.state !== 'OPEN') throw new ConflictError('RIDE_CLOSED');
+      const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
+      const spec = await fetchMatrix([...activeMembers(snap), cand], fromIso(snap.plan.firstPickup));
+      try {
+        return await commit(user.id, async (repo, fx) => {
+          const ride = await repo.getRide(rideId);
+          if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
+          if (ride.version !== snap.version) throw RETRY;
+          if (ride.state !== 'OPEN') throw new ConflictError('RIDE_CLOSED');
+          const active = activeMembers(ride);
+          const order = [...active.map((x) => x.userId), user.id];
+          const users = await usersOf(repo, order);
+          const me = { ...users.get(user.id)!, sameGenderOnly: t.sameGenderOnly };
+          const m = toTimed(spec);
+          const jIn = riderIn(cand, order, me, { category: t.category });
+          const res = checkJoin(m, rideIn(ride, active, order, users), jIn, clock.now(), cfg.calibration);
+          if (!res.ok) throw ruleError(res.reason);
+          const s = solo(m, jIn, { earlyMax: CATEGORY[ride.category].early, priceFactor: pf(ride.category) })!;
+          cand.soloFareP = piastres(up05(s.fare));
+          cand.soloInCarMin = s.incar[0]!;
+          const members = [...active, cand];
+          await assertFree(repo, order, res.plan!.T0, lastDrop(res.plan!), ride.id);
+          ride.members.push(cand);
+          rides.applyPlan(ride, res.plan!, members, piastres(res.share!));
+          cand.firstShownPickup = cand.shownPickup;
+          ride.version++;
+          system(fx, ride.id, `${user.firstName} joined`);
+          for (const x of ride.members) fx.touched.add(x.userId);
+          await repo.putRide(ride);
+          await repo.putUser({ ...me, viewSeq: users.get(user.id)!.viewSeq });
+        });
+      } catch (e) {
+        if (e === RETRY && attempt === 0) continue;
+        if (e === RETRY) throw new ConflictError('RIDE_FULL');
+        throw e;
+      }
+    }
+  }
+
+  async function postChat(user: User, rideId: string, text: string) {
+    return commit(user.id, async (repo, fx) => {
+      const ride = await repo.getRide(rideId);
+      if (!ride || !activeMembers(ride).some((m) => m.userId === user.id)) throw new ConflictError('RIDE_GONE');
+      if (!ACTIVE_STATES.includes(ride.state)) throw illegal('This chat is closed');
+      fx.messages.push({ rideId, channel: 'group', kind: 'user', fromUserId: user.id, text: maskChat(text.trim()) });
+      for (const m of activeMembers(ride)) fx.touched.add(m.userId);
+    });
+  }
+
+  // ---------- leaving ----------
+
+  async function leaveAs(user: User, rideId: string, acceptCharge: boolean) {
+    for (let attempt = 0; ; attempt++) {
+      const snap = await store.withLock((r) => r.getRide(rideId));
+      if (!snap || !ACTIVE_STATES.includes(snap.state)) throw new ConflictError('RIDE_GONE');
+      if (!activeMembers(snap).some((m) => m.userId === user.id)) return myView(user.id);
+      const active = activeMembers(snap), rest = active.filter((m) => m.userId !== user.id);
+      let spec: MatrixSpec | null = null, route: Ride['anchor']['route'] | null = null, order: string[];
+      if (snap.state === 'OPEN') {
+        order = rest.map((m) => m.userId);
+        if (rest.length) spec = await fetchMatrix(rest, fromIso(snap.plan.firstPickup));
+        if (rest.length && snap.hostUserId === user.id) {
+          const s = (await demo()).settings;
+          route = await selectProvider(s.source).getRoute([rest[0]!.pickup, rest[0]!.dest], fromIso(snap.plan.firstPickup));
+        }
+      } else {
+        order = snap.locked?.order ?? active.map((m) => m.userId);
+        spec = snap.locked?.matrix ?? await fetchMatrix(active, fromIso(snap.plan.firstPickup));
+      }
+      try {
+        return await commit(user.id, async (repo, fx) => {
+          const ride = await repo.getRide(rideId);
+          if (!ride || ride.version !== snap.version) throw RETRY;
+          const now = clock.now();
+          if (ride.state === 'OPEN') {
+            if (!rest.length) {
+              rides.leaveOpen(ride, user.id, user.firstName, now, fx, null);
+              await repo.putRide(ride);
+              return;
+            }
+            const m = toTimed(spec!);
+            const users = await usersOf(repo, order);
+            const restIn = rest.map((x) => riderIn(x, order, users.get(x.userId)!, ride));
+            const opts = { earlyMax: CATEGORY[ride.category].early, priceFactor: pf(ride.category) };
+            const p = plan(m, restIn, opts);
+            if (!p) throw illegal("The remaining riders can't be planned");
+            const seats = rest.reduce((n, x) => n + seatsOf(x), 0);
+            const shareP = piastres(up05(Math.max(0, p.fare - jod(ride.creditsP)) / seats));
+            const anchor = route ? { pickup: rest[0]!.pickup, dest: rest[0]!.dest, arriveBy: rest[0]!.arriveBy, route,
+              km: solo(m, restIn[0]!, opts)!.km } : undefined;
+            rides.leaveOpen(ride, user.id, user.firstName, now, fx, { plan: p, members: rest, shareP, anchor });
+          } else {
+            if (rides.isLateNow(ride, now) && !acceptCharge) {
+              const mine = activeMembers(ride).find((x) => x.userId === user.id)!;
+              throw new ConflictError('LATE_CONFIRM_REQUIRED', undefined, { chargeJod: jod(ride.plan.shareP * seatsOf(mine)) });
+            }
+            rides.leaveFrozen(ride, user.id, user.firstName, now, toTimed(spec!), order, pf(ride.category), fx, await repo.listDrivers());
+          }
+          await repo.putRide(ride);
+        });
+      } catch (e) {
+        if (e === RETRY && attempt === 0) continue;
+        if (e === RETRY) throw new ConflictError('RIDE_CLOSED');
+        throw e;
+      }
+    }
+  }
+
+  // ---------- time: due events, sim Ready, stepped fast-forward ----------
+
+  async function runDue(repo: Repo, fx: Effects, now: Us) {
+    const d = (await repo.getDemoState())!;
+    const drivers = await repo.listDrivers();
+    for (const ride of await repo.listActiveRides()) {
+      const before = ride.version;
+      if (ride.state === 'OPEN' && now >= rides.firstPickupUs(ride) - 45 * MIN) rides.startReadyCheck(ride, now, ctx.realNowMs(), 'auto', '', fx);
+      if (ride.state === 'READY_CHECK' && d.settings.simAutoReady && simShouldAnswer(ride.readyCheck!.startedRealMs, ctx.realNowMs())) {
+        for (const m of activeMembers(ride)) {
+          const u = await repo.getUser(m.userId);
+          if (u?.isSim && !m.readyAnswer) rides.answerReady(ride, u.id, u.firstName, now, drivers, fx);
+        }
+      }
+      if (ride.state === 'READY_CHECK' && now >= fromIso(ride.readyCheck!.endsAt)) rides.dispatch(ride, now, drivers, fx);
+      if (ride.state === 'DISPATCHED' && now >= fromIso(ride.dispatch!.expiresAt)) rides.cancel(ride, now, fx, 'no-driver');
+      if (ride.version !== before) await repo.putRide(ride);
+    }
+    await repo.putDemoState({ ...d, nowIso: toIso(clock.now()), paused: clock.snapshot().paused });   // survives a restart
+  }
+
+  const tick = () => commit(undefined, (repo, fx) => runDue(repo, fx, clock.now()));
+
+  function nextDueAt(list: Ride[]): Us | null {
+    const times = list.flatMap((r) =>
+      r.state === 'OPEN' ? [rides.firstPickupUs(r) - 45 * MIN]
+        : r.state === 'READY_CHECK' ? [fromIso(r.readyCheck!.endsAt)]
+          : r.state === 'DISPATCHED' ? [fromIso(r.dispatch!.expiresAt)] : []);
+    return times.length ? Math.min(...times) : null;
+  }
+
+  /** Fast-forward in steps: apply each due event at its own time, in order (ARCH §8). */
+  async function advanceTo(target: Us) {
+    for (let i = 0; i < 200; i++) {
+      const next = nextDueAt(await store.withLock((r) => r.listActiveRides()));
+      if (next === null || next > target) break;
+      if (next > clock.now()) clock.jump(next);
+      await tick();
+    }
+    clock.jump(target);
+    await tick();
+  }
+
+  async function demoView(): Promise<DemoView> {
+    return store.withLock(async (repo) => {
+      const d = (await repo.getDemoState())!;
+      const list = [];
+      for (const r of await repo.listActiveRides()) {
+        list.push({ id: r.id, state: r.state, hostFirstName: (await repo.getUser(r.hostUserId))?.firstName ?? '?',
+          riders: activeMembers(r).reduce((n, m) => n + seatsOf(m), 0), firstPickupAt: r.plan.firstPickup });
+      }
+      return { buildStamp: null, clock: clockView(clock), settings: d.settings, rides: list };
+    });
+  }
+
+  async function newFriendCode(repo: Repo) {
+    for (;;) {
+      const code = randomBytes(4).toString('base64').replace(/[^A-Z0-9]/gi, '').toUpperCase().padEnd(6, '7').slice(0, 6);
+      if (!(await repo.getUserByFriendCode(code))) return code;
+    }
+  }
+
+  // ---------- the commands ----------
+
+  return {
+    tick,
+
+    /** Push a fresh view to a user's sockets (on connect). */
+    pushView: (userId: string) => publish([userId]),
+
+    async signup(b: Body<typeof req.SignupBody>): Promise<AuthResponse> {
+      const u = await store.withLock(async (repo) => {
+        const d = (await repo.getDemoState())!;
+        const user: User = { id: randomUUID(), token: randomBytes(16).toString('hex'), epoch: d.epoch, role: b.role,
+          firstName: b.firstName.trim(), gender: b.gender, sameGenderOnly: true, friendCode: await newFriendCode(repo),
+          viewSeq: 0, outstandingP: 0, isSim: false, createdAt: toIso(clock.now()) };
+        await repo.putUser(user);
+        if (b.role === 'driver') {
+          const base = seedPlaces.find((p) => p.key === 'CC')!;
+          await repo.putDriver({ userId: user.id, car: 'Demo car', plate: '00-00000', base, creditBalanceP: 0, rejectedRideIds: [] });
+        }
+        return user;
+      });
+      return { token: u.token, epoch: u.epoch, view: await myView(u.id) };
+    },
+
+    async demoLogin({ as }: Body<typeof req.DemoLoginBody>): Promise<AuthResponse> {
+      const u = await store.withLock((r) => r.getUserBySeedLogin(as));
+      if (!u) throw illegal('Unknown demo login');
+      return { token: u.token, epoch: u.epoch, view: await myView(u.id) };
+    },
+
+    async me(token: string) { return myView((await auth(token)).id); },
+
+    async quote(token: string, b: Body<typeof req.QuoteBody>): Promise<QuoteView> {
+      await auth(token, 'rider');
+      const pickup = resolvePlace(b.pickup), dest = resolvePlace(b.dest), by = fromIso(b.arriveBy);
+      const cand = rides.newMember('q', pickup, dest, toIso(by), clock.now(), 0, 0);
+      const m = toTimed(await fetchMatrix([cand], by - HOUR));
+      const uniTrip = campuses.some((c) => hav(pickup, c) <= 1.0 || hav(dest, c) <= 1.0);   // SPEC §3.19
+      const categories: CategoryQuote[] = (['economy', 'comfort', 'airport'] as const).map((category) => {
+        const cat = CATEGORY[category];
+        const available = category === 'airport' ? isAirport(dest) : !isAirport(dest);
+        const s = available ? solo(m, { id: 'q', gender: 'F', p: 0, d: 1, by }, { earlyMax: cat.early, priceFactor: pf(category) }) : null;
+        const estimates = s ? Object.entries(cat.A).map(([k, a]) => ({ riders: +k, eachJod: up05(s.fare * a / +k) })) : [];
+        const [zp, zd] = zone(category, s?.km ?? 0);
+        return { category, available: !!s, maxRiders: cat.maxRiders, soloJod: s ? up05(s.fare) : 0,
+          fromJod: estimates.at(-1)?.eachJod ?? 0, estimates, beReadyBy: s ? toIso(s.T0) : toIso(by),
+          zoneKm: { pickup: zp, dest: zd }, uniTrip };
+      });
+      return { categories };
+    },
+
+    async search(token: string, b: Body<typeof req.SearchBody>): Promise<MatchCard[]> {
+      const user = await auth(token, 'rider');
+      const t = tripOf(b);
+      const open = (await store.withLock((r) => r.listActiveRides()))
+        .filter((r) => r.state === 'OPEN' && !r.members.some((m) => m.userId === user.id && ACTIVE_MEMBER.includes(m.state)));
+      const cards: MatchCard[] = [];
+      for (const ride of open) {
+        const active = activeMembers(ride);
+        const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
+        const order = [...active.map((x) => x.userId), user.id];
+        const users = await store.withLock((repo) => usersOf(repo, order));
+        const me = { ...user, sameGenderOnly: t.sameGenderOnly };
+        users.set(user.id, me);
+        const m = toTimed(await fetchMatrix([...active, cand], fromIso(ride.plan.firstPickup)));
+        const res = checkJoin(m, rideIn(ride, active, order, users), riderIn(cand, order, me, { category: t.category }), clock.now(), cfg.calibration);
+        if (!res.ok) continue;
+        const seatsUsed = active.reduce((n, x) => n + seatsOf(x), 0);
+        cards.push({
+          rideId: ride.id, hostFirstName: users.get(ride.hostUserId)?.firstName ?? '?',
+          category: ride.category, genderMode: ride.genderMode, gender: ride.gender,
+          seats: active.flatMap((x) => {
+            const s = { initials: (users.get(x.userId)?.firstName ?? '?')[0]!.toUpperCase(), isGuest: false };
+            return x.guest && !x.guest.leave ? [s, { initials: x.guest.firstName[0]!.toUpperCase(), isGuest: true }] : [s];
+          }),
+          seatsLeft: CATEGORY[ride.category].maxRiders - seatsUsed,
+          pickupArea: ride.anchor.pickup.area, destArea: ride.anchor.dest.area,
+          effectiveArriveBy: [...active.map((x) => x.arriveBy), t.arriveBy].sort()[0]!,
+          myPickupAt: toIso(res.plan!.pick[active.length]!), eachJod: res.share!, myPaysJod: res.share!,
+        });
+      }
+      return cards.sort((a, b2) => a.eachJod - b2.eachJod);
+    },
+
+    async createRide(token: string, b: Body<typeof req.CreateRideBody>) {
+      const user = await auth(token, 'rider');
+      const t = tripOf(b);
+      const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
+      const settings = (await demo()).settings;
+      const provider = selectProvider(settings.source);
+      const m = toTimed(await provider.getMatrix(points([cand]), t.by - HOUR, { level: settings.traffic, weather: settings.weather }));
+      const cat = CATEGORY[t.category];
+      const s = solo(m, riderIn(cand, [user.id], user, { category: t.category }), { earlyMax: cat.early, priceFactor: pf(t.category) });
+      if (!s) throw new ConflictError('NOT_ELIGIBLE', "We couldn't plan this trip");
+      const now = clock.now();
+      if (s.T0 < now + HOUR) throw new ConflictError('TOO_SOON');
+      if (s.T0 > now + 24 * HOUR) throw new ConflictError('NOT_ELIGIBLE', 'Shared rides can be planned up to 24 hours ahead');
+      const route = await provider.getRoute([t.pickup, t.dest], s.T0);
+      const [zp, zd] = zone(t.category, s.km);
+      return commit(user.id, async (repo, fx) => {
+        await assertFree(repo, [user.id], s.T0, lastDrop(s));
+        cand.soloFareP = piastres(up05(s.fare));
+        cand.soloInCarMin = s.incar[0]!;
+        const ride: Ride = {
+          id: randomUUID(), version: 0, state: 'OPEN', hostUserId: user.id, gender: user.gender,
+          category: t.category, genderMode: t.sameGenderOnly ? 'same' : 'mixed', zone: { pickupKm: zp, destKm: zd },
+          anchor: { pickup: t.pickup, dest: t.dest, arriveBy: t.arriveBy, route, km: s.km },
+          members: [cand], plan: { stops: [], firstPickup: '', km: 0, durMin: 0, fareJod: 0, shareP: 0, inCarMin: {} },
+          creditsP: 0, createdAt: toIso(clock.now()),
+        };
+        rides.applyPlan(ride, s, [cand], cand.soloFareP);
+        cand.firstShownPickup = cand.shownPickup;
+        await repo.putRide(ride);
+        const fresh = (await repo.getUser(user.id))!;
+        await repo.putUser({ ...fresh, sameGenderOnly: t.sameGenderOnly });
+        fx.touched.add(user.id);
+      });
+    },
+
+    async join(token: string, rideId: string, b: Body<typeof req.JoinBody>) {
+      return joinAs(await auth(token, 'rider'), rideId, tripOf(b));
+    },
+
+    async leave(token: string, rideId: string, b: Body<typeof req.LeaveBody>) {
+      return leaveAs(await auth(token, 'rider'), rideId, !!b.acceptCharge);
+    },
+
+    async findDriver(token: string, rideId: string) {
+      const user = await auth(token, 'rider');
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
+        if (ride.hostUserId !== user.id) throw illegal('Only the host can start the ready check');
+        if (ride.state !== 'OPEN') return;   // already started: harmless double tap
+        rides.startReadyCheck(ride, clock.now(), ctx.realNowMs(), 'host', user.firstName, fx);
+        await repo.putRide(ride);
+      });
+    },
+
+    async ready(token: string, rideId: string, b: Body<typeof req.ReadyBody>) {
+      const user = await auth(token, 'rider');
+      if (b.answer === 'CANCEL') return leaveAs(user, rideId, false);   // always free during the ready check
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride) throw new ConflictError('RIDE_GONE');
+        if (ride.state !== 'READY_CHECK') return;
+        rides.answerReady(ride, user.id, user.firstName, clock.now(), await repo.listDrivers(), fx);
+        await repo.putRide(ride);
+      });
+    },
+
+    async chat(token: string, rideId: string, b: Body<typeof req.ChatBody>) {
+      const user = await auth(token);
+      if (b.channel !== 'group') throw illegal('Driver chat comes later');   // P1
+      return postChat(user, rideId, b.text);
+    },
+
+    async accept(token: string, rideId: string) {
+      const user = await auth(token, 'driver');
+      for (let attempt = 0; ; attempt++) {
+        const snap = await store.withLock((r) => r.getRide(rideId));
+        const drv = await store.withLock((r) => r.getDriver(user.id));
+        if (!snap || snap.state !== 'DISPATCHED' || !snap.dispatch?.offeredTo.includes(user.id) || drv!.rejectedRideIds.includes(rideId)) {
+          throw new ConflictError('OFFER_TAKEN');
+        }
+        const order = activeMembers(snap).map((m) => m.userId);
+        const spec = await fetchMatrix(activeMembers(snap), fromIso(snap.plan.firstPickup));
+        try {
+          return await commit(user.id, async (repo, fx) => {
+            const ride = await repo.getRide(rideId);
+            if (!ride || ride.state !== 'DISPATCHED') throw new ConflictError('OFFER_TAKEN');
+            if (ride.version !== snap.version) throw RETRY;
+            const busy = (await repo.listActiveRides()).some((r) => r.driverUserId === user.id && r.id !== rideId);
+            if (busy) throw illegal('You already have a trip');
+            rides.accept(ride, (await repo.getDriver(user.id))!, user.firstName, clock.now(), spec, order, fx);
+            await repo.putRide(ride);
+          });
+        } catch (e) {
+          if (e === RETRY && attempt === 0) continue;
+          if (e === RETRY) throw new ConflictError('OFFER_TAKEN');
+          throw e;
+        }
+      }
+    },
+
+    async reject(token: string, rideId: string) {
+      const user = await auth(token, 'driver');
+      return commit(user.id, async (repo, fx) => {
+        const d = (await repo.getDriver(user.id))!;
+        if (!d.rejectedRideIds.includes(rideId)) await repo.putDriver({ ...d, rejectedRideIds: [...d.rejectedRideIds, rideId] });
+        fx.touched.add(user.id);
+      });
+    },
+
+    // ---------- demo menu (PIN checked by HTTP) ----------
+    demo: {
+      view: demoView,
+
+      async clock(b: Body<typeof req.DemoClockBody>): Promise<DemoView> {
+        if ('advanceMin' in b) await advanceTo(clock.now() + b.advanceMin * MIN);
+        else if ('jumpTo' in b) {
+          const t = fromIso(b.jumpTo);
+          if (t > clock.now()) await advanceTo(t); else { clock.jump(t); await tick(); }
+        } else if ('next' in b) {
+          const n = nextDueAt(await store.withLock((r) => r.listActiveRides()));
+          if (n !== null) await advanceTo(Math.max(n, clock.now()));
+        } else { clock.setPaused(b.paused); await tick(); }
+        publisher.clock(clockView(clock));
+        return demoView();
+      },
+
+      async simulateRider(b: Body<typeof req.DemoRideBody> | string): Promise<DemoView> {
+        const rideId = typeof b === 'string' ? b : b.rideId;
+        const snap = await store.withLock((r) => r.getRide(rideId));
+        if (!snap) throw new ConflictError('RIDE_GONE');
+        const day = snap.anchor.arriveBy.slice(0, 10);
+        const reasons: string[] = [];
+        for (const sim of SIM_ORDER) {
+          if (snap.members.some((m) => m.userId === sim.userId)) continue;
+          const u = (await store.withLock((r) => r.getUser(sim.userId)))!;
+          const t = tripOf({ pickup: { key: sim.pickupKey }, dest: { key: sim.destKey }, arriveBy: `${day}T${sim.arriveBy}:00+03:00`,
+            category: snap.category, sameGenderOnly: true });
+          try {
+            await joinAs(u, rideId, t);
+            await postChat(u, rideId, sim.chatLine);
+            return demoView();
+          } catch (e) {
+            if (!(e instanceof ConflictError)) throw e;
+            reasons.push(`${u.firstName}: ${e.message}`);
+          }
+        }
+        throw new ConflictError('NOT_ELIGIBLE', reasons.length ? `No seed rider fits. ${reasons.join('; ')}` : 'No seed riders left');
+      },
+
+      async completeTrip(b: Body<typeof req.DemoRideBody> | string): Promise<DemoView> {
+        const rideId = typeof b === 'string' ? b : b.rideId;
+        await commit(undefined, async (repo, fx) => {
+          const ride = await repo.getRide(rideId);
+          if (!ride) throw new ConflictError('RIDE_GONE');
+          rides.complete(ride, clock.now(), await usersOf(repo, ride.members.map((m) => m.userId)), fx);
+          await repo.putRide(ride);
+        });
+        return demoView();
+      },
+
+      async reset(): Promise<DemoView> {
+        await store.withLock((r) => resetToSeed(r, cfg));
+        clock.jump(cfg.demoStartUs);
+        clock.setPaused(true);
+        publisher.logout();
+        return demoView();
+      },
+
+      async settings(b: Body<typeof req.DemoSettingsBody>): Promise<DemoView> {
+        await store.withLock(async (r) => { const d = (await r.getDemoState())!; await r.putDemoState({ ...d, settings: { ...d.settings, ...b } }); });
+        return demoView();
+      },
+    },
+  };
+}
+
+export type Commands = ReturnType<typeof createCommands>;

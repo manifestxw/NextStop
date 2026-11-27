@@ -41,21 +41,21 @@ describe('ISO with the Amman offset', () => {
   });
 });
 
+import { vi } from 'vitest';
 import { createScheduler } from '../src/clock/scheduler.js';
-import { createMemoryStore } from '../src/store/memoryRepo.js';
-import { seedIfEmpty } from '../src/store/seed.js';
-import { parseConfig } from '../src/config.js';
 
-describe('scheduler tick', () => {
-  it('runs the due-event hook under the lock and saves the clock every tick', async () => {
-    const store = createMemoryStore();
-    await store.withLock((r) => seedIfEmpty(r, parseConfig({})));
-    const clock = createClock({ startUs: sun(6, 10), paused: true, realNowMs: () => 0 });
-    const seen: number[] = [];
-    const s = createScheduler({ store, clock, onTick: async (_r, now) => { seen.push(now); } });
-    clock.advance(25);
-    await s.tickOnce();
-    expect(seen).toEqual([sun(6, 35)]);
-    expect(await store.withLock((r) => r.getDemoState())).toMatchObject({ nowIso: '2026-11-29T06:35:00.000+03:00', paused: true });
+describe('scheduler', () => {
+  it('ticks every interval and never overlaps a slow tick', async () => {
+    vi.useFakeTimers();
+    let calls = 0, release: () => void = () => undefined;
+    const s = createScheduler({ tick: () => { calls++; return new Promise<void>((ok) => { release = ok; }); }, intervalMs: 1000 });
+    s.start();
+    await vi.advanceTimersByTimeAsync(3500);   // three intervals, but the first tick is still running
+    expect(calls).toBe(1);
+    release();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toBe(2);
+    s.stop();
+    vi.useRealTimers();
   });
 });

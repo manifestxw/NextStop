@@ -17,6 +17,7 @@ export interface Repo {
   getRide(id: string): Promise<Ride | null>;
   listActiveRides(): Promise<Ride[]>;            // state not COMPLETED/CANCELED
   listRidesForUser(userId: string): Promise<Ride[]>;   // any state, the user is (or was) a member
+  listRidesByDriver(driverUserId: string): Promise<Ride[]>;   // any state
   putRide(r: Ride): Promise<void>;                // upsert ride + replace its members
 
   addMessage(m: Omit<ChatMessage, 'seq'>): Promise<ChatMessage>;   // assigns seq = last + 1 per ride

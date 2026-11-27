@@ -57,7 +57,7 @@ export interface Ride {
   members: Member[];                              // includes LEFT/NO_SHOW for history
   plan: RidePlan;
   frozen?: { at: string };
-  locked?: { at: string; matrix: MatrixSpec; tariff: 'DAY' | 'NIGHT' };
+  locked?: { at: string; matrix: MatrixSpec; tariff: 'DAY' | 'NIGHT'; order: string[] };   // order: member ids in matrix point order
   creditsP: number;
   readyCheck?: { startedAt: string; startedRealMs: number; endsAt: string; startedBy: 'host' | 'auto' };
   dispatch?: { at: string; expiresAt: string; offeredTo: string[] };

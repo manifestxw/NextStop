@@ -66,6 +66,7 @@ function repoFor(tx: Tx): Repo {
     getRide: async (id) => { const r = await tx.ride.findUnique({ where: { id }, ...withMembers }); return r && toRide(r); },
     listActiveRides: async () => (await tx.ride.findMany({ where: { state: { in: ACTIVE_STATES } }, orderBy: { createdAt: 'asc' }, ...withMembers })).map(toRide),
     listRidesForUser: async (userId) => (await tx.ride.findMany({ where: { members: { some: { userId } } }, orderBy: { createdAt: 'asc' }, ...withMembers })).map(toRide),
+    listRidesByDriver: async (driverUserId) => (await tx.ride.findMany({ where: { driverUserId }, orderBy: { createdAt: 'asc' }, ...withMembers })).map(toRide),
     putRide: async (r) => {
       const data = {
         version: r.version, state: r.state, hostUserId: r.hostUserId, gender: r.gender, category: r.category, genderMode: r.genderMode,

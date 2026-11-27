@@ -72,6 +72,9 @@ describe.each(stores)('%s contract', (_name, make) => {
       expect(await r.getRide('r1')).toEqual(ride('r1', 'OPEN', ['lina', 'sara']));
       expect((await r.listActiveRides()).map((x) => x.id)).toEqual(['r1']);
       expect((await r.listRidesForUser('lina')).map((x) => x.id).sort()).toEqual(['r1', 'r2']);
+      await r.putUser(user('omar', { role: 'driver' }));
+      await r.putRide({ ...ride('r2', 'COMPLETED', ['lina']), driverUserId: 'omar' });
+      expect((await r.listRidesByDriver('omar')).map((x) => x.id)).toEqual(['r2']);
       const one = ride('r1', 'READY_CHECK', ['lina']);
       await r.putRide({ ...one, version: 1 });     // members are replaced, not merged
       expect((await r.getRide('r1'))?.members.map((m) => m.userId)).toEqual(['lina']);

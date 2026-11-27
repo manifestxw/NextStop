@@ -22,10 +22,11 @@ export interface JoinResult { ok: boolean; reason: string; plan?: Plan; share?: 
 
 const no = (reason: string): JoinResult => ({ ok: false, reason });
 
-export function checkJoin(m: TimedMatrix, ride: RideIn, j: RiderIn, now: Us): JoinResult {
+/** `calibration` = env CALIBRATION (1.00 in the golden tests); it multiplies the category price like the model. */
+export function checkJoin(m: TimedMatrix, ride: RideIn, j: RiderIn, now: Us, calibration = 1.0): JoinResult {
   const { riders } = ride, host = riders[0]!;
   const catName = ride.category ?? 'economy', cat = CATEGORY[catName];
-  const priceFactor = cat.price;
+  const priceFactor = calibration * cat.price;
   if (!genderOk(ride, j)) return no('rule 1 gender');
   if ((j.category ?? 'economy') !== catName) return no('rule 1 category');
   if (seats(riders) + seats([j]) > cat.maxRiders) return no('rule 2 full');
