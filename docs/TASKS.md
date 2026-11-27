@@ -58,7 +58,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 ## P2 (only if time remains before the 9:30 PM freeze)
 - [x] **T22** `done fe38714` CC: Demand spots: `kmeans.ts` port (mulberry32), `data/demand_seed.json` from `sample_history`, `GET /api/driver/demand`, demo driver-position. needs: T12 (SPEC §3.18)
 - [x] **T23** `done fe38714` CX→CC (owner): Demand map + best spot card. needs: T22
-- [ ] **T24** `todo` CC: Traffic/weather/supply demo controls. needs: T12
+- [ ] **T24** `doing CC` CC: Traffic/weather/supply demo controls. needs: T12
 
 ## Added during the build
 - [x] **T25** `done 579a19b` CC: Demo autopilot: "Play next step" in the demo menu runs SPEC §2.2 one step at a time as the seeded people (rehearsal + stage backup). Tested to the canonical numbers.

@@ -59,7 +59,7 @@ async function load(repo: Repo, cfg: Config, epoch: number, paused: boolean) {
   }
   await repo.putDemoState({
     epoch, nowIso: createdAt, paused,
-    settings: { source: cfg.travelSource, offlineFallbackActive: false, traffic: 'normal', weather: 'clear', driversNearby: 8, simAutoReady: true },
+    settings: { source: cfg.travelSource, offlineFallbackActive: false, traffic: 'normal', weather: 'clear', driversNearby: 20, simAutoReady: true },
   });
 }
 

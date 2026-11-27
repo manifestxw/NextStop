@@ -76,6 +76,14 @@ export function DemoMenu() {
         <button style={big} disabled={!ride} onClick={() => ride && act(() => api.demo.completeTrip(pin, ride.id))}>Complete trip</button>
         <button style={{ ...big, gridColumn: 'span 2' }} onClick={() => act(() => api.demo.placePlanned(pin))}>Place planned rides now (next 36 h)</button>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <label>Traffic<select value={demo.settings.traffic} onChange={(e) => act(() => api.demo.settings(pin, { traffic: e.target.value as 'normal' | 'heavy' | 'jam' }))} style={{ ...big, padding: 8, width: '100%' }}>
+          {['normal', 'heavy', 'jam'].map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+        <label>Weather<select value={demo.settings.weather} onChange={(e) => act(() => api.demo.settings(pin, { weather: e.target.value as 'clear' | 'rain' }))} style={{ ...big, padding: 8, width: '100%' }}>
+          {['clear', 'rain'].map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+        <label>Drivers<select value={demo.settings.driversNearby} onChange={(e) => act(() => api.demo.settings(pin, { driversNearby: Number(e.target.value) as 2 | 8 | 20 }))} style={{ ...big, padding: 8, width: '100%' }}>
+          {[2, 8, 20].map((v) => <option key={v} value={v}>{v} nearby</option>)}</select></label>
+      </div>
       <label>Omar's position (demand spots):{' '}
         <select defaultValue="" onChange={(e) => e.target.value && act(() => api.demo.driverPosition(pin, 'u-omar', e.target.value))} style={{ ...big, padding: 8 }}>
           <option value="" disabled>choose…</option>

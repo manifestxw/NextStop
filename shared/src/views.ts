@@ -96,6 +96,7 @@ export interface RiderRideView {
   driver?: { firstName: string; car: string; plate: string };
   readyCheck?: { endsAt: Iso; startedByFirstName: string; answers: { firstName: string; status: 'READY' | 'WAITING' | 'LEFT' }[] };
   findDriverAutoAt: Iso;
+  fewDrivers?: boolean;     // P2, SPEC §4.6: host sees "Few drivers nearby"
   leave: { free: boolean; chargeJod: number };    // what "Leave ride" would cost right now
   myGuest?: { firstName: string };                // P1
   pendingInvites?: { firstName: string }[];       // P1

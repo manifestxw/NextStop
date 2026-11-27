@@ -11,6 +11,8 @@ import type { Driver, Member, Place, Ride, User } from './types.js';
 
 const MIN = US_PER_MIN;
 export const firstPickupUs = (ride: Ride) => fromIso(ride.plan.firstPickup);
+/** Supply-aware automatic ready check (SPEC §4.6): fewer drivers nearby → start earlier. */
+export const readyLeadMin = (driversNearby: number) => (driversNearby >= 10 ? 45 : driversNearby >= 5 ? 60 : 75);
 export const driverAssigned = (ride: Ride) => !!ride.driverUserId && (ride.state === 'ACCEPTED' || ride.state === 'IN_PROGRESS');
 /** Late = a driver is assigned and it's under 30 min to the first pickup (SPEC §3.10). */
 export const isLateNow = (ride: Ride, now: Us) => driverAssigned(ride) && (firstPickupUs(ride) - now) / MIN < 30;

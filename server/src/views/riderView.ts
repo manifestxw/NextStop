@@ -4,7 +4,7 @@ import type { PlaceView, RiderRideView, RiderView } from '@nextstop/shared';
 import { fromIso, toIso } from '../clock/amman.js';
 import type { Clock } from '../clock/clock.js';
 import { activeMembers, cashDueP, jod, seatsOf, uniCreditP } from '../domain/bridge.js';
-import { driverAssigned, firstPickupUs, isLateNow, type SummaryRecord } from '../domain/rides.js';
+import { driverAssigned, firstPickupUs, isLateNow, readyLeadMin, type SummaryRecord } from '../domain/rides.js';
 import { ACTIVE_STATES, type Place, type Ride, type User } from '../domain/types.js';
 import { CATEGORY } from '../engine/zone.js';
 import type { Repo } from '../store/repo.js';
@@ -53,6 +53,7 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
   const driver = driverAssigned(ride) || ride.state === 'COMPLETED' ? await repo.getDriver(ride.driverUserId ?? '') : null;
   const driverUser = driver ? await repo.getUser(driver.userId) : null;
   const late = isLateNow(ride, now);
+  const drivers = (await repo.getDemoState())?.settings.driversNearby ?? 20;
   const group = await repo.listMessages(ride.id, 'group', 100);
   const summary = ride.summary as SummaryRecord | undefined;
   const mySeats = summary?.riders.find((r) => r.userId === me.id);
@@ -75,7 +76,8 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
         firstName: users.get(m.userId)?.firstName ?? '?',
         status: m.state === 'LEFT' ? 'LEFT' as const : m.readyAnswer === 'READY' ? 'READY' as const : 'WAITING' as const })),
     } } : {}),
-    findDriverAutoAt: toIso(firstPickupUs(ride) - 45 * 60_000_000),
+    findDriverAutoAt: toIso(firstPickupUs(ride) - readyLeadMin(drivers) * 60_000_000),
+    ...(ride.hostUserId === me.id && ride.state === 'OPEN' && drivers <= 2 ? { fewDrivers: true } : {}),
     leave: { free: !late, chargeJod: late ? jod(cashDueP(mine, ride.plan.shareP)) : 0 },
     chat: { group: group.map((m) => chatView(m, users)), unread: 0,
       ...(ride.driverUserId ? { driver: (await repo.listMessages(ride.id, `driver:${me.id}`, 100)).map((m) => chatView(m, users)) } : {}) },

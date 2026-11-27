@@ -368,7 +368,7 @@ export function createCommands(ctx: Ctx) {
     const drivers = await repo.listDrivers();
     for (const ride of await repo.listActiveRides()) {
       const before = ride.version;
-      if (ride.state === 'OPEN' && now >= rides.firstPickupUs(ride) - 45 * MIN) rides.startReadyCheck(ride, now, ctx.realNowMs(), 'auto', '', fx);
+      if (ride.state === 'OPEN' && now >= rides.firstPickupUs(ride) - rides.readyLeadMin(d.settings.driversNearby) * MIN) rides.startReadyCheck(ride, now, ctx.realNowMs(), 'auto', '', fx);
       if (ride.state === 'READY_CHECK' && d.settings.simAutoReady && simShouldAnswer(ride.readyCheck!.startedRealMs, ctx.realNowMs())) {
         for (const m of activeMembers(ride)) {
           const u = await repo.getUser(m.userId);
@@ -420,9 +420,9 @@ export function createCommands(ctx: Ctx) {
     }
   }
 
-  function nextDueAt(list: Ride[]): Us | null {
+  function nextDueAt(list: Ride[], leadMin = 45): Us | null {
     const times = list.flatMap((r) =>
-      r.state === 'OPEN' ? [rides.firstPickupUs(r) - 45 * MIN]
+      r.state === 'OPEN' ? [rides.firstPickupUs(r) - leadMin * MIN]
         : r.state === 'READY_CHECK' ? [fromIso(r.readyCheck!.endsAt)]
           : r.state === 'DISPATCHED' ? [fromIso(r.dispatch!.expiresAt)] : []);
     return times.length ? Math.min(...times) : null;
@@ -431,7 +431,8 @@ export function createCommands(ctx: Ctx) {
   /** Fast-forward in steps: apply each due event at its own time, in order (ARCH §8). */
   async function advanceTo(target: Us) {
     for (let i = 0; i < 200; i++) {
-      const next = nextDueAt(await store.withLock((r) => r.listActiveRides()));
+      const [list, d] = await store.withLock(async (r) => [await r.listActiveRides(), (await r.getDemoState())!] as const);
+      const next = nextDueAt(list, rides.readyLeadMin(d.settings.driversNearby));
       if (next === null || next > target) break;
       if (next > clock.now()) clock.jump(next);
       await tick();
@@ -877,7 +878,8 @@ export function createCommands(ctx: Ctx) {
           const t = fromIso(b.jumpTo);
           if (t > clock.now()) await advanceTo(t); else { clock.jump(t); await tick(); }
         } else if ('next' in b) {
-          const n = nextDueAt(await store.withLock((r) => r.listActiveRides()));
+          const [list, d] = await store.withLock(async (r) => [await r.listActiveRides(), (await r.getDemoState())!] as const);
+          const n = nextDueAt(list, rides.readyLeadMin(d.settings.driversNearby));
           if (n !== null) await advanceTo(Math.max(n, clock.now()));
         } else { clock.setPaused(b.paused); await tick(); }
         publisher.clock(clockView(clock));

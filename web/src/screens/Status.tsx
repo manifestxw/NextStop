@@ -124,7 +124,7 @@ export function Status() {
 
       {ride.isHost && ride.state === 'OPEN' && (
         <div className="dock">
-          <p className="t-caption text-2 center">Starts automatically at {fmtTime(ride.findDriverAutoAt)}</p>
+          <p className="t-caption text-2 center">{ride.fewDrivers ? 'Few drivers nearby, so it starts early · ' : ''}Starts automatically at {fmtTime(ride.findDriverAutoAt)}</p>
           <Button disabled={a.busy} onClick={() => a.run(() => api.findDriver(ride.id))}>Find driver</Button>
         </div>
       )}
