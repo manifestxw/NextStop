@@ -49,6 +49,11 @@ export function DemoMenu() {
   return (
     <main style={{ font: '16px system-ui', padding: 20, background: '#fff', color: '#111', minHeight: '100dvh', display: 'grid', gap: 12 }}>
       <h1 style={{ margin: 0 }}>Demo menu</h1>
+      <section style={{ border: '2px solid #111', borderRadius: 8, padding: 12, display: 'grid', gap: 8 }}>
+        <b>Autopilot (SPEC §2.2 script)</b>
+        <span>{demo.autopilot ? `Next: step ${demo.autopilot.step} of 7: ${demo.autopilot.label}` : 'Script done. Reset to run it again.'}</span>
+        <button style={{ ...big, background: '#111', color: '#fff' }} disabled={!demo.autopilot} onClick={() => act(() => api.demo.autopilot(pin))}>Play next step</button>
+      </section>
       <p style={{ margin: 0 }}>Build <b>{demo.buildStamp?.hash ?? 'dev'}</b> · source <b>{demo.settings.source}</b> · clock <b>{fmtTime(demo.clock.nowIso)}</b>{demo.clock.paused ? ' (paused)' : ' (running)'}</p>
       {msg && <p style={{ color: '#b00', margin: 0 }}>{msg}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

@@ -63,3 +63,26 @@ describe('SPEC §2.2 demo script (stage data)', () => {
     expect([ds.riders.map((x) => `${x.firstName} ${x.cashJod}`), ds.creditJod, ds.totalJod]).toEqual([['Lina 1.65', 'Rania 1.65', 'Dana 1.65'], 1.7, 6.65]);
   });
 });
+
+describe('demo autopilot (demo menu "Play next step")', () => {
+  it('plays the same script step by step from the ride state and ends on the canonical numbers', async () => {
+    const h = await makeHarness({ stage: true });
+    const labels: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const next = (await h.cmd.demo.view()).autopilot;
+      if (!next) break;
+      labels.push(next.label);
+      await h.cmd.demo.autopilot();
+      h.real.ms += 3_000;              // simulated riders answer the ready check after 3 s
+      await h.cmd.tick();
+    }
+    expect(labels).toEqual([
+      'Lina creates a ride', 'Sara joins and says hi', 'Two simulated riders join',
+      'Lina finds a driver; Lina and Sara are ready', 'Omar accepts', '6:53: Sara leaves late', 'Complete trip',
+    ]);
+    const omar = await h.login('omar');
+    const ds = driver(await h.cmd.me(omar)).trip!.summary!;
+    expect([ds.riders.map((x) => x.cashJod), ds.creditJod, ds.totalJod]).toEqual([[1.65, 1.65, 1.65], 1.7, 6.65]);
+    expect((await h.cmd.demo.view()).autopilot).toBeNull();
+  });
+});

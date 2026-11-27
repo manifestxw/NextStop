@@ -63,5 +63,6 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.post('/api/demo/simulate-rider', async (r) => { pin(r); return demo(cmd.demo.simulateRider(body(schema.DemoRideBody, r))); });
   app.post('/api/demo/complete-trip', async (r) => { pin(r); return demo(cmd.demo.completeTrip(body(schema.DemoRideBody, r))); });
   app.post('/api/demo/reset', async (r) => { pin(r); return demo(cmd.demo.reset()); });
+  app.post('/api/demo/autopilot', async (r) => { pin(r); return demo(cmd.demo.autopilot()); });
   app.post('/api/demo/settings', async (r) => { pin(r); return demo(cmd.demo.settings(body(schema.DemoSettingsBody, r))); });
 }

@@ -1,7 +1,7 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13, T14)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13, T14, T25)
 **Milestone:** M1 code done; only **T12** (deploy + 3 real phones) left · M2: T13 done
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
@@ -21,6 +21,7 @@
 - Booted on the snapshot; headless Chromium shows the new numbers. Real phones: not yet (T12).
 - **T14:** real Google map seen on localhost:3000: Paper (riders: own pickup + halo, destination only),
   Cockpit (driver: numbered pickups fit to view, "1·2" for a shared spot). Key rejection → marks panel.
+- **T25:** demo menu autopilot ("Play next step", 7 steps, state-driven) for rehearsal and as a stage backup.
 
 ## Next task
 - **T12 (owner/CC):** deploy to Replit (Reserved VM, Node 22 if offered), set Secrets from `.env`
@@ -37,4 +38,4 @@
 - Owner: Google's places for seeds (CC = Irbid City Center mall, Aydoun); 4 riders via shared pickup.
 - Al-Hashmi (2.31 km from the real road) is outside the zone; kept as a seed for other rides.
 - Live Google source: 2.5 s timeout → fixed table (logged); "offline estimates" demo flag still P1.
-- Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; Member `pos` column; unread counted on phone.
+- Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; Member `pos` column.

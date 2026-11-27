@@ -186,4 +186,6 @@ export interface DemoSettings {
 export interface DemoView {
   buildStamp: BuildStamp | null; clock: ClockView; settings: DemoSettings;
   rides: { id: string; state: RideState; hostFirstName: string; riders: number; firstPickupAt: Iso }[];
+  /** The demo menu's "Play next step": the next SPEC §2.2 step, or null when the script is done. */
+  autopilot: { step: number; label: string } | null;
 }

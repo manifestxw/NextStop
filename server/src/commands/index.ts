@@ -341,8 +341,32 @@ export function createCommands(ctx: Ctx) {
         list.push({ id: r.id, state: r.state, hostFirstName: (await repo.getUser(r.hostUserId))?.firstName ?? '?',
           riders: activeMembers(r).reduce((n, m) => n + seatsOf(m), 0), firstPickupAt: r.plan.firstPickup });
       }
-      return { buildStamp: null, clock: clockView(clock), settings: d.settings, rides: list };
+      return { buildStamp: null, clock: clockView(clock), settings: d.settings, rides: list, autopilot: await nextStep(repo) };
     });
+  }
+
+  // ---------- demo autopilot: the SPEC §2.2 script, one step per tap, read from the ride's state ----------
+
+  const STEPS = ['', 'Lina creates a ride', 'Sara joins and says hi', 'Two simulated riders join',
+    'Lina finds a driver; Lina and Sara are ready', 'Omar accepts', '6:53: Sara leaves late', 'Complete trip'];
+
+  async function linaRide(repo: Repo): Promise<Ride | null> {
+    const lina = await repo.getUserBySeedLogin('lina');
+    const rides = lina ? (await repo.listRidesForUser(lina.id)).filter((r) => r.hostUserId === lina.id || r.members[0]?.userId === lina.id) : [];
+    return rides.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+  }
+
+  async function nextStep(repo: Repo): Promise<DemoView['autopilot']> {
+    const ride = await linaRide(repo);
+    const step = (() => {
+      if (!ride || ride.state === 'CANCELED') return 1;
+      if (ride.state === 'COMPLETED') return 0;
+      const active = activeMembers(ride), saraIn = active.some((m) => m.userId === 'u-sara');
+      if (ride.state === 'OPEN') return !ride.members.some((m) => m.userId === 'u-sara') ? 2 : active.length < 4 ? 3 : 4;
+      if (ride.state === 'READY_CHECK' || ride.state === 'DISPATCHED') return 5;
+      return saraIn ? 6 : 7;
+    })();
+    return step ? { step, label: STEPS[step]! } : null;
   }
 
   async function newFriendCode(repo: Repo) {
@@ -354,7 +378,7 @@ export function createCommands(ctx: Ctx) {
 
   // ---------- the commands ----------
 
-  return {
+  const self = {
     tick,
 
     /** Push a fresh view to a user's sockets (on connect). */
@@ -612,12 +636,57 @@ export function createCommands(ctx: Ctx) {
         return demoView();
       },
 
+      /** Play the next script step as the seeded people, through the same commands their phones use. */
+      async autopilot(): Promise<DemoView> {
+        const next = await store.withLock(nextStep);
+        if (!next) throw new ConflictError('NOT_ELIGIBLE', 'The demo script is done. Reset to run it again.');
+        const [lina, sara, omar] = await store.withLock(async (r) =>
+          Promise.all((['lina', 'sara', 'omar'] as const).map(async (as) => (await r.getUserBySeedLogin(as))!.token)));
+        const day = toIso(clock.now()).slice(0, 10);
+        const trip = (key: string) => ({ pickup: { key }, dest: { key: 'JUST' }, arriveBy: `${day}T08:00:00+03:00`, category: 'economy' as const, sameGenderOnly: true });
+        const ride = async () => (await store.withLock(linaRide))!;
+        switch (next.step) {
+          case 1: await self.createRide(lina!, trip('CC')); break;
+          case 2: {
+            const id = (await ride()).id;
+            await self.join(sara!, id, trip('US'));
+            await self.chat(sara!, id, { channel: 'group', text: "Hi! I'm near University Street" });
+            break;
+          }
+          case 3: for (let i = 0; i < 3 && activeMembers(await ride()).length < 4; i++) await self.demo.simulateRider((await ride()).id); break;
+          case 4: {
+            const id = (await ride()).id;
+            await self.findDriver(lina!, id);
+            await self.ready(lina!, id, { answer: 'READY' });
+            await self.ready(sara!, id, { answer: 'READY' });
+            break;
+          }
+          case 5: {
+            if ((await ride()).state === 'READY_CHECK') await tick();
+            if ((await ride()).state === 'READY_CHECK') throw new ConflictError('NOT_ELIGIBLE', 'Waiting for the simulated riders to answer the ready check (about 3 s)');
+            await self.accept(omar!, (await ride()).id);
+            break;
+          }
+          case 6: {
+            const r = await ride();
+            const t = fromIso(r.plan.firstPickup) - 27 * MIN;   // the late-leave moment: 27 min before the first pickup
+            if (t > clock.now()) await advanceTo(t);
+            await self.leave(sara!, r.id, { acceptCharge: true });
+            break;
+          }
+          case 7: await self.demo.completeTrip((await ride()).id); break;
+        }
+        publisher.clock(clockView(clock));
+        return demoView();
+      },
+
       async settings(b: Body<typeof req.DemoSettingsBody>): Promise<DemoView> {
         await store.withLock(async (r) => { const d = (await r.getDemoState())!; await r.putDemoState({ ...d, settings: { ...d.settings, ...b } }); });
         return demoView();
       },
     },
   };
+  return self;
 }
 
 export type Commands = ReturnType<typeof createCommands>;

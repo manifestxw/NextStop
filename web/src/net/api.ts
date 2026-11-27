@@ -69,6 +69,7 @@ export const api = {
     simulateRider: async (pin: string, rideId: string) => (await post<DemoResponse>('/api/demo/simulate-rider', { rideId }, pin)).demo,
     completeTrip: async (pin: string, rideId: string) => (await post<DemoResponse>('/api/demo/complete-trip', { rideId }, pin)).demo,
     reset: async (pin: string) => (await post<DemoResponse>('/api/demo/reset', {}, pin)).demo,
+    autopilot: async (pin: string) => (await post<DemoResponse>('/api/demo/autopilot', {}, pin)).demo,
     settings: async (pin: string, b: In<typeof req.DemoSettingsBody>) => (await post<DemoResponse>('/api/demo/settings', b, pin)).demo,
   },
 };
