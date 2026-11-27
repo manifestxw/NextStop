@@ -68,7 +68,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [x] **T29** `done 32e8742` CC (owner): Picked-up riders can't leave or remove their +1; rider screen says "You're in the car".
 - [x] **T30** `done 8c87c86` CC (owner, 27 Nov; SPEC §5 "OTP login" lifted by owner): phone sign-up with demo OTP (code on screen + demo menu, no SMS), profile + log out, rider ↔ assigned-driver calling.
 - [x] **T31** `done 5ae6075` CC (owner): Installable app (PWA): manifest, icons, service worker (never caches /api or sockets; pages network-first), offline page, install row on Profile. APK = PWABuilder on the deployed URL.
-- [x] **T32** `done HASH` CC (owner): Demo people renamed (Laith, Saed, Deya'a, Adnan, Yazeed; men-only) + a women-only demo (Lina, Sara, Rasha, Hala) chosen in the demo menu; same canonical numbers.
+- [x] **T32** `done 0f80942` CC (owner): Demo people renamed (Laith, Saed, Deya'a, Adnan, Yazeed; men-only) + a women-only demo (Lina, Sara, Rasha, Hala) chosen in the demo menu; same canonical numbers.
 
 ## Cut order if time runs out
 P2 entirely → T16/T15 (pitch Uni plans from a slide) → T18/T17 → T21 → T20.
