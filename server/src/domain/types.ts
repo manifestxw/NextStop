@@ -75,6 +75,11 @@ export interface ChatMessage {
   at: string;
 }
 
+export interface Invite {                          // SPEC §3.17 B
+  id: string; rideId: string; fromUserId: string; toUserId: string;
+  at: string; state: 'PENDING' | 'USED' | 'EXPIRED';
+}
+
 export interface Banner { id: string; userId: string; text: string; tone: 'info' | 'warn' | 'danger'; at: string; seen: boolean }
 
 export interface DemoState { epoch: number; nowIso: string; paused: boolean; settings: DemoSettings }

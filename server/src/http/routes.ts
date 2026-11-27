@@ -51,6 +51,10 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.post('/api/rides/:id/find-driver', async (r) => view(cmd.findDriver(token(r), id(r))));
   app.post('/api/rides/:id/ready', async (r) => view(cmd.ready(token(r), id(r), body(schema.ReadyBody, r))));
   app.post('/api/rides/:id/chat', async (r) => view(cmd.chat(token(r), id(r), body(schema.ChatBody, r))));
+  app.post('/api/rides/:id/guest', async (r) => view(cmd.addGuest(token(r), id(r), body(schema.GuestBody, r))));
+  app.post('/api/rides/:id/guest/remove', async (r) => view(cmd.removeGuest(token(r), id(r), body(schema.GuestRemoveBody, r))));
+  app.post('/api/rides/:id/invite', async (r) => view(cmd.invite(token(r), id(r), body(schema.InviteBody, r))));
+  app.post('/api/invites/:id/decline', async (r) => view(cmd.declineInvite(token(r), id(r))));
   app.post('/api/banners/:id/seen', async (r) => view(cmd.bannerSeen(token(r), id(r))));
 
   // driver

@@ -1,7 +1,7 @@
 // SQLite Repo via Prisma (ARCH §4.1). Nested objects are JSON strings; the only raw storage detail
 // beyond ARCH is Member.pos, which keeps member order (host first) when joins share a timestamp.
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { ACTIVE_STATES, type Member, type Ride, type User } from '../domain/types.js';
+import { ACTIVE_STATES, type Invite, type Member, type Ride, type User } from '../domain/types.js';
 import { createLock } from './lock.js';
 import type { Repo, Store } from './repo.js';
 
@@ -100,6 +100,14 @@ function repoFor(tx: Tx): Repo {
     listUnseenBanners: async (userId) =>
       (await tx.banner.findMany({ where: { userId, seen: false }, orderBy: { at: 'asc' } })).map((b) => ({ ...b, tone: b.tone as 'info' | 'warn' | 'danger' })),
     markBannerSeen: async (id) => { await tx.banner.updateMany({ where: { id }, data: { seen: true } }); },
+    putInvite: async (i) => {
+      await tx.invite.deleteMany({ where: { rideId: i.rideId, toUserId: i.toUserId, NOT: { id: i.id } } });
+      await tx.invite.upsert({ where: { id: i.id }, create: i, update: i });
+    },
+    getInvite: async (id) => (await tx.invite.findUnique({ where: { id } })) as Invite | null,
+    listInvitesForUser: async (toUserId) => (await tx.invite.findMany({ where: { toUserId }, orderBy: { at: 'asc' } })) as Invite[],
+    listInvitesForRide: async (rideId) => (await tx.invite.findMany({ where: { rideId }, orderBy: { at: 'asc' } })) as Invite[],
+    expireInvites: async (rideId) => { await tx.invite.updateMany({ where: { rideId, state: 'PENDING' }, data: { state: 'EXPIRED' } }); },
     getDemoState: async () => {
       const d = await tx.demoState.findUnique({ where: { id: 1 } });
       return d && { epoch: d.epoch, nowIso: d.demoNowIso, paused: d.paused, settings: JSON.parse(d.settingsJson) };

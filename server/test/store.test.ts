@@ -108,6 +108,18 @@ describe.each(stores)('%s contract', (_name, make) => {
     });
   });
 
+  it('keeps one invite per ride and invitee, and expires pending ones', async () => {
+    await store.withLock(async (r) => {
+      const base = { rideId: 'r1', fromUserId: 'lina', toUserId: 'sara', state: 'PENDING' as const };
+      await r.putInvite({ ...base, id: 'i1', at: '2026-11-29T06:10:00.000+03:00' });
+      await r.putInvite({ ...base, id: 'i2', at: '2026-11-29T06:11:00.000+03:00' });   // replaces i1
+      expect((await r.listInvitesForUser('sara')).map((i) => i.id)).toEqual(['i2']);
+      await r.expireInvites('r1');
+      expect((await r.getInvite('i2'))?.state).toBe('EXPIRED');
+      expect((await r.listInvitesForRide('r1')).length).toBe(1);
+    });
+  });
+
   it('rolls back everything when a locked block throws', async () => {
     await expect(store.withLock(async (r) => { await r.putUser(user('ghost')); throw new Error('boom'); })).rejects.toThrow('boom');
     expect(await store.withLock((r) => r.getUser('ghost'))).toBeNull();

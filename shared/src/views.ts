@@ -104,7 +104,7 @@ export interface RiderRideView {
   cancelReason?: 'no-driver' | 'driver-canceled' | 'everyone-left';   // when state is CANCELED
 }
 
-export interface InviteView { id: string; fromFirstName: string; destArea: string; arriveBy: Iso; category: Category }
+export interface InviteView { id: string; rideId: string; fromFirstName: string; destArea: string; destKey?: string; arriveBy: Iso; category: Category }
 
 export interface PlanView {
   kind: 'weekly' | 'semester'; end: Iso; replacementsLeft: number;

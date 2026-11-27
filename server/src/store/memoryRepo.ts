@@ -1,13 +1,13 @@
 // In-memory Repo for domain tests. Same contract as prismaRepo; rollback = restore a snapshot.
-import { ACTIVE_STATES, type Banner, type ChatMessage, type DemoState, type Driver, type Ride, type User } from '../domain/types.js';
+import { ACTIVE_STATES, type Banner, type ChatMessage, type DemoState, type Driver, type Invite, type Ride, type User } from '../domain/types.js';
 import { createLock } from './lock.js';
 import type { Repo, Store } from './repo.js';
 
 interface State {
   users: Map<string, User>; drivers: Map<string, Driver>; rides: Map<string, Ride>;
-  messages: ChatMessage[]; banners: Banner[]; demo: DemoState | null;
+  messages: ChatMessage[]; banners: Banner[]; invites: Invite[]; demo: DemoState | null;
 }
-const empty = (): State => ({ users: new Map(), drivers: new Map(), rides: new Map(), messages: [], banners: [], demo: null });
+const empty = (): State => ({ users: new Map(), drivers: new Map(), rides: new Map(), messages: [], banners: [], invites: [], demo: null });
 const c = structuredClone;   // never hand out or keep references that could change outside the lock
 
 export function createMemoryStore(): Store {
@@ -40,6 +40,11 @@ export function createMemoryStore(): Store {
     addBanner: async (b) => { s.banners.push(c(b)); },
     listUnseenBanners: async (uid) => c(s.banners.filter((b) => b.userId === uid && !b.seen)),
     markBannerSeen: async (id) => { for (const b of s.banners) if (b.id === id) b.seen = true; },
+    putInvite: async (i) => { s.invites = s.invites.filter((x) => x.id !== i.id && !(x.rideId === i.rideId && x.toUserId === i.toUserId)); s.invites.push(c(i)); },
+    getInvite: async (id) => c(s.invites.find((x) => x.id === id) ?? null),
+    listInvitesForUser: async (uid) => c(s.invites.filter((x) => x.toUserId === uid)),
+    listInvitesForRide: async (rid) => c(s.invites.filter((x) => x.rideId === rid)),
+    expireInvites: async (rid) => { for (const x of s.invites) if (x.rideId === rid && x.state === 'PENDING') x.state = 'EXPIRED'; },
     getDemoState: async () => c(s.demo),
     putDemoState: async (d) => { s.demo = c(d); },
     wipe: async () => { s = empty(); },

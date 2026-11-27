@@ -1,6 +1,6 @@
 // The storage contract (ARCH §4, §7.2). Domain code only sees `Repo`, inside `store.withLock`.
 // memoryRepo (tests) and prismaRepo (app) pass the same contract test.
-import type { Banner, ChatMessage, DemoState, Driver, Ride, User } from '../domain/types.js';
+import type { Banner, ChatMessage, DemoState, Driver, Invite, Ride, User } from '../domain/types.js';
 
 export interface Repo {
   getUser(id: string): Promise<User | null>;
@@ -27,6 +27,12 @@ export interface Repo {
   addBanner(b: Banner): Promise<void>;
   listUnseenBanners(userId: string): Promise<Banner[]>;
   markBannerSeen(id: string): Promise<void>;
+
+  putInvite(i: Invite): Promise<void>;           // one per (ride, invitee): a new invite replaces the old one
+  getInvite(id: string): Promise<Invite | null>;
+  listInvitesForUser(toUserId: string): Promise<Invite[]>;
+  listInvitesForRide(rideId: string): Promise<Invite[]>;
+  expireInvites(rideId: string): Promise<void>;   // PENDING → EXPIRED
 
   getDemoState(): Promise<DemoState | null>;
   putDemoState(s: DemoState): Promise<void>;

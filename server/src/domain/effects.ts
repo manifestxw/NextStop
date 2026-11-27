@@ -10,12 +10,13 @@ export interface Effects {
   banners: Omit<Banner, 'id' | 'at' | 'seen'>[];
   outstanding: { userId: string; deltaP: number }[];      // late-leave charges and reversals
   driverCredit: { userId: string; deltaP: number }[];     // paid only at COMPLETED
+  expireInvites: string[];                                // ride ids leaving OPEN (SPEC §3.17 B)
   touched: Set<string>;                                   // users whose view changed
   created: ChatMessage[];                                 // filled by applyEffects, pushed as `chat` events
 }
 
 export const newEffects = (): Effects =>
-  ({ messages: [], banners: [], outstanding: [], driverCredit: [], touched: new Set(), created: [] });
+  ({ messages: [], banners: [], outstanding: [], driverCredit: [], expireInvites: [], touched: new Set(), created: [] });
 
 export const system = (fx: Effects, rideId: string, text: string) =>
   { fx.messages.push({ rideId, channel: 'group', kind: 'system', text }); };
@@ -27,6 +28,10 @@ export async function applyEffects(repo: Repo, fx: Effects, now: Us) {
   for (const o of fx.outstanding) {
     const u = await repo.getUser(o.userId);
     if (u) await repo.putUser({ ...u, outstandingP: u.outstandingP + o.deltaP });
+  }
+  for (const rideId of fx.expireInvites) {
+    for (const i of await repo.listInvitesForRide(rideId)) if (i.state === 'PENDING') fx.touched.add(i.toUserId);
+    await repo.expireInvites(rideId);
   }
   for (const c of fx.driverCredit) {
     const d = await repo.getDriver(c.userId);

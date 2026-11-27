@@ -49,8 +49,8 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 ## P1 (only after every P0 item works on the deployed URL)
 - [ ] **T15** `todo` CC: Uni plans domain: subscribe (demo card validation, last4 only), planned trips, `place_bucket` in the scheduler, replacements, 12 h cancel, discount + RideSync credit at COMPLETED; `demo/place-planned`. needs: T12 (SPEC §3.19)
 - [ ] **T16** `todo` CX: Uni plans UI: entry card, plan picker, week grid builder, demo card sheet, My plan, discount display. needs: T15 (DESIGN §8)
-- [ ] **T17** `todo` CC: Friends domain: +1 add/remove (seats, late charge to bringer), friend-code invites, expiry at READY_CHECK. needs: T12 (SPEC §3.17)
-- [ ] **T18** `todo` CX: Friends UI: friends card, add-friend sheet, invite sheet, invite card, profile code. needs: T17
+- [ ] **T17** `doing CC` CC (with T18 UI): Friends domain: +1 add/remove (seats, late charge to bringer), friend-code invites, expiry at READY_CHECK. needs: T12 (SPEC §3.17)
+- [ ] **T18** `doing CC` CX→CC (owner): Friends UI: friends card, add-friend sheet, invite sheet, invite card, profile code. needs: T17
 - [x] **T19** `done e4e99aa` CC (P1 before T12 by owner choice, 27 Nov): Hardening: no-show, driver cancel + redispatch, "Book a solo ride", pickup-time banners, stale tab + reconnect, Google fallback. needs: T12
 - [ ] **T20** `todo` CX: P1 UI: Places autocomplete, driver route line, driver chat. (Pickup/drop-off/no-show taps, driver cancel, solo fallback, stale tab and "Map unavailable" shipped with T19/T14.) needs: T19
 - [ ] **T21** `todo` CC: Airport: QAIA seed place + snapshot pairs. needs: T11

@@ -13,6 +13,8 @@ const P: Record<string, string> = {
   back: 'm15 18-6-6 6-6',
   next: 'm9 18 6-6-6-6',
   check: 'M20 6 9 17l-5-5',
+  userPlus: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M5 7a4 4 0 1 0 8 0 4 4 0 1 0-8 0M19 8v6M22 11h-6',
+  ticket: 'M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2ZM13 5v2M13 17v2M13 11v2',
 };
 export type IconName = keyof typeof P;
 

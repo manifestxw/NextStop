@@ -194,3 +194,4 @@
 @keyframes merge-fill { from { fill: var(--text-1); } to { fill: var(--success); } }
 
 .map--live { background-image: none; }   /* the grid only belongs to the stand-in panel */
+.chip:disabled { opacity: 0.4; cursor: default; }

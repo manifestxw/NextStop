@@ -177,7 +177,7 @@ export function createCommands(ctx: Ctx) {
 
   // ---------- joining (shared by riders and "Simulate rider") ----------
 
-  async function joinAs(user: User, rideId: string, t: Trip): Promise<View> {
+  async function joinAs(user: User, rideId: string, t: Trip, inviteId?: string): Promise<View> {
     for (let attempt = 0; ; attempt++) {
       const snap = await store.withLock((r) => r.getRide(rideId));
       if (!snap || !ACTIVE_STATES.includes(snap.state)) throw new ConflictError('RIDE_GONE');
@@ -208,7 +208,13 @@ export function createCommands(ctx: Ctx) {
           rides.applyPlan(ride, res.plan!, members, piastres(res.share!), fx);
           cand.firstShownPickup = cand.shownPickup;
           ride.version++;
-          system(fx, ride.id, `${user.firstName} joined`);
+          const inv = inviteId ? await repo.getInvite(inviteId) : null;
+          if (inv && inv.toUserId === user.id && inv.rideId === ride.id && inv.state === 'PENDING') {
+            await repo.putInvite({ ...inv, state: 'USED' });
+            cand.invitedBy = inv.fromUserId;
+            const from = (await repo.getUser(inv.fromUserId))?.firstName ?? 'a friend';
+            system(fx, ride.id, `${user.firstName} joined (invited by ${from})`);
+          } else system(fx, ride.id, `${user.firstName} joined`);
           for (const x of ride.members) fx.touched.add(x.userId);
           await repo.putRide(ride);
           await repo.putUser({ ...me, viewSeq: users.get(user.id)!.viewSeq });
@@ -497,7 +503,7 @@ export function createCommands(ctx: Ctx) {
     },
 
     async join(token: string, rideId: string, b: Body<typeof req.JoinBody>) {
-      return joinAs(await auth(token, 'rider'), rideId, tripOf(b));
+      return joinAs(await auth(token, 'rider'), rideId, tripOf(b), b.inviteId);
     },
 
     async leave(token: string, rideId: string, b: Body<typeof req.LeaveBody>) {
@@ -566,6 +572,89 @@ export function createCommands(ctx: Ctx) {
       const user = await auth(token);
       return commit(user.id, async (repo) => {
         if ((await repo.listUnseenBanners(user.id)).some((x) => x.id === bannerId)) await repo.markBannerSeen(bannerId);
+      });
+    },
+
+    // ---------- friends (P1, SPEC §3.17) ----------
+
+    /** +1: a friend riding from my pickup to my destination. Same stops and fare, one more seat. */
+    async addGuest(token: string, rideId: string, b: Body<typeof req.GuestBody>) {
+      const user = await auth(token, 'rider');
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
+        if (ride.state !== 'OPEN') throw new ConflictError('RIDE_CLOSED');
+        const me = activeMembers(ride).find((m) => m.userId === user.id);
+        if (!me) throw new ConflictError('RIDE_GONE');
+        if (me.guest && !me.guest.leave) throw new ConflictError('NOT_ELIGIBLE', 'You already added a friend');
+        const seats = activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0);
+        if (seats + 1 > CATEGORY[ride.category].maxRiders) throw new ConflictError('NO_SEAT_FOR_FRIEND');
+        if (ride.genderMode === 'same' && b.gender !== ride.gender) throw new ConflictError('NOT_ELIGIBLE', `This ride is ${ride.gender === 'F' ? 'women' : 'men'} only`);
+        const name = b.firstName.trim();
+        me.guest = { firstName: name, gender: b.gender };
+        const shareP = piastres(up05(Math.max(0, ride.plan.fareJod - jod(ride.creditsP)) / (seats + 1)));
+        if (shareP >= me.soloFareP) throw new ConflictError('NOT_ELIGIBLE', "Your friend's share would be higher than riding solo");
+        ride.plan = { ...ride.plan, shareP };
+        ride.version++;
+        system(fx, ride.id, `${user.firstName} added a friend (${name})`);
+        for (const m of ride.members) fx.touched.add(m.userId);
+        await repo.putRide(ride);
+      });
+    },
+
+    /** Remove my +1: free while OPEN or ≥ 30 min out; late after that, charged to me (a +1 has no account). */
+    async removeGuest(token: string, rideId: string, b: Body<typeof req.GuestRemoveBody>) {
+      const user = await auth(token, 'rider');
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
+        const me = activeMembers(ride).find((m) => m.userId === user.id);
+        if (!me?.guest || me.guest.leave) return;   // nothing to remove (double tap)
+        const now = clock.now();
+        const late = rides.isLateNow(ride, now);
+        if (late && !b.acceptCharge) throw new ConflictError('LATE_CONFIRM_REQUIRED', undefined, { chargeJod: jod(ride.plan.shareP) });
+        const chargedP = late ? ride.plan.shareP : 0;
+        me.guest.leave = { at: toIso(now), late, chargedP };
+        if (late) { fx.outstanding.push({ userId: user.id, deltaP: chargedP }); ride.creditsP += chargedP; }
+        const seats = activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0);
+        let shareP = piastres(up05(Math.max(0, ride.plan.fareJod - jod(ride.creditsP)) / seats));
+        if (late) shareP = Math.min(shareP, ride.plan.shareP);   // a late leave never raises the others' shares
+        ride.plan = { ...ride.plan, shareP };
+        ride.version++;
+        system(fx, ride.id, `${me.guest.firstName} (${user.firstName}'s friend) left`);
+        if (ride.driverUserId && rides.driverAssigned(ride)) {
+          fx.banners.push({ userId: ride.driverUserId, tone: 'danger',
+            text: `${me.guest.firstName} canceled. Collect JOD ${jod(shareP * seats).toFixed(2)} cash · JOD ${jod(ride.creditsP).toFixed(2)} credit at trip end` });
+        }
+        for (const m of ride.members) fx.touched.add(m.userId);
+        await repo.putRide(ride);
+      });
+    },
+
+    /** Invite a friend's account by friend code. They still join under every matching rule. */
+    async invite(token: string, rideId: string, b: Body<typeof req.InviteBody>) {
+      const user = await auth(token, 'rider');
+      const code = b.friendCode.trim().toUpperCase();
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
+        if (ride.state !== 'OPEN') throw new ConflictError('RIDE_CLOSED');
+        if (!activeMembers(ride).some((m) => m.userId === user.id)) throw new ConflictError('RIDE_GONE');
+        const friend = await repo.getUserByFriendCode(code);
+        if (!friend || friend.role !== 'rider') throw new ConflictError('NO_SUCH_CODE');
+        if (friend.id === user.id) throw new ConflictError('NOT_ELIGIBLE', "That's your own code");
+        if (activeMembers(ride).some((m) => m.userId === friend.id)) throw new ConflictError('NOT_ELIGIBLE', `${friend.firstName} is already in this ride`);
+        await repo.putInvite({ id: randomUUID(), rideId, fromUserId: user.id, toUserId: friend.id, at: toIso(clock.now()), state: 'PENDING' });
+        fx.banners.push({ userId: friend.id, tone: 'info', text: `${user.firstName} invited you to a ride to ${ride.anchor.dest.area}` });
+        fx.touched.add(friend.id);
+      });
+    },
+
+    async declineInvite(token: string, inviteId: string) {
+      const user = await auth(token, 'rider');
+      return commit(user.id, async (repo) => {
+        const inv = await repo.getInvite(inviteId);
+        if (inv && inv.toUserId === user.id && inv.state === 'PENDING') await repo.putInvite({ ...inv, state: 'EXPIRED' });
       });
     },
 

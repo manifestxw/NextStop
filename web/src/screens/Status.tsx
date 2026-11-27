@@ -101,6 +101,8 @@ export function Status() {
           {last && <span className="t-body text-2 truncate" style={{ display: 'block', marginTop: 4 }}>{last.fromFirstName ? `${last.fromFirstName}: ` : ''}{last.text}</span>}
         </button>
 
+        {ride.state === 'OPEN' && <FriendsCard ride={ride} />}
+
         <section className="card card--tight">
           <div className="card-row"><Ring /><span className="grow"><span className="t-caption text-2" style={{ display: 'block' }}>Start location</span><span className="t-body-l truncate" style={{ display: 'block' }}>{ride.myPickup.name}</span></span></div>
           <div className="card-row"><Square /><span className="grow"><span className="t-caption text-2" style={{ display: 'block' }}>Your destination</span><span className="t-body-l truncate" style={{ display: 'block' }}>{ride.myDest.name}</span></span></div>
@@ -193,5 +195,76 @@ function Gone() {
       <p className="t-body text-2">It was canceled, completed or replaced by a newer ride.</p>
       <div className="dock"><Button onClick={() => nav('/')}>Go home</Button></div>
     </main>
+  );
+}
+
+/** Friends card (DESIGN §7, SPEC §3.17), while the ride is still taking riders. */
+function FriendsCard({ ride }: { ride: RiderRideView }) {
+  const [sheet, setSheet] = useState<'guest' | 'invite' | null>(null);
+  const a = useAction();
+  const late = a.error?.code === 'LATE_CONFIRM_REQUIRED';
+  return (
+    <section className="card card--tight">
+      {ride.myGuest ? (
+        <div className="card-row">
+          <Icon name="userPlus" />
+          <span className="grow t-body-l">{ride.myGuest.firstName} rides with you · {fmtJod(ride.shareJod)} <span className="t-caption text-2">(pays own share)</span></span>
+          <button type="button" className="linkbtn" disabled={a.busy} onClick={() => a.run(() => api.removeGuest(ride.id, late))}>{late ? `Remove · pay ${fmtJod(a.error!.chargeJod ?? 0)}` : 'Remove'}</button>
+        </div>
+      ) : (
+        <button type="button" className="card-row" style={{ width: '100%', background: 'none', border: 0, textAlign: 'left' }} onClick={() => setSheet('guest')} disabled={ride.seatsLeft === 0}>
+          <Icon name="userPlus" /><span className="grow t-body-l">Add a friend (+1)</span><span className="text-2"><Icon name="next" size={16} /></span>
+        </button>
+      )}
+      <button type="button" className="card-row" style={{ width: '100%', background: 'none', border: 0, textAlign: 'left' }} onClick={() => setSheet('invite')}>
+        <Icon name="ticket" /><span className="grow t-body-l">Invite with a friend code</span><span className="text-2"><Icon name="next" size={16} /></span>
+      </button>
+      {(ride.pendingInvites ?? []).map((p, i) => <div key={i} className="card-row t-body text-2">Invited {p.firstName} · waiting</div>)}
+      {!late && <ErrorNote text={a.message} />}
+      {sheet === 'guest' && <AddGuestSheet ride={ride} onClose={() => setSheet(null)} />}
+      {sheet === 'invite' && <InviteSheet ride={ride} onClose={() => setSheet(null)} />}
+    </section>
+  );
+}
+
+function AddGuestSheet({ ride, onClose }: { ride: RiderRideView; onClose: () => void }) {
+  const view = useSession((s) => s.view) as RiderView;
+  const [name, setName] = useState('');
+  const [gender, setGender] = useState<'F' | 'M' | null>(ride.genderMode === 'same' ? view.me.gender : null);
+  const a = useAction();
+  const lockGender = ride.genderMode === 'same';
+  return (
+    <Sheet onClose={onClose}>
+      <h2 className="t-h2">Add a friend</h2>
+      <p className="t-body text-2">They ride with you from your pickup and pay their own share in cash.</p>
+      <input className="field" placeholder="First name" value={name} maxLength={30} onChange={(e) => setName(e.target.value)} aria-label="Friend's first name" />
+      <div className="chips">
+        {(['F', 'M'] as const).map((g) => (
+          <button key={g} type="button" className={`chip${gender === g ? ' chip--on' : ''}`} aria-pressed={gender === g}
+            disabled={lockGender && g !== view.me.gender} onClick={() => setGender(g)}>{g === 'F' ? 'Woman' : 'Man'}</button>
+        ))}
+      </div>
+      {lockGender && <p className="t-caption text-2">This ride is {view.me.gender === 'F' ? 'women' : 'men'} only</p>}
+      <p className="t-caption text-2">If you leave late, their share goes on your balance.</p>
+      <ErrorNote text={a.message} />
+      <Button disabled={!name.trim() || !gender || a.busy} onClick={() => a.run(async () => { await api.addGuest(ride.id, { firstName: name, gender: gender! }); onClose(); })}>
+        Add {name.trim() || 'friend'}
+      </Button>
+    </Sheet>
+  );
+}
+
+function InviteSheet({ ride, onClose }: { ride: RiderRideView; onClose: () => void }) {
+  const [code, setCode] = useState('');
+  const a = useAction();
+  return (
+    <Sheet onClose={onClose}>
+      <h2 className="t-h2">Invite a friend</h2>
+      <p className="t-body text-2">Ask for the code on their RideSync home screen.</p>
+      <input className="field t-big" style={{ textAlign: 'center', letterSpacing: '0.2em', textTransform: 'uppercase' }} value={code} maxLength={6}
+        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} aria-label="Friend code" autoCapitalize="characters" />
+      <ErrorNote text={a.message} />
+      <Button disabled={code.length !== 6 || a.busy} onClick={() => a.run(async () => { await api.invite(ride.id, code); onClose(); })}>Send invite</Button>
+    </Sheet>
   );
 }

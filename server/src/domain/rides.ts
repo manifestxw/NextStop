@@ -40,6 +40,7 @@ export function cancel(ride: Ride, now: Us, fx: Effects, why: NonNullable<Ride['
   touchAll(ride, fx);
   ride.state = 'CANCELED';
   ride.cancelReason = why;
+  fx.expireInvites.push(ride.id);
   ride.closedAt = toIso(now);
   ride.version++;
   // Credits are paid to nobody; every late leaver's charge is reversed (SPEC §3.10).
@@ -62,6 +63,7 @@ export function startReadyCheck(ride: Ride, now: Us, realMs: number, by: 'host' 
   ride.frozen = { at: toIso(now) };
   ride.readyCheck = { startedAt: toIso(now), startedRealMs: realMs, endsAt: toIso(now + 5 * MIN), startedBy: by };
   ride.version++;
+  fx.expireInvites.push(ride.id);   // joining closes, so do invites
   system(fx, ride.id, by === 'host' ? `${hostName} started the ready check` : 'The ready check started');
   system(fx, ride.id, 'Pickup times are now fixed');
 }

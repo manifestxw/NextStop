@@ -36,7 +36,7 @@ export async function riderView(repo: Repo, user: User, clock: Clock, epoch: num
     me: { id: user.id, firstName: user.firstName, gender: user.gender, sameGenderOnly: user.sameGenderOnly,
       friendCode: user.friendCode, outstandingJod: jod(user.outstandingP) },
     ...(ride ? { ride: await rideView(repo, ride, user, now) } : {}),
-    invites: [],
+    invites: await invitesFor(repo, user.id),
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),
   };
@@ -77,6 +77,10 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     leave: { free: !late, chargeJod: late ? jod(ride.plan.shareP * seatsOf(mine)) : 0 },
     chat: { group: group.map((m) => chatView(m, users)), unread: 0 },
     ...(ride.cancelReason ? { cancelReason: ride.cancelReason } : {}),
+    ...(mine.guest && !mine.guest.leave ? { myGuest: { firstName: mine.guest.firstName } } : {}),
+    pendingInvites: await Promise.all((await repo.listInvitesForRide(ride.id))
+      .filter((i) => i.fromUserId === me.id && i.state === 'PENDING')
+      .map(async (i) => ({ firstName: (await repo.getUser(i.toUserId))?.firstName ?? '?' }))),
     ...(summary ? { summary: {
       destArea: summary.destArea[me.id] ?? mine.dest.area, arrivedAt: summary.arrivedAt[me.id] ?? ride.closedAt!,
       paidJod: jod(mySeats?.cashP ?? 0), riders: summary.riders.reduce((n, r) => n + r.seats, 0),
@@ -85,4 +89,20 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
       ...(mine.leave?.late ? { leftLate: { chargedJod: jod(mine.leave.chargedP) } } : {}),
     } } : {}),
   };
+}
+
+/** Pending invites to this rider for rides still taking riders (SPEC §3.17 B). */
+async function invitesFor(repo: Repo, userId: string): Promise<RiderView['invites']> {
+  const out: RiderView['invites'] = [];
+  for (const i of await repo.listInvitesForUser(userId)) {
+    if (i.state !== 'PENDING') continue;
+    const ride = await repo.getRide(i.rideId);
+    if (!ride || ride.state !== 'OPEN') continue;
+    out.push({
+      id: i.id, rideId: ride.id, fromFirstName: (await repo.getUser(i.fromUserId))?.firstName ?? 'A friend',
+      destArea: ride.anchor.dest.area, ...(ride.anchor.dest.key ? { destKey: ride.anchor.dest.key } : {}),
+      arriveBy: activeMembers(ride).map((m) => m.arriveBy).sort()[0] ?? ride.anchor.arriveBy, category: ride.category,
+    });
+  }
+  return out;
 }
