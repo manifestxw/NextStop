@@ -129,6 +129,7 @@ export function DriverTrip() {
         <section className="card stack">
           {s.riders.map((r, i) => <div key={i} className="row row--between t-body-l"><span>{r.firstName}</span><span>{fmtJod(r.cashJod)} cash</span></div>)}
           {s.creditJod > 0 && <div className="row row--between t-body-l"><span>Credit from RideSync</span><span>{fmtJod(s.creditJod)}</span></div>}
+          {s.uniCreditJod > 0 && <div className="row row--between t-body-l"><span>Uni plan credit from RideSync</span><span>{fmtJod(s.uniCreditJod)}</span></div>}
           <div className="row row--between" style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}><span className="t-body-l">Total</span><span className="t-big">{fmtJod(s.totalJod)}</span></div>
         </section>
         <div className="dock"><Button onClick={() => { d.dismiss(t.rideId); nav('/driver'); }}>Done</Button></div>
@@ -166,6 +167,7 @@ function StopActions({ trip }: { trip: NonNullable<DriverView['trip']> }) {
               <span className="t-body" style={{ fontWeight: 600 }}>{fmtTime(s.at)}</span>{' '}
               <span className="t-body">{s.firstName}{s.guestFirstName ? ' +1' : ''}</span>
               <span className="t-body text-2 truncate" style={{ display: 'block' }}>{s.shortAddress}</span>
+              {!!s.uniCreditJod && <span className="t-caption text-2" style={{ display: 'block' }}>+ {s.uniCreditJod.toFixed(2)} from RideSync (Uni plan)</span>}
               {!s.done && s.kind === 'P' && (
                 <span className="row" style={{ gap: 8, marginTop: 6 }}>
                   <Button kind="secondary" small disabled={a.busy} onClick={() => tap(s.id, 'picked-up')}>Picked up</Button>

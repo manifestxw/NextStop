@@ -90,7 +90,8 @@ export function Status() {
           <div className="pass-bottom">
             <SeatMeter seats={ride.seats} max={MAX[ride.category]} closed={stage > 0} />
             <span className="t-body" style={{ fontWeight: 600 }}><Flap value={String(filled)} /> of {filled + ride.seatsLeft} synced</span>
-            <div className="row row--between"><span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-eyebrow">JOD</span><Flap className="t-big" value={ride.shareJod.toFixed(2)} /><span className="t-body text-2">each</span></span>
+            <div className="row row--between"><span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-eyebrow">JOD</span><Flap className="t-big" value={(ride.uniDiscountJod ? ride.myCashDueJod : ride.shareJod).toFixed(2)} /><span className="t-body text-2">{ride.uniDiscountJod ? 'you pay' : 'each'}</span>
+              {ride.uniDiscountJod ? <><span className="badge badge--accent">−20% Uni</span><s className="t-caption text-2">{ride.shareJod.toFixed(2)}</s></> : null}</span>
               <GenderBadge mode={ride.genderMode} gender={view.me.gender} /></div>
           </div>
         </section>

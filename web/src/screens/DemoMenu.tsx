@@ -74,6 +74,7 @@ export function DemoMenu() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <button style={big} disabled={!ride} onClick={() => ride && act(() => api.demo.simulateRider(pin, ride.id))}>Simulate rider</button>
         <button style={big} disabled={!ride} onClick={() => ride && act(() => api.demo.completeTrip(pin, ride.id))}>Complete trip</button>
+        <button style={{ ...big, gridColumn: 'span 2' }} onClick={() => act(() => api.demo.placePlanned(pin))}>Place planned rides now (next 36 h)</button>
       </div>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input type="checkbox" checked={demo.settings.simAutoReady} onChange={(e) => act(() => api.demo.settings(pin, { simAutoReady: e.target.checked }))} />

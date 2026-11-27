@@ -195,3 +195,4 @@
 
 .map--live { background-image: none; }   /* the grid only belongs to the stand-in panel */
 .chip:disabled { opacity: 0.4; cursor: default; }
+.chip--on .mark-ring { border-color: currentColor; } .chip--on .mark-square { background: currentColor; }

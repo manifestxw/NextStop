@@ -11,6 +11,7 @@ import { Chat } from './screens/Chat.js';
 import { Summary } from './screens/Summary.js';
 import { DriverHome, DriverOffer, DriverTrip } from './screens/Driver.js';
 import { DemoMenu } from './screens/DemoMenu.js';
+import { Plan } from './screens/Plan.js';
 
 /** Everything but signup and the demo menu needs a login. */
 function Authed({ children }: { children: React.ReactElement }) {
@@ -37,6 +38,7 @@ export function AppRoutes() {
       <Route path="/ride/:id" element={<Authed><Status /></Authed>} />
       <Route path="/ride/:id/chat" element={<Authed><Chat /></Authed>} />
       <Route path="/ride/:id/summary" element={<Authed><Summary /></Authed>} />
+      <Route path="/plan" element={<Authed><Plan /></Authed>} />
       <Route path="/driver" element={<Authed><DriverHome /></Authed>} />
       <Route path="/driver/offer/:id" element={<Authed><DriverOffer /></Authed>} />
       <Route path="/driver/trip/:id" element={<Authed><DriverTrip /></Authed>} />

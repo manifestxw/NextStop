@@ -39,3 +39,14 @@ describe('seed (SPEC §2.6)', () => {
     expect(after!.token).not.toBe(before!.token);
   });
 });
+
+describe('seeded Uni plan (SPEC §2.6)', () => {
+  it('Huda has a semester plan: Arabella → JUST, Mon–Thu 8:00, nothing on demo Sunday', async () => {
+    const store = createMemoryStore();
+    await store.withLock((r) => seedIfEmpty(r, cfg));
+    const [sub, trips] = await store.withLock(async (r) => [await r.getSubscription('u-huda'), await r.listPlannedTrips('u-huda')] as const);
+    expect([sub!.kind, sub!.replacementsLeft, trips.length]).toEqual(['semester', 1, 36]);
+    expect(trips[0]).toMatchObject({ arriveBy: '2026-11-30T08:00:00.000+03:00', state: 'PLANNED' });
+    expect(trips.every((t) => t.pickup.key === 'AM' && t.dest.key === 'JUST')).toBe(true);
+  });
+});

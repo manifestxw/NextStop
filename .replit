@@ -1,0 +1,12 @@
+# Replit: hosting only (ARCH §11). Nobody edits code in the Repl; GitHub is the source of truth.
+modules = ["nodejs-22"]
+run = "npm run build && npm start"
+
+[deployment]
+deploymentTarget = "gce"   # Reserved VM, 1 instance: one clock, one SQLite file, Socket.IO
+build = ["sh", "-c", "npm ci --include=dev && npm run build"]
+run = ["sh", "-c", "npm start"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80

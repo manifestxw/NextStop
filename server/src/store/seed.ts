@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { toIso } from '../clock/amman.js';
 import type { Config } from '../config.js';
 import type { Place, User } from '../domain/types.js';
+import { planDates, SEMESTER_END } from '../domain/plans.js';
+import { fromIso } from '../clock/amman.js';
+import { replacementsFor, SEMESTER_WEEK_PRICE_P } from '../engine/uni.js';
 import type { Repo } from './repo.js';
 
 interface SeedFile {
@@ -43,6 +46,16 @@ async function load(repo: Repo, cfg: Config, epoch: number, paused: boolean) {
   for (const d of s.drivers) {
     const base = s.places.find((p) => p.key === d.baseKey)!;
     await repo.putDriver({ userId: d.userId, car: d.car, plate: d.plate, base, creditBalanceP: 0, rejectedRideIds: [] });
+  }
+  // Huda's semester Uni plan: Arabella → JUST, Mon–Thu, arrive 8:00 (SPEC §2.6). No Sunday ride, so the demo stays clean.
+  const am = s.places.find((p) => p.key === 'AM')!, just = s.places.find((p) => p.key === 'JUST')!;
+  const dates = planDates([1, 2, 3, 4].map((weekday) => ({ weekday, arriveByTime: '08:00' })), cfg.demoStartUs + 12 * 3_600_000_000, fromIso(SEMESTER_END));
+  const weeks = Math.ceil((fromIso(SEMESTER_END) - cfg.demoStartUs) / (7 * 86_400_000_000));
+  await repo.putSubscription({ id: 'sub-huda', userId: 'u-huda', kind: 'semester', start: createdAt, end: SEMESTER_END,
+    pricePaidP: SEMESTER_WEEK_PRICE_P * weeks, card: { brand: 'demo', last4: '4242' }, replacementsLeft: replacementsFor('semester', dates.length), replacementCredits: 0 });
+  for (const [i, d] of dates.entries()) {
+    await repo.putPlannedTrip({ id: `pt-huda-${i}`, subscriptionId: 'sub-huda', userId: 'u-huda', pickup: am, dest: just, arriveBy: d.arriveBy,
+      category: 'economy', sameGenderOnly: true, state: 'PLANNED', isReplacement: false });
   }
   await repo.putDemoState({
     epoch, nowIso: createdAt, paused,

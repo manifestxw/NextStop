@@ -59,7 +59,8 @@ export function SharedList() {
           <SeatMeter mini max={c.seats.length + c.seatsLeft} seats={c.seats.map((s) => ({ initials: s.initials, isMe: false, isHost: false, ...(s.isGuest ? { guestOf: '' } : {}) }))} />
           <RoutePair from={c.pickupArea} to={c.destArea} />
           <p className="t-body text-2">Arrives by {fmtTime(c.effectiveArriveBy)} · Pickup ~{fmtTime(c.myPickupAt)}</p>
-          <p className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-big">{fmtJod(c.myPaysJod)}</span><span className="t-body text-2">each if you join</span></p>
+          <p className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-big">{fmtJod(c.myPaysJod)}</span><span className="t-body text-2">{c.myPaysJod < c.eachJod ? 'you pay' : 'each if you join'}</span>
+            {c.myPaysJod < c.eachJod && <><span className="badge badge--accent">−20% Uni</span><s className="t-caption text-2">{c.eachJod.toFixed(2)}</s></>}</p>
           <Button disabled={a.busy} onClick={() => join(c.rideId)}>Join · {fmtJod(c.myPaysJod)}</Button>
         </article>
       ))}

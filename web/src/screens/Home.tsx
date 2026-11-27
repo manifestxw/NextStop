@@ -59,6 +59,9 @@ export function Home() {
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">Code {view.me.friendCode}</span></div>
         {view.invites[0] && <InviteCard invite={view.invites[0]} sameGenderOnly={sameGender} />}
+        <button type="button" className="card card--tight row" style={{ background: 'var(--accent-soft)', border: 0, textAlign: 'left', color: 'var(--ink-900)' }} onClick={() => nav('/plan')}>
+          <Icon name="cap" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>{view.plan ? `${view.plan.kind === 'weekly' ? 'Weekly' : 'Semester'} plan · my rides` : 'Uni plan · 20% off every campus ride'}</span><Icon name="next" size={16} />
+        </button>
         {view.me.outstandingJod > 0 && (
           <p className="card card--tight row t-body-l" style={{ background: 'var(--raised)', border: 0 }}>
             <span style={{ color: 'var(--warn)' }}><Icon name="alert" /></span><span className="grow">Outstanding balance {fmtJod(view.me.outstandingJod)}</span>
