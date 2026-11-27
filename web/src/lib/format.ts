@@ -1,9 +1,9 @@
-// Display only (DESIGN §3): Amman wall time and JOD amounts. No business rules live here.
+// Display only (DESIGN §3): Amman wall time and JD amounts. No business rules live here.
 const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Amman', hour: 'numeric', minute: '2-digit' });
 const dateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Amman', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export const fmtTime = (iso: string | number) => timeFmt.format(new Date(iso));
-export const fmtJod = (jod: number) => `JOD ${jod.toFixed(2)}`;
+export const fmtJod = (jod: number) => `${jod.toFixed(2)} JD`;   // Jordanian style: "1.70 JD"
 export const fmtNum = (jod: number) => jod.toFixed(2);
 export const countdown = (ms: number) => {
   const s = Math.max(0, Math.ceil(ms / 1000));   // round up: 0:00 only when time is really up

@@ -60,7 +60,7 @@ function Builder({ sameGenderOnly }: { sameGenderOnly: boolean }) {
         {(['weekly', 'semester'] as const).map((k) => (
           <button key={k} type="button" className="tile" data-cat="economy" aria-pressed={kind === k} onClick={() => setKind(k)} style={{ minHeight: 120 }}>
             <span className="t-eyebrow">{k}</span>
-            <span className="t-name">{k === 'weekly' ? 'JOD 2.00 / week' : 'JOD 1.60 / week'}</span>
+            <span className="t-name">{k === 'weekly' ? '2.00 JD / week' : '1.60 JD / week'}</span>
             <span className="t-caption">{k === 'weekly' ? '3–5 rides this week · 1 replacement' : '2–5 rides every week · replacements: 5%'}</span>
           </button>
         ))}

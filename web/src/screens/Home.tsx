@@ -193,7 +193,7 @@ function InviteCard({ invite, sameGenderOnly, gender }: { invite: RiderView['inv
         {preview && (
           <div className="row row--between">
             <span className="stack" style={{ gap: 0 }}><span className="t-caption text-2">You'd pay · {preview.riders} riders</span>
-              <span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-eyebrow">JOD</span><span className="t-big">{preview.myPaysJod.toFixed(2)}</span></span></span>
+              <span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-big">{preview.myPaysJod.toFixed(2)}</span><span className="t-eyebrow">JD</span></span></span>
             <span className="stack" style={{ gap: 0, textAlign: 'right' }}><span className="t-caption text-2">Be ready by</span><span className="t-body-l" style={{ fontWeight: 600 }}>{fmtTime(preview.myPickupAt)}</span></span>
           </div>
         )}

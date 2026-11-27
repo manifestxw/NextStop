@@ -15,6 +15,13 @@
       "skillPath": "skills/ponytail/SKILL.md",
       "computedHash": "56d72677aca02689ac89bd48734e8c19b40ab86716d1257eaf5f1238b43cda6b"
     },
+    "pptx": {
+      "source": "appautomaton/document-SKILLs",
+      "commit": "dfb5685ce241dd9e1f6148ceba5977ee43b54d46",
+      "sourceType": "github",
+      "skillPath": "pptx/SKILL.md",
+      "computedHash": "93ff07fb8618c3a45b4a1d8d8a05e820ddecf76a2a0917755ca8a90b8076d694"
+    },
     "test-driven-development": {
       "source": "obra/superpowers",
       "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
