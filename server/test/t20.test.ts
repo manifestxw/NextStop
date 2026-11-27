@@ -43,10 +43,11 @@ describe('driver chat (P1, SPEC §3.11)', () => {
 });
 
 describe('places proxy (P1)', () => {
-  it('needs 3+ characters and returns nothing without a server key', async () => {
+  it('needs 2+ characters; without a server key only the seed places match (tests have no GOOGLE_SERVER_KEY)', async () => {
     const h = await makeHarness();
     const lina = await h.login('lina');
-    expect(await h.cmd.places(lina, 'ir')).toEqual([]);
-    expect(await h.cmd.places(lina, 'Irbid hospital')).toEqual([]);   // tests have no GOOGLE_SERVER_KEY
+    expect(await h.cmd.places(lina, 'i')).toEqual([]);
+    expect((await h.cmd.places(lina, 'irbid')).map((p) => p.key)).toEqual(['CC']);
+    expect(await h.cmd.places(lina, 'Irbid hospital')).toEqual([]);
   });
 });

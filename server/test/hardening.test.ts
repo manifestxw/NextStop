@@ -107,3 +107,16 @@ describe('pickup-time banners (P1, SPEC §3.6)', () => {
     expect(v.ride!.chat.group.map((m) => m.text)).toContain('Pickup times changed');
   });
 });
+
+describe('in the car (owner fix)', () => {
+  it('a picked-up rider is told so, cannot leave, and cannot remove their +1; others still can leave', async () => {
+    const { cmd, omar, lina, sara, rideId } = await accepted();
+    await cmd.stop(omar, rideId, 'P-u-lina', 'picked-up');
+    const v = rider(await cmd.me(lina)).ride!;
+    expect([v.onBoard, v.leave.canLeave]).toEqual([true, false]);
+    expect(rider(await cmd.me(sara)).ride!.onBoard).toBeUndefined();
+    expect(await code(cmd.leave(lina, rideId, { acceptCharge: true }))).toBe('ILLEGAL_STATE');
+    expect(await code(cmd.removeGuest(lina, rideId, { acceptCharge: true }))).toBe('ILLEGAL_STATE');
+    expect(rider(await cmd.me(sara)).ride!.leave.canLeave).toBe(true);
+  });
+});

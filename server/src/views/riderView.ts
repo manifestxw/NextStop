@@ -78,14 +78,16 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     } } : {}),
     findDriverAutoAt: toIso(firstPickupUs(ride) - readyLeadMin(drivers) * 60_000_000),
     ...(ride.hostUserId === me.id && ride.state === 'OPEN' && drivers <= 2 ? { fewDrivers: true } : {}),
-    leave: { free: !late, chargeJod: late ? jod(cashDueP(mine, ride.plan.shareP)) : 0 },
+    leave: { free: !late, chargeJod: late ? jod(cashDueP(mine, ride.plan.shareP)) : 0, canLeave: mine.state !== 'PICKED_UP' },
+    ...(mine.state === 'PICKED_UP' ? { onBoard: true } : {}),
     chat: { group: group.map((m) => chatView(m, users)), unread: 0,
       ...(ride.driverUserId ? { driver: (await repo.listMessages(ride.id, `driver:${me.id}`, 100)).map((m) => chatView(m, users)) } : {}) },
     ...(ride.cancelReason ? { cancelReason: ride.cancelReason } : {}),
     ...(mine.guest && !mine.guest.leave ? { myGuest: { firstName: mine.guest.firstName } } : {}),
-    pendingInvites: await Promise.all((await repo.listInvitesForRide(ride.id))
-      .filter((i) => i.fromUserId === me.id && i.state === 'PENDING')
-      .map(async (i) => ({ firstName: (await repo.getUser(i.toUserId))?.firstName ?? '?' }))),
+    sentInvites: await Promise.all((await repo.listInvitesForRide(ride.id))
+      .filter((i) => i.fromUserId === me.id).sort((a, b) => a.at.localeCompare(b.at))
+      .map(async (i) => ({ id: i.id, firstName: (await repo.getUser(i.toUserId))?.firstName ?? '?',
+        state: ({ PENDING: 'waiting', USED: 'joined', DECLINED: 'declined', EXPIRED: 'expired' } as const)[i.state] }))),
     ...(summary ? { summary: {
       destArea: summary.destArea[me.id] ?? mine.dest.area, arrivedAt: summary.arrivedAt[me.id] ?? ride.closedAt!,
       paidJod: jod(mySeats?.cashP ?? 0), riders: summary.riders.reduce((n, r) => n + r.seats, 0),
@@ -107,6 +109,9 @@ async function invitesFor(repo: Repo, userId: string): Promise<RiderView['invite
       id: i.id, rideId: ride.id, fromFirstName: (await repo.getUser(i.fromUserId))?.firstName ?? 'A friend',
       destArea: ride.anchor.dest.area, ...(ride.anchor.dest.key ? { destKey: ride.anchor.dest.key } : {}),
       arriveBy: activeMembers(ride).map((m) => m.arriveBy).sort()[0] ?? ride.anchor.arriveBy, category: ride.category,
+      hostFirstName: (await repo.getUser(ride.hostUserId))?.firstName ?? '?', pickupArea: ride.anchor.pickup.area,
+      riders: activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0), genderMode: ride.genderMode,
+      seatsLeft: CATEGORY[ride.category].maxRiders - activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0),
     });
   }
   return out;

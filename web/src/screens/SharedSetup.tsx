@@ -1,5 +1,6 @@
 // Host setup "Start your own sync" (DESIGN §7): ready-by, price ladder, sync zone, gender switch.
 import { Icon } from '../components/Icon.js';
+import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
@@ -21,9 +22,13 @@ export function SharedSetup() {
   if (!d.pickupKey || !d.destKey) return <Navigate to="/" replace />;
   const q = quote?.categories.find((c) => c.category === d.category);
   const sameGender = d.sameGenderOnly ?? view?.me.sameGenderOnly ?? true;
+  const [friends, setFriends] = useState<{ code: string; name: string }[]>([]);
   const confirm = () => a.run(async () => {
     const v = await api.createRide(tripBody(d, now, sameGender)) as RiderView;
-    if (v.ride) nav(`/ride/${v.ride.id}`);
+    if (!v.ride) return;
+    // Invites go out once the ride exists; a refused one shows as an error on the ride screen's invite list.
+    for (const f of friends) await api.invite(v.ride.id, f.code).catch(() => undefined);
+    nav(`/ride/${v.ride.id}`);
   });
   return (
     <main className="screen">
@@ -58,8 +63,41 @@ export function SharedSetup() {
         <span className="grow t-body-l" style={{ fontWeight: 500 }}>Same gender only</span>
         <Switch on={sameGender} label="Same gender only" onChange={(v) => d.set({ sameGenderOnly: v })} />
       </div>
+      <InviteFriends friends={friends} setFriends={setFriends} max={(q?.estimates.length ?? 4) - 1} />
       <ErrorNote text={a.message ?? error} />
       <div className="dock"><Button disabled={!q?.available || a.busy} onClick={confirm}>Confirm{q ? ` · ${fmtJod(q.soloJod)}` : ''}</Button></div>
     </main>
+  );
+}
+
+/** Invite friends while setting up (P1): codes are checked now, invites are sent when the ride is created. */
+function InviteFriends({ friends, setFriends, max }: { friends: { code: string; name: string }[]; setFriends: (f: { code: string; name: string }[]) => void; max: number }) {
+  const [code, setCode] = useState('');
+  const a = useAction();
+  const add = () => a.run(async () => {
+    if (friends.some((f) => f.code === code)) { setCode(''); return; }
+    const f = await api.lookupCode(code);
+    setFriends([...friends, { code, name: f.firstName }]);
+    setCode('');
+  });
+  return (
+    <section className="card card--tight stack">
+      <span className="row" style={{ gap: 8 }}><Icon name="ticket" /><span className="t-body-l grow" style={{ fontWeight: 600 }}>Invite friends</span><span className="t-caption text-2">optional</span></span>
+      {friends.length > 0 && (
+        <div className="chips">{friends.map((f) => (
+          <button key={f.code} type="button" className="chip chip--on" aria-label={`Remove ${f.name}`} onClick={() => setFriends(friends.filter((x) => x.code !== f.code))}>
+            {f.name} <Icon name="close" size={14} /></button>
+        ))}</div>
+      )}
+      {friends.length < max && (
+        <form className="row" style={{ gap: 8 }} onSubmit={(e) => { e.preventDefault(); if (code.length === 6) add(); }}>
+          <input className="field grow" style={{ height: 44, letterSpacing: '0.15em', textTransform: 'uppercase' }} placeholder="Friend code" value={code} maxLength={6}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} aria-label="Friend code" autoCapitalize="characters" autoComplete="off" />
+          <Button type="submit" kind="secondary" small disabled={code.length !== 6 || a.busy}>Add</Button>
+        </form>
+      )}
+      <ErrorNote text={a.message} />
+      <span className="t-caption text-2">They get the invite when you confirm, pick their own pickup and pay their own share.</span>
+    </section>
   );
 }

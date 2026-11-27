@@ -96,6 +96,7 @@
     {
       "id": "u-noor",
       "firstName": "Noor",
+      "seedLogin": "noor",
       "gender": "F",
       "role": "rider",
       "friendCode": "NOOR26",
@@ -104,6 +105,7 @@
     {
       "id": "u-huda",
       "firstName": "Huda",
+      "seedLogin": "huda",
       "gender": "F",
       "role": "rider",
       "friendCode": "HUDA26",

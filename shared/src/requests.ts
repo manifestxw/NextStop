@@ -25,7 +25,7 @@ export const PlaceRef = z.union([
 const FirstName = z.string().trim().min(1).max(30);
 
 export const SignupBody = z.object({ firstName: FirstName, gender: Gender, role: Role }).strict();
-export const DemoLoginBody = z.object({ as: z.enum(['lina', 'sara', 'omar']) }).strict();
+export const DemoLoginBody = z.object({ as: z.enum(['lina', 'sara', 'omar', 'noor', 'huda']) }).strict();
 
 export const QuoteBody = z.object({ pickup: PlaceRef, dest: PlaceRef, arriveBy: IsoTime }).strict();
 export const TripBody = QuoteBody.extend({ category: Category, sameGenderOnly: z.boolean() }).strict();
@@ -43,6 +43,7 @@ export const ChatBody = z.object({
 // ---------- P1: friends (SPEC §3.17) ----------
 export const GuestBody = z.object({ firstName: FirstName, gender: Gender }).strict();
 export const GuestRemoveBody = LeaveBody;
+export const InviteAcceptBody = z.object({ pickup: PlaceRef, sameGenderOnly: z.boolean() }).strict();
 export const InviteBody = z.object({ friendCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{6}$/) }).strict();
 
 // ---------- P1: Uni plans (SPEC §3.19) ----------

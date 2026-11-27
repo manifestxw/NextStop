@@ -5,6 +5,7 @@ import { pyRound } from '../engine/pyRound.js';
 import type { LatLng, Us } from '../engine/types.js';
 import type { Conditions } from './fixed.js';
 import type { Cell, MatrixSpec, TravelProvider } from './provider.js';
+import type { AddressPart } from './places.js';
 
 const DAY_US = 86_400_000_000;
 const wp = (p: LatLng) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
@@ -51,16 +52,32 @@ async function post<T>(url: string, key: string, fieldMask: string, body: unknow
   return (await r.json()) as T;
 }
 
-/** Places Text Search (P1 autocomplete), Jordan only, biased to Irbid. Server only. */
-export async function searchPlaces(key: string, q: string): Promise<{ placeId: string; name: string; lat: number; lng: number }[]> {
-  const r = await post<{ places?: { id: string; displayName?: { text?: string }; location: { latitude: number; longitude: number } }[] }>(
-    'https://places.googleapis.com/v1/places:searchText', key, 'places.id,places.displayName,places.location', {
-      textQuery: q, regionCode: 'JO', maxResultCount: 5,
-      locationBias: { circle: { center: { latitude: 32.55, longitude: 35.86 }, radius: 30000 } },
-    });
-  return (r.places ?? [])
-    .filter((p) => p.location.latitude > 29.1 && p.location.latitude < 33.4 && p.location.longitude > 34.9 && p.location.longitude < 39.4)
-    .map((p) => ({ placeId: p.id, name: p.displayName?.text ?? 'Place', lat: p.location.latitude, lng: p.location.longitude }));
+export interface FoundPlace { placeId: string; name: string; address: string; lat: number; lng: number; parts: AddressPart[] }
+interface GPlace { id: string; displayName?: { text?: string }; shortFormattedAddress?: string; formattedAddress?: string;
+  location: { latitude: number; longitude: number }; addressComponents?: { longText: string; types: string[] }[] }
+const PLACE_FIELDS = 'id,displayName,shortFormattedAddress,formattedAddress,location,addressComponents';
+const inJordan = (p: GPlace) => p.location.latitude > 29.1 && p.location.latitude < 33.4 && p.location.longitude > 34.9 && p.location.longitude < 39.4;
+const PLUS_CODE = /^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3},?\s*/;   // "GVMG+J68, " means nothing to riders
+const found = (p: GPlace): FoundPlace => ({ placeId: p.id, name: p.displayName?.text ?? 'Place', address: (p.shortFormattedAddress ?? p.formattedAddress ?? '').replace(PLUS_CODE, ''),
+  lat: p.location.latitude, lng: p.location.longitude, parts: (p.addressComponents ?? []).map((c) => ({ text: c.longText, types: c.types })) });
+
+/** Places Text Search (P1), Jordan only, biased to Irbid. Server only. */
+export async function searchPlaces(key: string, q: string): Promise<FoundPlace[]> {
+  const r = await post<{ places?: GPlace[] }>('https://places.googleapis.com/v1/places:searchText', key, PLACE_FIELDS.replace(/(^|,)/g, '$1places.'), {
+    textQuery: q, regionCode: 'JO', languageCode: 'en', maxResultCount: 8,
+    locationBias: { circle: { center: { latitude: 32.55, longitude: 35.86 }, radius: 30000 } },
+  });
+  return (r.places ?? []).filter(inJordan).map(found);
+}
+
+/** The closest named place to a pin (Places Nearby, 250 m), for its name and neighbourhood. Server only. */
+export async function nearestPlace(key: string, p: LatLng): Promise<FoundPlace | null> {
+  const r = await post<{ places?: GPlace[] }>('https://places.googleapis.com/v1/places:searchNearby', key, PLACE_FIELDS.replace(/(^|,)/g, '$1places.'), {
+    maxResultCount: 1, rankPreference: 'DISTANCE', languageCode: 'en', regionCode: 'JO',
+    locationRestriction: { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 250 } },
+  });
+  const g = r.places?.[0];
+  return g && inJordan(g) ? found(g) : null;
 }
 
 export function googleProvider(key: string, realNowUs: () => Us = () => Date.now() * 1000): TravelProvider {

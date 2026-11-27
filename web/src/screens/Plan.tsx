@@ -5,7 +5,8 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
-import { PLACES } from '../state/draft.js';
+import { PLACES, placeName, placeRef } from '../state/draft.js';
+import { PlacePicker } from '../components/PlacePicker.js';
 import { ammanDate, fmtTime } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
 import { Icon } from '../components/Icon.js';
@@ -13,7 +14,6 @@ import { Button, ErrorNote, Ring, Sheet, Square, useAction } from '../components
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const CAMPUSES = PLACES.filter((p) => p.key === 'JUST' || p.key === 'YU');
-const HOMES = PLACES.filter((p) => p.key !== 'JUST');
 const STATE_LABEL = { PLANNED: 'Planned', PLACED: 'Synced', CANCELED: 'Canceled', UNPLACEABLE: "Couldn't plan" } as const;
 
 export function Plan() {
@@ -39,6 +39,7 @@ function Builder({ sameGenderOnly }: { sameGenderOnly: boolean }) {
   const [time, setTime] = useState('08:00');
   const [days, setDays] = useState<number[]>([1, 2, 3, 4]);
   const [paying, setPaying] = useState(false);
+  const [pickingHome, setPickingHome] = useState(false);
   const [lo, hi] = kind === 'weekly' ? [3, 5] : [2, 5];
   const ok = days.length >= lo && days.length <= hi;
   // Weekly = the next date of each chosen weekday that is at least 12 h away (display + request; the server re-checks).
@@ -50,7 +51,7 @@ function Builder({ sameGenderOnly }: { sameGenderOnly: boolean }) {
     }
     return null;
   };
-  const trip = (arriveBy: string) => ({ pickup: { key: home }, dest: { key: campus }, arriveBy, category: 'economy' as const, sameGenderOnly });
+  const trip = (arriveBy: string) => ({ pickup: placeRef(home), dest: { key: campus }, arriveBy, category: 'economy' as const, sameGenderOnly });
   const toggle = (d: number) => setDays(days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort());
   return (
     <main className="screen">
@@ -67,7 +68,10 @@ function Builder({ sameGenderOnly }: { sameGenderOnly: boolean }) {
       <p className="t-caption text-2">20% off your share on rides to or from campus. Others in the car don't need a plan.</p>
       <section className="card stack">
         <span className="t-caption text-2">From</span>
-        <div className="chips">{HOMES.map((p) => <button key={p.key} type="button" className={`chip${home === p.key ? ' chip--on' : ''}`} onClick={() => setHome(p.key)}><Ring />{p.name}</button>)}</div>
+        <button type="button" className="row card card--tight" style={{ textAlign: 'left', width: '100%' }} onClick={() => setPickingHome(true)}>
+          <Ring /><span className="grow t-body-l truncate">{placeName(home)}</span><Icon name="search" size={18} /></button>
+        {pickingHome && <PlacePicker title="Home pickup" kind="pickup" exclude={['JUST', 'YU', 'QAIA']} onClose={() => setPickingHome(false)}
+          onPick={(k) => { setHome(k); setPickingHome(false); }} />}
         <span className="t-caption text-2">To campus</span>
         <div className="chips">{CAMPUSES.map((p) => <button key={p.key} type="button" className={`chip${campus === p.key ? ' chip--on' : ''}`} onClick={() => setCampus(p.key)}><Square />{p.name}</button>)}</div>
         <label className="row"><Icon name="clock" /><span className="grow t-body-l">Arrive by</span>

@@ -16,7 +16,7 @@ const w = window as unknown as { gm_authFailure?: () => void };
 const prevHook = w.gm_authFailure;
 w.gm_authFailure = () => { prevHook?.(); authFailed = true; listeners.forEach((l) => l()); console.warn('Google Maps key rejected: showing the marks panel'); };
 const useAuthFailed = () => useSyncExternalStore((cb) => { listeners.add(cb); return () => { listeners.delete(cb); }; }, () => authFailed);
-const IRBID = { lat: 32.535, lng: 35.875 };
+export const IRBID = { lat: 32.535, lng: 35.875 };
 
 // Paper (riders) and Cockpit (drivers) map styles, DESIGN §7. POIs and transit off.
 const base: google.maps.MapTypeStyle[] = [
@@ -24,7 +24,7 @@ const base: google.maps.MapTypeStyle[] = [
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
 ];
-const PAPER: google.maps.MapTypeStyle[] = [...base,
+export const PAPER: google.maps.MapTypeStyle[] = [...base,
   { elementType: 'geometry', stylers: [{ color: '#EDE9E1' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#666970' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#F6F3EE' }] },

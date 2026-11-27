@@ -97,15 +97,19 @@ export interface RiderRideView {
   readyCheck?: { endsAt: Iso; startedByFirstName: string; answers: { firstName: string; status: 'READY' | 'WAITING' | 'LEFT' }[] };
   findDriverAutoAt: Iso;
   fewDrivers?: boolean;     // P2, SPEC §4.6: host sees "Few drivers nearby"
-  leave: { free: boolean; chargeJod: number };    // what "Leave ride" would cost right now
+  leave: { free: boolean; chargeJod: number; canLeave: boolean };   // what "Leave ride" would cost right now; false once picked up
+  onBoard?: boolean;        // the driver marked me picked up
   myGuest?: { firstName: string };                // P1
-  pendingInvites?: { firstName: string }[];       // P1
+  sentInvites?: { id: string; firstName: string; state: 'waiting' | 'joined' | 'declined' | 'expired' }[];   // invites I sent for this ride
   chat: { group: ChatMessageView[]; driver?: ChatMessageView[]; unread: number };
   summary?: RiderSummary;
   cancelReason?: 'no-driver' | 'driver-canceled' | 'everyone-left';   // when state is CANCELED
 }
 
-export interface InviteView { id: string; rideId: string; fromFirstName: string; destArea: string; destKey?: string; arriveBy: Iso; category: Category }
+export interface InviteView {
+  id: string; rideId: string; fromFirstName: string; destArea: string; destKey?: string; arriveBy: Iso; category: Category;
+  hostFirstName: string; pickupArea: string; riders: number; seatsLeft: number; genderMode: GenderMode;
+}
 
 export interface PlanView {
   kind: 'weekly' | 'semester'; end: Iso; replacementsLeft: number; replacementCredits: number;

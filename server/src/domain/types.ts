@@ -13,7 +13,7 @@ export interface User {
   role: Role; firstName: string; gender: Gender;  // gender immutable after signup
   sameGenderOnly: boolean; friendCode: string;
   viewSeq: number; outstandingP: number;
-  isSim: boolean; seedLogin?: 'lina' | 'sara' | 'omar';
+  isSim: boolean; seedLogin?: 'lina' | 'sara' | 'omar' | 'noor' | 'huda';   // noor = an invitable friend, huda = Uni plan
   createdAt: string;
 }
 
@@ -92,7 +92,7 @@ export interface PlannedTrip {
 
 export interface Invite {                          // SPEC §3.17 B
   id: string; rideId: string; fromUserId: string; toUserId: string;
-  at: string; state: 'PENDING' | 'USED' | 'EXPIRED';
+  at: string; state: 'PENDING' | 'USED' | 'EXPIRED' | 'DECLINED';
 }
 
 export interface Banner { id: string; userId: string; text: string; tone: 'info' | 'warn' | 'danger'; at: string; seen: boolean }

@@ -196,3 +196,27 @@
 .map--live { background-image: none; }   /* the grid only belongs to the stand-in panel */
 .chip:disabled { opacity: 0.4; cursor: default; }
 .chip--on .mark-ring { border-color: currentColor; } .chip--on .mark-square { background: currentColor; }
+
+/* ---------- place picker (P1) ---------- */
+.picker { position: fixed; inset: 0; z-index: 40; background: var(--surface); display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+.picker-head { display: flex; gap: var(--s-2); align-items: center; padding: var(--s-3) var(--pad-x); border-bottom: 1px solid var(--line); }
+.picker-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s-2); height: 48px; padding: 0 var(--s-3); border-radius: 12px; background: var(--raised); color: var(--text-2); }
+.picker-search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 17px; color: var(--text-1); outline: none; }
+.picker-body { flex: 1; overflow-y: auto; padding: var(--s-4) var(--pad-x) var(--s-6); display: flex; flex-direction: column; gap: 2px; }
+.picker-row { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 56px; padding: 8px 0; background: none; border: 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--text-1); }
+.picker-icon { width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--text-1); }
+.iconbtn--sm { width: 32px; height: 32px; border: 0; background: none; }
+.picker--map { background: var(--surface); }
+.pinmap { position: relative; flex: 1; min-height: 0; }
+.pinmap > div:first-child { position: absolute; inset: 0; }
+.pinmap-back { position: absolute; top: var(--s-3); left: var(--pad-x); box-shadow: var(--shadow-1, 0 2px 8px rgb(0 0 0 / 0.15)); }
+.pin-mark { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: transform 160ms var(--ease-out, ease-out); }
+.pin-mark--up { transform: translate(-50%, calc(-100% - 8px)); }
+.pin-mark > :first-child { transform: scale(1.6); background: var(--card); border-radius: 50%; }
+.pin-stem { width: 2px; height: 18px; margin-top: 6px; background: var(--text-1); border-radius: 1px; }
+.pinmap-card { padding: var(--s-4) var(--pad-x) calc(var(--s-4) + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); gap: var(--s-2); }
+@media (prefers-reduced-motion: reduce) { .pin-mark { transition: none; } }
+.status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--raised); color: var(--text-2); }
+.status-pill--ok { color: var(--success-text); }
+.status-pill--off { color: var(--text-2); text-decoration: line-through; }
+.code-big { font-size: 40px; font-weight: 700; letter-spacing: 0.18em; font-variant-numeric: tabular-nums; text-align: center; }

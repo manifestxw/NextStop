@@ -16,7 +16,7 @@ async function seededLogin() {
   const q = new URLSearchParams(location.search);
   const as = q.get('as'), pin = q.get('pin');
   if (q.get('demo') === '1') history.replaceState(null, '', '/demo');
-  if (as !== 'lina' && as !== 'sara' && as !== 'omar') return;
+  if (as !== 'lina' && as !== 'sara' && as !== 'omar' && as !== 'noor' && as !== 'huda') return;
   if (!pin) return;
   q.delete('as'); q.delete('pin');
   history.replaceState(null, '', location.pathname + (q.size ? `?${q}` : ''));

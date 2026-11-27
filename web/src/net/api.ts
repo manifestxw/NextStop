@@ -44,6 +44,10 @@ async function auth(p: Promise<AuthResponse>): Promise<View> {
   return r.view;
 }
 
+/** A searched, quick-pick or pinned place. `key` = a seed place; `area` = what other riders would see. */
+export interface PlaceResult { key?: string; placeId: string; name: string; address: string; area: string; lat: number; lng: number }
+export interface InvitePreview { eachJod: number; myPaysJod: number; myPickupAt: string; riders: number }
+
 const post = <T = OkResponse>(path: string, body?: unknown, pin?: string) => call<T>('POST', path, body, pin);
 
 export const api = {
@@ -59,8 +63,12 @@ export const api = {
   findDriver: (rideId: string) => withView(post(`/api/rides/${rideId}/find-driver`)),
   ready: (rideId: string, answer: In<typeof req.ReadyBody>['answer']) => withView(post(`/api/rides/${rideId}/ready`, { answer })),
   chat: (rideId: string, text: string, channel: 'group' | `driver:${string}` = 'group') => withView(post(`/api/rides/${rideId}/chat`, { channel, text })),
-  places: async (q: string): Promise<{ placeId: string; name: string; lat: number; lng: number }[]> =>
-    (await call<{ ok: true; places: { placeId: string; name: string; lat: number; lng: number }[] }>('GET', `/api/places?q=${encodeURIComponent(q)}`)).places,
+  places: async (q: string): Promise<PlaceResult[]> => (await call<{ ok: true; places: PlaceResult[] }>('GET', `/api/places?q=${encodeURIComponent(q)}`)).places,
+  placeAt: async (lat: number, lng: number): Promise<PlaceResult> => (await call<{ ok: true; place: PlaceResult }>('GET', `/api/places/at?lat=${lat}&lng=${lng}`)).place,
+  lookupCode: async (code: string): Promise<{ firstName: string }> => (await call<{ ok: true; friend: { firstName: string } }>('GET', `/api/friends/${encodeURIComponent(code)}`)).friend,
+  previewInvite: async (inviteId: string, b: In<typeof req.InviteAcceptBody>): Promise<InvitePreview> =>
+    (await post<{ ok: true; preview: InvitePreview }>(`/api/invites/${inviteId}/preview`, b)).preview,
+  acceptInvite: (inviteId: string, b: In<typeof req.InviteAcceptBody>) => withView(post(`/api/invites/${inviteId}/accept`, b)),
   bannerSeen: (id: string) => withView(post(`/api/banners/${id}/seen`)),
   addGuest: (rideId: string, b: In<typeof req.GuestBody>) => withView(post(`/api/rides/${rideId}/guest`, b)),
   removeGuest: (rideId: string, acceptCharge = false) => withView(post(`/api/rides/${rideId}/guest/remove`, { acceptCharge })),

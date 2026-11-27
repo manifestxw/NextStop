@@ -2,7 +2,7 @@
 import { MapView } from '../components/MapView.js';
 import { Flap } from '../components/Flap.js';
 import { Icon } from '../components/Icon.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { RiderRideView, RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
@@ -52,20 +52,22 @@ export function Status() {
   }
   const stage = stageOf(ride.state);
   const filled = ride.seats.length;
-  const title = ['Syncing riders', 'Ready check', 'Finding your driver', 'Driver on the way'][stage]!;
+  const onBoard = !!ride.onBoard;
+  const title = onBoard ? "You're in the car" : ['Syncing riders', 'Ready check', 'Finding your driver', 'Driver on the way'][stage]!;
   const subtitle = [
     `${filled} of ${filled + ride.seatsLeft} synced`,
     `${ride.readyCheck?.answers.filter((x) => x.status === 'READY').length ?? 0} of ${filled} ready`,
     'Your ride is set',
     ride.driver ? `${ride.driver.firstName} · ${ride.driver.car}` : '',
   ][stage];
+  const shownSubtitle = onBoard ? `Picked up by ${ride.driver?.firstName ?? 'your driver'} · on the way to ${ride.myDest.area}` : subtitle;
   const unread = ride.chat.group.filter((m) => m.kind === 'user' && m.seq > (d.chatSeen[ride.id] ?? 0) && m.fromUserId !== view.me.id).length;
   const last = ride.chat.group.at(-1);
 
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
       <MapView marks={[
-        { kind: 'pickup', lat: ride.myPickup.lat, lng: ride.myPickup.lng, label: ride.myPickup.name, me: stage < 3 },
+        ...(onBoard ? [] : [{ kind: 'pickup' as const, lat: ride.myPickup.lat, lng: ride.myPickup.lng, label: ride.myPickup.name, me: stage < 3 }]),
         { kind: 'dest', lat: ride.myDest.lat, lng: ride.myDest.lng, label: ride.myDest.name },
       ]} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
@@ -74,17 +76,18 @@ export function Status() {
         </div>
         <div className="stack" style={{ gap: 4 }}>
           <div className="row" style={{ gap: 10 }}>{stage === 2 && <MergeMark loading />}<h1 className="t-h1">{title}</h1></div>
-          <p className="t-body text-2">{subtitle}
-          {stage === 3 && ride.driver && <> · <span className="badge badge--raised" style={{ border: '1px solid var(--text-1)' }}>{ride.driver.plate}</span></>}</p>
+          <p className="t-body text-2">{shownSubtitle}
+          {stage === 3 && !onBoard && ride.driver && <> · <span className="badge badge--raised" style={{ border: '1px solid var(--text-1)' }}>{ride.driver.plate}</span></>}</p>
         </div>
 
         <section className="pass" aria-label="Your ride">
           <div className="pass-top">
             <div className="row row--between"><span className="t-eyebrow truncate">{ride.myPickup.area} → {ride.myDest.area}</span><CategoryBadge category={ride.category} /></div>
-            <span className="t-eyebrow text-2">Be ready by</span>
-            <span className="pass-time"><Flap className="t-hero" value={fmtTime(ride.beReadyBy).replace(/ [AP]M$/, '')} />
-              <span className="t-body-l" style={{ fontWeight: 600 }}>{fmtTime(ride.beReadyBy).slice(-2)}</span></span>
-            <span className="t-body text-2">Pickup {ride.myStop.index} of {ride.myStop.of} · Arrive by {fmtTime(ride.effectiveArriveBy)}</span>
+            {onBoard ? <span className="row" style={{ gap: 6 }}><span className="badge badge--fill"><Icon name="check" size={14} /> Picked up</span></span>
+              : <span className="t-eyebrow text-2">Be ready by</span>}
+            {(() => { const t = fmtTime(onBoard ? ride.effectiveArriveBy : ride.beReadyBy); return (
+              <span className="pass-time"><Flap className="t-hero" value={t.replace(/ [AP]M$/, '')} /><span className="t-body-l" style={{ fontWeight: 600 }}>{t.slice(-2)}</span></span>); })()}
+            <span className="t-body text-2">{onBoard ? `Arrive by · ${ride.myDest.name}` : `Pickup ${ride.myStop.index} of ${ride.myStop.of} · Arrive by ${fmtTime(ride.effectiveArriveBy)}`}</span>
           </div>
           <div className="pass-perf" />
           <div className="pass-bottom">
@@ -116,9 +119,11 @@ export function Status() {
           <div className="card-row"><span style={{ color: 'var(--success)' }}><Icon name="banknote" /></span><span className="grow t-body-l">Cash · {fmtJod(ride.myCashDueJod)}</span></div>
         </section>
 
-        <button type="button" className="card card--tight row" style={{ color: 'var(--danger)', textAlign: 'left' }} onClick={() => setLeaving(true)}>
-          <Icon name="logout" /><span className="t-body-l" style={{ fontWeight: 600 }}>Leave ride</span>
-        </button>
+        {ride.leave.canLeave ? (
+          <button type="button" className="card card--tight row" style={{ color: 'var(--danger)', textAlign: 'left' }} onClick={() => setLeaving(true)}>
+            <Icon name="logout" /><span className="t-body-l" style={{ fontWeight: 600 }}>Leave ride</span>
+          </button>
+        ) : <p className="t-caption text-2 center">You're in the car, so you can't leave this ride now. It ends when you're dropped off.</p>}
         <ErrorNote text={a.message} />
       </div>
 
@@ -129,7 +134,7 @@ export function Status() {
         </div>
       )}
       {ride.state === 'READY_CHECK' && !leaving && <ReadyCheck ride={ride} />}
-      {leaving && <LeaveSheet ride={ride} onClose={() => setLeaving(false)} onLeft={() => nav('/')} />}
+      {leaving && ride.leave.canLeave && <LeaveSheet ride={ride} onClose={() => setLeaving(false)} onLeft={() => nav('/')} />}
     </main>
   );
 }
@@ -226,7 +231,14 @@ function FriendsCard({ ride }: { ride: RiderRideView }) {
       <button type="button" className="card-row" style={{ width: '100%', background: 'none', border: 0, textAlign: 'left' }} onClick={() => setSheet('invite')}>
         <Icon name="ticket" /><span className="grow t-body-l">Invite with a friend code</span><span className="text-2"><Icon name="next" size={16} /></span>
       </button>
-      {(ride.pendingInvites ?? []).map((p, i) => <div key={i} className="card-row t-body text-2">Invited {p.firstName} · waiting</div>)}
+      {(ride.sentInvites ?? []).map((i) => (
+        <div key={i.id} className="card-row">
+          <span className="picker-icon" style={{ width: 32, height: 32 }}>{i.firstName[0]}</span>
+          <span className="grow t-body-l">{i.firstName}</span>
+          <span className={`status-pill${i.state === 'joined' ? ' status-pill--ok' : i.state === 'waiting' ? '' : ' status-pill--off'}`}>
+            {{ waiting: 'Invite sent · waiting', joined: 'Joined', declined: 'Declined', expired: 'Expired' }[i.state]}</span>
+        </div>
+      ))}
       {!late && <ErrorNote text={a.message} />}
       {sheet === 'guest' && <AddGuestSheet ride={ride} onClose={() => setSheet(null)} />}
       {sheet === 'invite' && <InviteSheet ride={ride} onClose={() => setSheet(null)} />}
@@ -263,15 +275,27 @@ function AddGuestSheet({ ride, onClose }: { ride: RiderRideView; onClose: () => 
 
 function InviteSheet({ ride, onClose }: { ride: RiderRideView; onClose: () => void }) {
   const [code, setCode] = useState('');
+  const [friend, setFriend] = useState<{ code: string; name: string } | null>(null);
+  const [lookErr, setLookErr] = useState<string | null>(null);
   const a = useAction();
+  useEffect(() => {
+    setFriend(null); setLookErr(null);
+    if (code.length !== 6) return;
+    let live = true;
+    api.lookupCode(code).then((f) => { if (live) setFriend({ code, name: f.firstName }); }).catch((e: Error) => { if (live) setLookErr(e.message); });
+    return () => { live = false; };
+  }, [code]);
   return (
     <Sheet onClose={onClose}>
       <h2 className="t-h2">Invite a friend</h2>
-      <p className="t-body text-2">Ask for the code on their RideSync home screen.</p>
+      <p className="t-body text-2">Type the 6-character code from their RideSync home screen. They pick their own pickup and pay their own share.</p>
       <input className="field t-big" style={{ textAlign: 'center', letterSpacing: '0.2em', textTransform: 'uppercase' }} value={code} maxLength={6}
-        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} aria-label="Friend code" autoCapitalize="characters" />
-      <ErrorNote text={a.message} />
-      <Button disabled={code.length !== 6 || a.busy} onClick={() => a.run(async () => { await api.invite(ride.id, code); onClose(); })}>Send invite</Button>
+        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} aria-label="Friend code" autoCapitalize="characters" autoComplete="off" />
+      {friend && <p className="row t-body-l" style={{ gap: 8 }}><span style={{ color: 'var(--success-text)' }}><Icon name="check" /></span>{friend.name}</p>}
+      <ErrorNote text={a.message ?? lookErr} />
+      <Button disabled={!friend || a.busy} onClick={() => a.run(async () => { await api.invite(ride.id, code); onClose(); })}>
+        {friend ? `Invite ${friend.name}` : 'Send invite'}
+      </Button>
     </Sheet>
   );
 }

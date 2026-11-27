@@ -27,8 +27,11 @@ import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
 import type { Repo, Store } from '../store/repo.js';
 import { loadSeed, resetToSeed } from '../store/seed.js';
 import { selectProvider, travelOffline } from '../travel/select.js';
-import { searchPlaces } from '../travel/google.js';
+import { nearestPlace, searchPlaces } from '../travel/google.js';
+import { areaFor, pinName } from '../travel/places.js';
 import { SCRIPT, describeRide } from './script.js';
+
+export interface PlaceResult { key?: string; placeId: string; name: string; address: string; area: string; lat: number; lng: number }
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
 import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
@@ -92,8 +95,18 @@ export function createCommands(ctx: Ctx) {
       if (!p) throw new ConflictError('NOT_ELIGIBLE', 'Unknown place');
       return p;
     }
-    // shortcut: Google places (P1) use their name as the area until the places proxy returns a neighborhood.
-    return { placeId: ref.placeId, name: ref.name, area: ref.name, lat: ref.lat, lng: ref.lng };
+    // The area others see comes from the server: what it computed when it returned this place, else the nearest seed area.
+    const k = knownPlaces.get(ref.placeId);
+    const area = k && hav(k, ref) < 0.05 ? k.area : areaFor(ref, [], seedPlaces);
+    return { placeId: ref.placeId, name: ref.name, area, lat: ref.lat, lng: ref.lng };
+  }
+
+  // Places this server returned from search or a pin (P1): placeId → public area. In memory, capped.
+  const knownPlaces = new Map<string, { area: string; lat: number; lng: number }>();
+  function remember<T extends { placeId: string; area: string; lat: number; lng: number }>(p: T): T {
+    if (knownPlaces.size > 5000) knownPlaces.delete(knownPlaces.keys().next().value!);
+    knownPlaces.set(p.placeId, { area: p.area, lat: p.lat, lng: p.lng });
+    return p;
   }
 
   function tripOf(b: Body<typeof req.TripBody>): Trip {
@@ -128,7 +141,7 @@ export function createCommands(ctx: Ctx) {
       const out: [string, View][] = [];
       for (const id of new Set(ids)) {
         const u = await repo.getUser(id);
-        if (!u || u.epoch !== d.epoch || (u.isSim && id !== callerId)) continue;   // sims have no phone
+        if (!u || u.epoch !== d.epoch || (u.isSim && !u.seedLogin && id !== callerId)) continue;   // sims have no phone (Noor can be opened on one)
         const next = { ...u, viewSeq: u.viewSeq + 1 };
         await repo.putUser(next);
         out.push([id, await viewFor(repo, next, d.epoch)]);
@@ -252,6 +265,45 @@ export function createCommands(ctx: Ctx) {
     }
   }
 
+  /** What joining this ride would look like for this rider (search cards, invite previews). Read-only. */
+  async function cardFor(user: User, ride: Ride, t: Trip): Promise<{ card: MatchCard } | { reason: string }> {
+    const active = activeMembers(ride);
+    const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
+    const order = [...active.map((x) => x.userId), user.id];
+    const users = await store.withLock((repo) => usersOf(repo, order));
+    const me = { ...user, sameGenderOnly: t.sameGenderOnly };
+    users.set(user.id, me);
+    const m = toTimed(await fetchMatrix([...active, cand], fromIso(ride.plan.firstPickup)));
+    const res = checkJoin(m, rideIn(ride, active, order, users), riderIn(cand, order, me, { category: t.category }), clock.now(), cfg.calibration);
+    if (!res.ok) return { reason: res.reason };
+    const seatsUsed = active.reduce((n, x) => n + seatsOf(x), 0);
+    return { card: {
+      rideId: ride.id, hostFirstName: users.get(ride.hostUserId)?.firstName ?? '?',
+      category: ride.category, genderMode: ride.genderMode, gender: ride.gender,
+      seats: active.flatMap((x) => {
+        const s = { initials: (users.get(x.userId)?.firstName ?? '?')[0]!.toUpperCase(), isGuest: false };
+        return x.guest && !x.guest.leave ? [s, { initials: x.guest.firstName[0]!.toUpperCase(), isGuest: true }] : [s];
+      }),
+      seatsLeft: CATEGORY[ride.category].maxRiders - seatsUsed,
+      pickupArea: ride.anchor.pickup.area, destArea: ride.anchor.dest.area,
+      effectiveArriveBy: [...active.map((x) => x.arriveBy), t.arriveBy].sort()[0]!,
+      myPickupAt: toIso(res.plan!.pick[active.length]!), eachJod: res.share!,
+      myPaysJod: (await store.withLock((repo) => uniFor(repo, user.id, t))) ? uniPaid(res.share!) : res.share!,
+    } };
+  }
+
+  /** An invited friend's trip: their own pickup, the ride's destination, arrive-by and category (SPEC §3.17 B). */
+  async function inviteTrip(user: User, inviteId: string, b: Body<typeof req.InviteAcceptBody>) {
+    const { inv, ride } = await store.withLock(async (repo) => {
+      const inv = await repo.getInvite(inviteId);
+      return { inv, ride: inv ? await repo.getRide(inv.rideId) : null };
+    });
+    if (!inv || inv.toUserId !== user.id || inv.state !== 'PENDING' || !ride || ride.state !== 'OPEN') throw new ConflictError('RIDE_GONE');
+    const arriveBy = activeMembers(ride).map((m) => m.arriveBy).sort()[0] ?? ride.anchor.arriveBy;
+    const trip: Trip = { pickup: resolvePlace(b.pickup), dest: ride.anchor.dest, arriveBy, by: fromIso(arriveBy), category: ride.category, sameGenderOnly: b.sameGenderOnly };
+    return { inv, ride, trip };
+  }
+
   async function postChat(user: User, rideId: string, text: string) {
     return commit(user.id, async (repo, fx) => {
       const ride = await repo.getRide(rideId);
@@ -308,6 +360,7 @@ export function createCommands(ctx: Ctx) {
       const snap = await store.withLock((r) => r.getRide(rideId));
       if (!snap || !ACTIVE_STATES.includes(snap.state)) throw new ConflictError('RIDE_GONE');
       if (!activeMembers(snap).some((m) => m.userId === user.id)) return myView(user.id);
+      if (snap.members.some((m) => m.userId === user.id && m.state === 'PICKED_UP')) throw illegal("You're already in the car. The ride ends when you're dropped off.");
       const active = activeMembers(snap), rest = active.filter((m) => m.userId !== user.id);
       let spec: MatrixSpec | null = null, route: Ride['anchor']['route'] | null = null, order: string[];
       if (snap.state === 'OPEN') {
@@ -452,7 +505,7 @@ export function createCommands(ctx: Ctx) {
       }
       const settings = { ...d.settings, offlineFallbackActive: d.settings.offlineFallbackActive || travelOffline() };
       const mine = await linaRide(repo);
-      const now = mine && ACTIVE_STATES.includes(mine.state) ? await describeRide(repo, mine) : [];
+      const now = mine && ACTIVE_STATES.includes(mine.state) ? await describeRide(repo, mine, rides.readyLeadMin(d.settings.driversNearby)) : [];
       return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: SCRIPT, log: [...apLog], now };
     });
   }
@@ -511,11 +564,29 @@ export function createCommands(ctx: Ctx) {
       return { token: u.token, epoch: u.epoch, view: await myView(u.id) };
     },
 
-    /** Places search proxy (P1): server-side Google Places, Jordan only, biased to Irbid. No key → nothing. */
-    async places(token: string, q: string) {
+    /** Places search proxy (P1): server-side Google Places, Jordan only, biased to Irbid. No key or Google down → seed places. */
+    async places(token: string, q: string): Promise<PlaceResult[]> {
       await auth(token, 'rider');
-      if (q.trim().length < 3 || !cfg.googleServerKey) return [];
-      try { return await searchPlaces(cfg.googleServerKey, q.trim()); } catch (e) { console.warn(`places: ${(e as Error).message}`); return []; }
+      const text = q.trim();
+      if (text.length < 2) return [];
+      const seeds = seedPlaces.filter((p) => p.key && `${p.name} ${p.area}`.toLowerCase().includes(text.toLowerCase()))
+        .map((p) => ({ key: p.key!, placeId: `seed:${p.key}`, name: p.name, address: p.area, area: p.area, lat: p.lat, lng: p.lng }));
+      if (!cfg.googleServerKey || text.length < 3) return seeds;
+      try {
+        const g = (await searchPlaces(cfg.googleServerKey, text))
+          .map((p) => remember({ placeId: p.placeId, name: p.name, address: p.address, area: areaFor(p, p.parts, seedPlaces), lat: p.lat, lng: p.lng }));
+        return [...seeds, ...g].slice(0, 8);
+      } catch (e) { console.warn(`places: ${(e as Error).message}`); return seeds; }
+    },
+
+    /** A pin dropped on the map (P1): its name from the closest named place, and its public area. */
+    async placeAt(token: string, lat: number, lng: number): Promise<PlaceResult> {
+      await auth(token, 'rider');
+      if (!(lat > 29.1 && lat < 33.4 && lng > 34.9 && lng < 39.4)) throw new ConflictError('NOT_ELIGIBLE', 'Pick a place in Jordan');
+      const p = { lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5 };
+      let near = null;
+      if (cfg.googleServerKey) { try { near = await nearestPlace(cfg.googleServerKey, p); } catch (e) { console.warn(`places: ${(e as Error).message}`); } }
+      return remember({ placeId: `pin:${p.lat},${p.lng}`, name: pinName(near?.name), address: near?.address ?? '', area: areaFor(p, near?.parts ?? [], seedPlaces), ...p });
     },
 
     async demoLogin({ as }: Body<typeof req.DemoLoginBody>): Promise<AuthResponse> {
@@ -552,29 +623,8 @@ export function createCommands(ctx: Ctx) {
         .filter((r) => r.state === 'OPEN' && !r.members.some((m) => m.userId === user.id && ACTIVE_MEMBER.includes(m.state)));
       const cards: MatchCard[] = [];
       for (const ride of open) {
-        const active = activeMembers(ride);
-        const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
-        const order = [...active.map((x) => x.userId), user.id];
-        const users = await store.withLock((repo) => usersOf(repo, order));
-        const me = { ...user, sameGenderOnly: t.sameGenderOnly };
-        users.set(user.id, me);
-        const m = toTimed(await fetchMatrix([...active, cand], fromIso(ride.plan.firstPickup)));
-        const res = checkJoin(m, rideIn(ride, active, order, users), riderIn(cand, order, me, { category: t.category }), clock.now(), cfg.calibration);
-        if (!res.ok) continue;
-        const seatsUsed = active.reduce((n, x) => n + seatsOf(x), 0);
-        cards.push({
-          rideId: ride.id, hostFirstName: users.get(ride.hostUserId)?.firstName ?? '?',
-          category: ride.category, genderMode: ride.genderMode, gender: ride.gender,
-          seats: active.flatMap((x) => {
-            const s = { initials: (users.get(x.userId)?.firstName ?? '?')[0]!.toUpperCase(), isGuest: false };
-            return x.guest && !x.guest.leave ? [s, { initials: x.guest.firstName[0]!.toUpperCase(), isGuest: true }] : [s];
-          }),
-          seatsLeft: CATEGORY[ride.category].maxRiders - seatsUsed,
-          pickupArea: ride.anchor.pickup.area, destArea: ride.anchor.dest.area,
-          effectiveArriveBy: [...active.map((x) => x.arriveBy), t.arriveBy].sort()[0]!,
-          myPickupAt: toIso(res.plan!.pick[active.length]!), eachJod: res.share!,
-          myPaysJod: (await store.withLock((repo) => uniFor(repo, user.id, t))) ? uniPaid(res.share!) : res.share!,
-        });
+        const r = await cardFor(user, ride, t);
+        if ('card' in r) cards.push(r.card);
       }
       return cards.sort((a, b2) => a.eachJod - b2.eachJod);
     },
@@ -771,6 +821,7 @@ export function createCommands(ctx: Ctx) {
         const ride = await repo.getRide(rideId);
         if (!ride || !ACTIVE_STATES.includes(ride.state)) throw new ConflictError('RIDE_GONE');
         const me = activeMembers(ride).find((m) => m.userId === user.id);
+        if (me?.state === 'PICKED_UP') throw illegal("You're already in the car");
         if (!me?.guest || me.guest.leave) return;   // nothing to remove (double tap)
         const now = clock.now();
         const late = rides.isLateNow(ride, now);
@@ -806,17 +857,46 @@ export function createCommands(ctx: Ctx) {
         if (!friend || friend.role !== 'rider') throw new ConflictError('NO_SUCH_CODE');
         if (friend.id === user.id) throw new ConflictError('NOT_ELIGIBLE', "That's your own code");
         if (activeMembers(ride).some((m) => m.userId === friend.id)) throw new ConflictError('NOT_ELIGIBLE', `${friend.firstName} is already in this ride`);
+        if (ride.genderMode === 'same' && friend.gender !== ride.gender) throw new ConflictError('NOT_ELIGIBLE', `This ride is ${ride.gender === 'F' ? 'women' : 'men'} only`);
+        if (activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0) >= CATEGORY[ride.category].maxRiders) throw new ConflictError('RIDE_FULL');
         await repo.putInvite({ id: randomUUID(), rideId, fromUserId: user.id, toUserId: friend.id, at: toIso(clock.now()), state: 'PENDING' });
         fx.banners.push({ userId: friend.id, tone: 'info', text: `${user.firstName} invited you to a ride to ${ride.anchor.dest.area}` });
         fx.touched.add(friend.id);
       });
     },
 
+    /** Is this a rider's friend code? First name only (P1). */
+    async lookupCode(token: string, raw: string) {
+      const user = await auth(token, 'rider');
+      const friend = await store.withLock((r) => r.getUserByFriendCode(raw.trim().toUpperCase()));
+      if (!friend || friend.role !== 'rider') throw new ConflictError('NO_SUCH_CODE');
+      if (friend.id === user.id) throw new ConflictError('NOT_ELIGIBLE', "That's your own code");
+      return { firstName: friend.firstName };
+    },
+
+    /** What the invited friend would pay from this pickup, before joining. */
+    async previewInvite(token: string, inviteId: string, b: Body<typeof req.InviteAcceptBody>) {
+      const user = await auth(token, 'rider');
+      const { ride, trip } = await inviteTrip(user, inviteId, b);
+      const r = await cardFor(user, ride, trip);
+      if ('reason' in r) throw ruleError(r.reason);
+      return { eachJod: r.card.eachJod, myPaysJod: r.card.myPaysJod, myPickupAt: r.card.myPickupAt, riders: r.card.seats.length + 1 };
+    },
+
+    async acceptInvite(token: string, inviteId: string, b: Body<typeof req.InviteAcceptBody>) {
+      const user = await auth(token, 'rider');
+      const { inv, ride, trip } = await inviteTrip(user, inviteId, b);
+      return joinAs(user, ride.id, trip, inv.id);
+    },
+
     async declineInvite(token: string, inviteId: string) {
       const user = await auth(token, 'rider');
-      return commit(user.id, async (repo) => {
+      return commit(user.id, async (repo, fx) => {
         const inv = await repo.getInvite(inviteId);
-        if (inv && inv.toUserId === user.id && inv.state === 'PENDING') await repo.putInvite({ ...inv, state: 'EXPIRED' });
+        if (inv && inv.toUserId === user.id && inv.state === 'PENDING') {
+          await repo.putInvite({ ...inv, state: 'DECLINED' });
+          fx.touched.add(inv.fromUserId);
+        }
       });
     },
 
@@ -990,7 +1070,7 @@ export function createCommands(ctx: Ctx) {
           }
           case 7: await self.demo.completeTrip((await ride()).id); break;
         }
-        const lines = await store.withLock(async (r) => { const x = await linaRide(r); return x ? describeRide(r, x) : []; });
+        const lines = await store.withLock(async (r) => { const x = await linaRide(r); return x ? describeRide(r, x, rides.readyLeadMin((await r.getDemoState())!.settings.driversNearby)) : []; });
         apLog.push({ step: next.step, title: next.label, at: toIso(clock.now()), lines });
         publisher.clock(clockView(clock));
         return demoView();

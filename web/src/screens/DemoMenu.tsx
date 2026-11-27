@@ -93,7 +93,7 @@ export function DemoMenu() {
         Simulated riders answer Ready automatically
       </label>
       <button style={{ ...big, borderColor: '#b00', color: '#b00' }} onClick={() => { if (confirm('Reset everything and log out all phones?')) void act(() => api.demo.reset(pin)); }}>Reset demo</button>
-      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=lina&amp;pin=…</code> · <code>/?as=sara&amp;pin=…</code> · <code>/?as=omar&amp;pin=…</code></p>
+      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=lina&amp;pin=…</code> · <code>/?as=sara&amp;pin=…</code> · <code>/?as=omar&amp;pin=…</code> · <code>/?as=noor&amp;pin=…</code> (friend to invite, code NOOR26) · <code>/?as=huda&amp;pin=…</code> (Uni plan)</p>
     </main>
   );
 }

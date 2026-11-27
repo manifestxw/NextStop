@@ -79,7 +79,7 @@ export const SCRIPT: Step[] = [
 const jod = (p: number) => (p / 100).toFixed(2);
 
 /** What the ride looks like right now, in plain lines (demo menu "Live" panel and the step log). */
-export async function describeRide(repo: Repo, ride: Ride): Promise<string[]> {
+export async function describeRide(repo: Repo, ride: Ride, readyLeadMin = 45): Promise<string[]> {
   const name = async (id: string) => (await repo.getUser(id))?.firstName ?? '?';
   const active = activeMembers(ride);
   const seats = active.reduce((n, m) => n + seatsOf(m), 0);
@@ -93,15 +93,16 @@ export async function describeRide(repo: Repo, ride: Ride): Promise<string[]> {
   }
   lines.push(`${ride.state} · ${seats} rider${seats === 1 ? '' : 's'} · JOD ${jod(ride.plan.shareP)} each · fare JOD ${ride.plan.fareJod.toFixed(2)}`);
   const pickups = ride.plan.stops.filter((s) => s.kind === 'P');
-  for (const m of active) {
-    const n = pickups.findIndex((s) => s.userId === m.userId) + 1;
+  const nOf = (id: string) => pickups.findIndex((s) => s.userId === id) + 1;
+  for (const m of [...active].sort((a, b) => nOf(a.userId) - nOf(b.userId))) {
+    const n = nOf(m.userId);
     const ready = ride.readyCheck ? ` · ready: ${m.readyAnswer === 'READY' ? 'yes' : m.readyAnswer === 'CANCEL' ? 'canceled' : 'waiting'}` : '';
     lines.push(`  ${n}. ${await name(m.userId)}${m.guest ? ` +${m.guest.firstName}` : ''} · ${m.pickup.area} · be ready by ${ammanTime12(fromIso(m.shownPickup))} · pays JOD ${jod(cashDueP(m, ride.plan.shareP))}${ready}`);
   }
   for (const m of ride.members.filter((x) => x.leave)) {
     lines.push(`${await name(m.userId)} left ${m.leave!.late ? 'late' : 'free'} at ${ammanTime12(fromIso(m.leave!.at))}${m.leave!.late ? ` · charged JOD ${jod(m.leave!.chargedP)}` : ''}`);
   }
-  if (ride.state === 'OPEN') lines.push(`Ready check starts automatically before the first pickup (${ammanTime12(fromIso(ride.plan.firstPickup))})`);
+  if (ride.state === 'OPEN') lines.push(`Ready check starts automatically at ${ammanTime12(fromIso(ride.plan.firstPickup) - readyLeadMin * 60_000_000)} (${readyLeadMin} min before the first pickup)`);
   if (ride.readyCheck) lines.push(`Ready check ends ${ammanTime12(fromIso(ride.readyCheck.endsAt))}`);
   if (ride.dispatch && !ride.driverUserId) {
     lines.push(`Offer sent to ${(await Promise.all(ride.dispatch.offeredTo.map(name))).join(', ')} · expires ${ammanTime12(fromIso(ride.dispatch.expiresAt))}`);

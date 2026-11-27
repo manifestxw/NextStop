@@ -44,6 +44,12 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
 
   // rider
   app.get('/api/places', async (r) => ({ ok: true, places: await cmd.places(token(r), String((r.query as { q?: string }).q ?? '')) }));
+  app.get('/api/places/at', async (r) => {
+    const q = r.query as { lat?: string; lng?: string };
+    const lat = Number(q.lat), lng = Number(q.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new ConflictError('NOT_ELIGIBLE', 'Pick a place on the map');
+    return { ok: true, place: await cmd.placeAt(token(r), lat, lng) };
+  });
   app.post('/api/quote', async (r) => ({ ok: true, quote: await cmd.quote(token(r), body(schema.QuoteBody, r)) }));
   app.post('/api/search', async (r) => ({ ok: true, cards: await cmd.search(token(r), body(schema.SearchBody, r)) }));
   app.post('/api/rides', async (r) => view(cmd.createRide(token(r), body(schema.CreateRideBody, r))));
@@ -56,6 +62,9 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.post('/api/rides/:id/guest/remove', async (r) => view(cmd.removeGuest(token(r), id(r), body(schema.GuestRemoveBody, r))));
   app.post('/api/rides/:id/invite', async (r) => view(cmd.invite(token(r), id(r), body(schema.InviteBody, r))));
   app.post('/api/invites/:id/decline', async (r) => view(cmd.declineInvite(token(r), id(r))));
+  app.post('/api/invites/:id/preview', async (r) => ({ ok: true, preview: await cmd.previewInvite(token(r), id(r), body(schema.InviteAcceptBody, r)) }));
+  app.post('/api/invites/:id/accept', async (r) => view(cmd.acceptInvite(token(r), id(r), body(schema.InviteAcceptBody, r))));
+  app.get('/api/friends/:id', async (r) => ({ ok: true, friend: await cmd.lookupCode(token(r), id(r)) }));
   app.post('/api/plans/subscribe', async (r) => view(cmd.subscribe(token(r), body(schema.SubscribeBody, r))));
   app.post('/api/plans/trips/:id/cancel', async (r) => view(cmd.cancelPlanned(token(r), id(r))));
   app.post('/api/plans/trips', async (r) => view(cmd.planReplacement(token(r), body(schema.ReplacementBody, r))));

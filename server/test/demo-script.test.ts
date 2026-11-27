@@ -46,7 +46,7 @@ describe('SPEC §2.2 demo script (stage data)', () => {
 
     // 5. 6:53 (27 min before the first pickup): Sara leaves late
     await cmd.demo.clock({ jumpTo: '2026-11-29T06:53:00+03:00' });
-    expect(rider(await cmd.me(sara)).ride!.leave).toEqual({ free: false, chargeJod: 1.7 });
+    expect(rider(await cmd.me(sara)).ride!.leave).toEqual({ free: false, chargeJod: 1.7, canLeave: true });
     await cmd.leave(sara, rideId, { acceptCharge: true });
     const r5 = rider(await cmd.me(lina)).ride!;
     expect([await fare(rideId), r5.shareJod, r5.seats.length, hhmm(r5.beReadyBy)]).toEqual([6.59, 1.65, 3, '07:33']);

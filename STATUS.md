@@ -12,17 +12,15 @@
   (Sara) / respond 7:05; late leave at **6:53** → 1.65 each; Omar 4.95 + 1.70 credit = 6.65.
 
 ## Verification
-- `npm run check`: green, 171 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
+- `npm run check`: green, 181 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests on the fixed table. Every flow checked in headless Chromium. Phones: T12.
-- **T14:** real Google map (riders: own pickup + destination only; driver: numbered pickups).
-- **T17–T19/T25:** friends (+1, invites), driver taps, no-show, driver cancel, solo fallback; demo autopilot.
-
+- **T14, T17–T19/T25:** Google map, friends, driver taps, no-show, driver cancel, solo fallback; autopilot.
 - **T15/T16:** Uni plans end to end: picker, week grid, demo card (test numbers, last4 only), My plan (states,
   cancel ≥12 h → replacement, plan a replacement), 12 h placement, 20% per subscriber + RideSync credit. Huda seeded.
-
 - **T20/T21:** driver route line, rider ↔ driver chat (private per rider), live place search (server proxy);
   Airport place + snapshot pairs (existing cells untouched).
 - **T22–T24 (P2):** k-means demand spots + best-spot card; demo traffic/weather/drivers; supply-aware ready check.
+- **T26–T29 (owner):** detailed autopilot + log; place picker (search, recents, map pin); invites complete; in-car lock.
 
 ## Next task
 - **T12 (owner): deploy on Replit.** Import the GitHub repo; `.replit` sets Node 22, build `npm ci --include=dev && npm run build`,
@@ -38,3 +36,5 @@
 - Owner: Google's places for seeds (CC = Aydoun mall); 4 riders via shared pickup.
 - No-show waits count from the shown minute. Default 20 drivers nearby (keeps −45). Deploy: owner, later.
 - Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; storage-only Member `pos`, Ride `cancelReason`.
+- Invite state DECLINED (string column, no migration). Public area of a searched/pinned place is set by the server.
+- Noor + Huda get seed logins; Geocoding API is off for the key, so pins use Places Nearby. No "use my location" (SPEC §5: no real GPS).
