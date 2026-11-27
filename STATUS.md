@@ -7,9 +7,8 @@
 
 ## Just shipped
 - T1–T11, T13: engine, store, domain, REST, every P0 screen, demo menu, snapshot (Google places), polish.
-- Real roads fit 4 only with a shared pickup: sims Deya'a @ Arabella, Adnan @ University St (with Saed).
-- Demo now: 5.35 solo → 3.10 → 2.20 → **1.70 ×4**; offer 6.71 / collect 6.80 / first pickup 7:20
-  (Saed) / respond 7:05; late leave at **6:53** → 1.65 each; Yazeed 4.95 + 1.70 credit = 6.65.
+- 4 riders via a shared pickup: sims @ Arabella and @ University St (with the rider who joins).
+- Demo: 5.35 → 3.10 → 2.20 → **1.70 ×4**; offer 6.71 / collect 6.80 / first pickup 7:20; late leave **6:53** → 1.65; driver 6.65.
 
 ## Verification
 - `npm run check`: green, 190 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
