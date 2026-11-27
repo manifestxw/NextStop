@@ -32,13 +32,9 @@
 - Pitch deck: rebrand + friends, demand spots, Uni plans slides (SPEC §7.3).
 
 ## Decisions (this session)
-- Node 20 is end-of-life (Apr 2026) but locked; `engines` is `>=20.19`. Owner: use Node 22 on Replit if offered.
-- npm 12 blocks install scripts: `allowScripts` approves Prisma + esbuild only. Vite pinned once at root.
-- `npm audit`: 4 highs in the Prisma 6 CLI config loader; fix needs Prisma 7 (locked to 6).
-- Engine times are epoch microseconds and emulate Python timedelta's µs rounding (exact parity).
-- `TimedMatrix` lives in `engine/types.ts`; T4's TravelProvider builds one per evaluation.
-- CALIBRATION is a constant 1.00 for now; T4 wires env `CALIBRATION` (comment in constants.ts).
+- Node 20 EOL (Apr 2026) but locked; `engines` `>=20.19`; use Node 22 on Replit if offered. npm 12: `allowScripts` = Prisma + esbuild.
+- `npm audit`: 4 highs in the Prisma 6 CLI (fix needs Prisma 7). Engine times are µs, Python-exact.
+- Engine CALIBRATION stays 1.00; domain passes env CALIBRATION × category price as `priceFactor` (bit-identical).
 - Not yet tested: rules 7–9 reject paths, "not cheaper than solo"; added when T6 needs them.
 - Prisma Member has a storage-only `pos` column (member order; paused-clock joins share joinedAt).
-- `select.ts` serves the fixed table for every source until T11; `/api/health` shows the configured one.
-- `npm start` defaults `DATABASE_URL` so Replit needs no extra secret for it.
+- `select.ts` serves the fixed table for every source until T11. `npm start` defaults `DATABASE_URL`.
