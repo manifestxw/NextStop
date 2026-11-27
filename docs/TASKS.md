@@ -51,7 +51,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [ ] **T16** `todo` CX: Uni plans UI: entry card, plan picker, week grid builder, demo card sheet, My plan, discount display. needs: T15 (DESIGN §8)
 - [ ] **T17** `todo` CC: Friends domain: +1 add/remove (seats, late charge to bringer), friend-code invites, expiry at READY_CHECK. needs: T12 (SPEC §3.17)
 - [ ] **T18** `todo` CX: Friends UI: friends card, add-friend sheet, invite sheet, invite card, profile code. needs: T17
-- [ ] **T19** `doing CC` CC (P1 before T12 by owner choice, 27 Nov): Hardening: no-show, driver cancel + redispatch, "Book a solo ride", pickup-time banners, stale tab + reconnect, Google fallback. needs: T12
+- [x] **T19** `done e4e99aa` CC (P1 before T12 by owner choice, 27 Nov): Hardening: no-show, driver cancel + redispatch, "Book a solo ride", pickup-time banners, stale tab + reconnect, Google fallback. needs: T12
 - [ ] **T20** `todo` CX: P1 UI: Places autocomplete, driver route line, driver chat. (Pickup/drop-off/no-show taps, driver cancel, solo fallback, stale tab and "Map unavailable" shipped with T19/T14.) needs: T19
 - [ ] **T21** `todo` CC: Airport: QAIA seed place + snapshot pairs. needs: T11
 
