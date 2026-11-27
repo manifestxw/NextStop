@@ -5,6 +5,7 @@ export default tseslint.config(
   { ignores: ['**/node_modules/**', '**/dist/**', 'server/public/**', 'docs/**', '.agents/**', '.claude/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  { rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }] } },
   {
     files: ['**/*.mjs', '**/*.js'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },

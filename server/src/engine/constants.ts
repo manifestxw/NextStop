@@ -1,5 +1,6 @@
 // Numbers from SPEC §3.5, §3.10, §4 (top of fare_model.py). Don't "improve" them.
-// shortcut: CALIBRATION is fixed at 1.00 (golden value); wire it to env CALIBRATION when config lands (T4).
+// Always 1.00 here (golden values). The domain multiplies env CALIBRATION (config.ts) into priceFactor:
+// fare_model.py computes CALIBRATION × price_factor first, so (cal × price) as priceFactor is bit-identical.
 export const CALIBRATION = 1.0;
 export const MAX_RIDERS = 4;
 export const BUFFER = 5;              // rule 7: drop by effective arrive-by − 5 min

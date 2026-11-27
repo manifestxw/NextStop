@@ -2,7 +2,9 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { Health } from '@nextstop/shared';
+import type { Health, TravelSource } from '@nextstop/shared';
+import { toIso } from './clock/amman.js';
+import type { Clock } from './clock/clock.js';
 
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 // Same layout in dev (src/) and prod (dist/): both sit one level under server/.
@@ -13,11 +15,17 @@ function readStamp(): Health['buildStamp'] {
   try { return JSON.parse(readFileSync(STAMP_FILE, 'utf8')); } catch { return null; }
 }
 
-export function buildApp() {
+export interface AppDeps { clock?: Clock; source?: () => TravelSource }
+
+export function buildApp({ clock, source }: AppDeps = {}) {
   const app = Fastify({ logger: false });
   const buildStamp = readStamp();
 
-  app.get('/api/health', async (): Promise<Health> => ({ ok: true, buildStamp }));
+  app.get('/api/health', async (): Promise<Health> => ({
+    ok: true, buildStamp,
+    ...(clock && { clock: { nowIso: toIso(clock.now()), paused: clock.snapshot().paused } }),
+    ...(source && { source: source() }),
+  }));
 
   if (existsSync(PUBLIC_DIR)) app.register(fastifyStatic, { root: PUBLIC_DIR });
 

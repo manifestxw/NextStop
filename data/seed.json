@@ -1,0 +1,30 @@
+{
+  "_note": "SPEC §2.6. lat/lng are the fixed-table approximations; placeId is filled when the snapshot is generated (T11).",
+  "places": [
+    { "key": "CC", "name": "Irbid City Center", "area": "City Center area", "lat": 32.5568, "lng": 35.8469, "placeId": null },
+    { "key": "HS", "name": "Al-Hashmi Street", "area": "Al-Hashmi area", "lat": 32.552, "lng": 35.864, "placeId": null },
+    { "key": "US", "name": "University Street", "area": "University Street area", "lat": 32.544, "lng": 35.857, "placeId": null },
+    { "key": "YU", "name": "Yarmouk University", "area": "Yarmouk area", "lat": 32.5366, "lng": 35.8556, "placeId": null },
+    { "key": "AM", "name": "Arabella Mall", "area": "Arabella area", "lat": 32.529, "lng": 35.866, "placeId": null },
+    { "key": "JUST", "name": "Jordan University of Science and Technology", "area": "JUST", "lat": 32.47889, "lng": 35.985, "placeId": null }
+  ],
+  "users": [
+    { "id": "u-lina", "firstName": "Lina", "gender": "F", "role": "rider", "seedLogin": "lina", "friendCode": "LINA26", "isSim": false },
+    { "id": "u-sara", "firstName": "Sara", "gender": "F", "role": "rider", "seedLogin": "sara", "friendCode": "SARA26", "isSim": false },
+    { "id": "u-rania", "firstName": "Rania", "gender": "F", "role": "rider", "friendCode": "RANI26", "isSim": true },
+    { "id": "u-dana", "firstName": "Dana", "gender": "F", "role": "rider", "friendCode": "DANA26", "isSim": true },
+    { "id": "u-noor", "firstName": "Noor", "gender": "F", "role": "rider", "friendCode": "NOOR26", "isSim": true },
+    { "id": "u-huda", "firstName": "Huda", "gender": "F", "role": "rider", "friendCode": "HUDA26", "isSim": false },
+    { "id": "u-ahmad", "firstName": "Ahmad", "gender": "M", "role": "rider", "friendCode": "AHMD26", "isSim": true },
+    { "id": "u-khaled", "firstName": "Khaled", "gender": "M", "role": "rider", "friendCode": "KHLD26", "isSim": true },
+    { "id": "u-omar", "firstName": "Omar", "gender": "M", "role": "driver", "seedLogin": "omar", "friendCode": "OMAR26", "isSim": false }
+  ],
+  "drivers": [
+    { "userId": "u-omar", "car": "White Hyundai Elantra", "plate": "12-34567", "baseKey": "CC" }
+  ],
+  "simRiders": [
+    { "userId": "u-rania", "pickupKey": "HS", "destKey": "JUST", "arriveBy": "08:05", "chatLine": "Hi everyone 👋" },
+    { "userId": "u-dana", "pickupKey": "YU", "destKey": "JUST", "arriveBy": "08:00", "chatLine": "I'll be at the main gate" },
+    { "userId": "u-noor", "pickupKey": "AM", "destKey": "JUST", "arriveBy": "08:00", "chatLine": "Hello!" }
+  ]
+}

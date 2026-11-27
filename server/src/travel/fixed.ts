@@ -4,6 +4,7 @@ import { ammanParts } from '../clock/amman.js';
 import { hav } from '../engine/geo.js';
 import { pyRound } from '../engine/pyRound.js';
 import type { LatLng, TimedMatrix, Us } from '../engine/types.js';
+import type { TravelProvider } from './provider.js';
 
 export const JUST: LatLng = { lat: 32.47889, lng: 35.985 };
 export const EXIT: LatLng = { lat: 32.52, lng: 35.89 };   // Irbid → Ramtha road exit node
@@ -63,3 +64,18 @@ export function fixedMatrix(points: LatLng[], cond: Conditions = {}): TimedMatri
     freeMin: (i, j) => { const [u, hw] = leg(i, j); return u / V_URBAN * 60 + hw / V_HW * 60; },
   };
 }
+
+/** Fixed-table TravelProvider: deterministic, offline. Routes are straight segments via the exit node for JUST legs. */
+export const fixedProvider: TravelProvider = {
+  name: 'fixed',
+  getMatrix: async (points, _departure, cond = {}) => ({ kind: 'fixed', points, cond }),
+  getRoute: async (points) => {
+    const out: LatLng[] = points.slice(0, 1);
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1]!, b = points[i]!;
+      if (!same(a, b) && (isJust(a) || isJust(b))) out.push(EXIT);
+      out.push(b);
+    }
+    return out;
+  },
+};

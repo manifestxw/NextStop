@@ -323,6 +323,7 @@ model Ride {
 model Member {
   rideId           String
   userId           String
+  pos              Int    @default(0)   // member order (host first); joins can share a timestamp
   ride             Ride   @relation(fields: [rideId], references: [id], onDelete: Cascade)
   user             User   @relation(fields: [userId], references: [id])
   pickupJson       String

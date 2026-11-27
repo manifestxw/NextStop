@@ -10,7 +10,7 @@ const HOUR_MS = 3_600_000;
 // Amman's offset only ever changes on a whole hour, so the cache is exact.
 const offsetCache = new Map<number, number>();
 
-function offsetMs(ms: number): number {
+export function offsetMs(ms: number): number {
   const key = Math.floor(ms / HOUR_MS);
   let off = offsetCache.get(key);
   if (off === undefined) {
@@ -30,3 +30,14 @@ export function ammanParts(us: number): AmmanParts {
     hour: d.getUTCHours(), minute: d.getUTCMinutes(), second: d.getUTCSeconds(), weekday: d.getUTCDay(),
   };
 }
+
+/** ISO string with the Amman offset, e.g. 2026-11-29T06:10:00.000+03:00 (stored-time format, ARCH §4). */
+export function toIso(us: number): string {
+  const ms = Math.floor(us / 1000), off = offsetMs(ms);
+  const sign = off < 0 ? '-' : '+', a = Math.abs(off) / 60_000;
+  const hh = String(Math.floor(a / 60)).padStart(2, '0'), mm = String(a % 60).padStart(2, '0');
+  return new Date(ms + off).toISOString().slice(0, 23) + `${sign}${hh}:${mm}`;
+}
+
+/** Parse any ISO string with an offset to epoch microseconds. */
+export const fromIso = (iso: string): number => Date.parse(iso) * 1000;

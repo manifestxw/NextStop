@@ -1,8 +1,8 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1 scaffold, T2 contract, T3 engine)
-**Milestone:** M1 walking skeleton (T1–T3 of T12 done)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T4)
+**Milestone:** M1 walking skeleton (T1–T4 of T12 done)
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
 ## Just shipped
@@ -13,14 +13,17 @@
 - **T3:** engine port of `fare_model.py`: `pyRound`/`up05`, `ammanParts`, tariff, geo, fare,
   plan (itertools order), zones/categories/seats/rule 1, matching rules 1–2 and 4–11, leave.
   Fixed-table source in `server/src/travel/fixed.ts` (pure `fixedMatrix`, `anchorRoute`).
+- **T4:** TravelProvider (fixed + cache + select; serializable `MatrixSpec` for the fare lock),
+  config (zod env), demo clock + scheduler tick (saves clock), `withLock` store with memoryRepo +
+  prismaRepo, `data/seed.json` (places, 9 users incl. 2 male sims, Omar, friend codes), `seed:reset`.
 
 ## Verification
-- `npm run check`: green. 57 tests: all SPEC §4.7 golden values + §4.7.1 (zones, gender modes,
-  Comfort, +1), the 3 model unit tests, every matching rule's reject path. Tests take ~2.5 s.
-- `npm start` and `npm run dev` work (T1). Works on 3 phones: not yet (T12).
+- `npm run check`: green, 87 tests (~4 s): golden values, rule rejects, store contract on both repos
+  (rollback, last-seat race, chat seq), clock, config, seed, travel.
+- `npm start` with no env: seeds once, restart resumes the saved paused clock. Phones: not yet (T12).
 
 ## Next task
-- Board: `docs/TASKS.md`. Next CC: **T4** (TravelProvider wrappers, clock, store, seed).
+- Board: `docs/TASKS.md`. Next CC: **T6** (domain + commands + views + Socket.IO), then T10.
 - **CX: T5 is unblocked.** Import types from `@nextstop/shared`, schemas as `req.*`.
 
 ## Blocked / waiting
@@ -36,3 +39,6 @@
 - `TimedMatrix` lives in `engine/types.ts`; T4's TravelProvider builds one per evaluation.
 - CALIBRATION is a constant 1.00 for now; T4 wires env `CALIBRATION` (comment in constants.ts).
 - Not yet tested: rules 7–9 reject paths, "not cheaper than solo"; added when T6 needs them.
+- Prisma Member has a storage-only `pos` column (member order; paused-clock joins share joinedAt).
+- `select.ts` serves the fixed table for every source until T11; `/api/health` shows the configured one.
+- `npm start` defaults `DATABASE_URL` so Replit needs no extra secret for it.
