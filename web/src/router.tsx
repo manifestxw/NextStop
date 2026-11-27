@@ -1,33 +1,45 @@
-// Routes (ARCH §10). T8 builds the rider screens, T9 the driver screens and demo menu.
+// Routes (ARCH §10). Screens are pure functions of the session view.
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Placeholder } from './screens/Placeholder.js';
 import { useSession } from './state/session.js';
-
-function Home() {
-  const view = useSession((s) => s.view);
-  if (!view) return <Placeholder name="loading" />;
-  return view.role === 'driver' ? <Navigate to="/driver" replace /> : <Placeholder name="home" />;
-}
+import { Banners, ConnectionBar } from './components/ui.js';
+import { Signup } from './screens/Signup.js';
+import { Home } from './screens/Home.js';
+import { SharedList } from './screens/SharedList.js';
+import { SharedSetup } from './screens/SharedSetup.js';
+import { Status } from './screens/Status.js';
+import { Chat } from './screens/Chat.js';
+import { Summary } from './screens/Summary.js';
+import { DriverHome, DriverOffer, DriverTrip } from './screens/Driver.js';
+import { DemoMenu } from './screens/DemoMenu.js';
 
 /** Everything but signup and the demo menu needs a login. */
 function Authed({ children }: { children: React.ReactElement }) {
   const token = useSession((s) => s.token);
-  return token ? children : <Navigate to="/signup" replace />;
+  const view = useSession((s) => s.view);
+  if (!token) return <Navigate to="/signup" replace />;
+  return (
+    <>
+      <ConnectionBar />
+      {view && <Banners banners={view.banners} />}
+      {view ? children : <main className="screen" aria-busy="true" />}
+    </>
+  );
 }
-
-const screens: [path: string, name: string][] = [
-  ['/search', 'search'], ['/shared', 'rides going your way'], ['/shared/new', 'start your own sync'],
-  ['/ride/:id', 'ride status'], ['/ride/:id/chat', 'group chat'], ['/ride/:id/summary', 'trip summary'],
-  ['/driver', 'driver home'], ['/driver/offer/:id', 'trip offer'], ['/driver/trip/:id', 'active trip'],
-];
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/signup" element={<Placeholder name="signup" />} />
-      <Route path="/demo" element={<Placeholder name="demo menu" />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/demo" element={<DemoMenu />} />
       <Route path="/" element={<Authed><Home /></Authed>} />
-      {screens.map(([path, name]) => <Route key={path} path={path} element={<Authed><Placeholder name={name} /></Authed>} />)}
+      <Route path="/shared" element={<Authed><SharedList /></Authed>} />
+      <Route path="/shared/new" element={<Authed><SharedSetup /></Authed>} />
+      <Route path="/ride/:id" element={<Authed><Status /></Authed>} />
+      <Route path="/ride/:id/chat" element={<Authed><Chat /></Authed>} />
+      <Route path="/ride/:id/summary" element={<Authed><Summary /></Authed>} />
+      <Route path="/driver" element={<Authed><DriverHome /></Authed>} />
+      <Route path="/driver/offer/:id" element={<Authed><DriverOffer /></Authed>} />
+      <Route path="/driver/trip/:id" element={<Authed><DriverTrip /></Authed>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

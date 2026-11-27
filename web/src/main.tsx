@@ -4,9 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { api } from './net/api.js';
 import { connectSocket, disconnectSocket } from './net/socket.js';
 import { AppRoutes } from './router.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { useSession } from './state/session.js';
 import './styles/tokens.css';
 import './styles/base.css';
+import './styles/components.css';
 
 /** `/?as=lina&pin=1337` logs this phone in as a seeded account, then cleans the URL (SPEC §2.6). */
 async function seededLogin() {
@@ -23,8 +25,6 @@ async function seededLogin() {
 function App() {
   const token = useSession((s) => s.token);
   const view = useSession((s) => s.view);
-
-  useEffect(() => { void seededLogin(); }, []);
 
   // One socket per token: (re)connect on login, close on logout. A stale stored token is cleared by 401.
   useEffect(() => {
@@ -45,6 +45,10 @@ function App() {
   return <AppRoutes />;
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode><BrowserRouter><App /></BrowserRouter></StrictMode>,
-);
+// The seeded login must finish BEFORE the first render: otherwise the router's "not logged in → /signup"
+// redirect runs first and drops the ?as= query.
+void seededLogin().finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode><ErrorBoundary><BrowserRouter><App /></BrowserRouter></ErrorBoundary></StrictMode>,
+  );
+});

@@ -1,0 +1,164 @@
+/* DESIGN.md §5–§8 components. Only semantic tokens; text on an accent fill is always ink. */
+
+.screen { min-height: 100dvh; display: flex; flex-direction: column; padding: var(--s-4) var(--pad-x) calc(128px + env(safe-area-inset-bottom)); gap: var(--s-3); }
+.screen--flush { padding-left: 0; padding-right: 0; }
+.stack { display: flex; flex-direction: column; gap: var(--s-2); }
+.row { display: flex; align-items: center; gap: var(--s-3); }
+.row--between { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.center { text-align: center; }
+
+/* ---------- buttons (§6) ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  width: 100%; min-height: 56px; padding: 0 var(--s-6); border-radius: var(--r-pill);
+  font: 600 17px/24px var(--font-ui); border: 1.5px solid transparent;
+  transition: transform 90ms var(--ease), box-shadow 90ms var(--ease), background-color 90ms var(--ease);
+}
+.btn--primary { background: var(--accent); color: var(--ink-900); border-color: var(--ink-900); box-shadow: 0 3px 0 var(--ink-900); }
+.btn--primary:active:not(:disabled) { background: var(--accent-strong); transform: translateY(2px); box-shadow: 0 1px 0 var(--ink-900); }
+.btn--secondary { background: transparent; color: var(--text-1); border-color: var(--text-1); }
+.btn--danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn--small { min-height: 36px; padding: 0 var(--s-4); font-size: 15px; width: auto; }
+.btn:disabled { background: var(--raised); color: var(--text-2); border-color: transparent; box-shadow: none; cursor: default; }
+.btn-pair { display: grid; grid-template-columns: 1fr 2fr; gap: var(--s-3); }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; padding: var(--s-3) var(--pad-x) calc(var(--s-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--surface) 70%, transparent); display: flex; flex-direction: column; gap: var(--s-2); z-index: 5; }
+.linkbtn { background: none; border: 0; padding: 0; font: 600 16px/24px var(--font-ui); color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.iconbtn { width: 44px; height: 44px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); display: inline-grid; place-items: center; color: var(--text-1); }
+
+/* ---------- cards, sheets ---------- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-5); }
+.card--tight { padding: var(--s-4); }
+.card-row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--line); }
+.card-row:first-child { border-top: 0; padding-top: 0; }
+.card-row:last-child { padding-bottom: 0; }
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; animation: fade 200ms var(--ease); }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--card); border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow: var(--shadow-sheet); padding: 22px var(--pad-x) calc(var(--s-5) + env(safe-area-inset-bottom));
+  max-height: 92dvh; overflow: auto; display: flex; flex-direction: column; gap: var(--s-3); animation: up 280ms var(--ease); }
+.sheet::before { content: ''; position: absolute; top: 10px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--line); }
+@keyframes up { from { transform: translateY(100%); } }
+@keyframes fade { from { opacity: 0; } }
+
+/* ---------- badges, chips, switch ---------- */
+.badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--r-pill);
+  font: 600 12px/16px var(--font-ui); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.badge--accent { background: var(--accent-soft); color: var(--ink-900); }
+.badge--fill { background: var(--accent); color: var(--ink-900); }
+.badge--ink { background: var(--text-1); color: var(--surface); }
+.badge--raised { background: var(--raised); color: var(--text-1); }
+.chips { display: flex; gap: var(--s-2); overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chip { flex: none; height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 0; background: var(--raised); color: var(--text-1);
+  font: 500 15px/22px var(--font-ui); display: inline-flex; align-items: center; gap: 6px; }
+.chip--on { background: var(--ink-900); color: var(--white); }
+[data-role="driver"] .chip--on { background: var(--text-1); color: var(--surface); }
+.switch { position: relative; width: 52px; height: 32px; flex: none; border-radius: var(--r-pill); background: var(--raised); border: 0; padding: 0; transition: background-color 150ms; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--white);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 150ms var(--ease); }
+.switch[aria-checked="true"] { background: var(--ink-900); }
+.switch[aria-checked="true"]::after { transform: translateX(20px); background: radial-gradient(circle, var(--accent) 5px, var(--white) 5.5px); }
+
+/* ---------- marks: pickup = ring, destination = square (§2.5) ---------- */
+.mark-ring { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--text-1); flex: none; }
+.mark-square { width: 12px; height: 12px; background: var(--text-1); flex: none; }
+.route-pair { display: grid; grid-template-columns: 14px 1fr; column-gap: var(--s-3); row-gap: 6px; align-items: center; }
+.route-pair .connector { width: 2px; height: 12px; background: var(--line); justify-self: center; }
+
+/* ---------- category tiles (§5) ---------- */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.tile { border-radius: var(--r-md); background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--tile-accent);
+  padding: 14px 10px; text-align: left; display: flex; flex-direction: column; gap: 2px; min-height: 116px; color: var(--text-1); }
+.tile[aria-pressed="true"] { background: var(--tile-accent); border-color: var(--tile-accent); color: var(--ink-900); }
+.tile:disabled { opacity: 0.45; }
+.tile[data-cat="economy"] { --tile-accent: var(--tangerine-500); }
+.tile[data-cat="comfort"] { --tile-accent: var(--glacier-500); }
+.tile[data-cat="airport"] { --tile-accent: var(--runway-500); }
+.tile .t-name { font: 700 17px/22px var(--font-display); margin-top: auto; }
+
+/* ---------- seat meter (§5) ---------- */
+.seats { position: relative; display: flex; justify-content: space-between; padding: 4px 0; }
+.seats::before { content: ''; position: absolute; left: 22px; right: 22px; top: 26px; height: 2px; background: var(--line); }
+.seats--mini::before { top: 18px; left: 14px; right: 14px; }
+.seat { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.seat-dot { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 600 15px/1 var(--font-ui);
+  background: var(--accent); color: var(--ink-900); transition: background-color 300ms var(--ease); }
+.seats--mini .seat-dot { width: 28px; height: 28px; font-size: 12px; }
+.seat-dot--me { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text-1); }
+.seat-dot--empty { background: var(--card); border: 1.5px dashed var(--ink-300); color: var(--text-2); }
+.seat-dot--closed { background: var(--raised); border: 0; }
+.seat-badge { position: absolute; right: -2px; top: 30px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10px; color: var(--white); background: var(--success); border: 2px solid var(--card); }
+.seat-badge--wait { background: var(--raised); color: var(--text-2); }
+
+/* ---------- Sync Pass (§5): perforated boarding pass ---------- */
+.pass { --notch: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); position: relative; }
+.pass-top, .pass-bottom { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); }
+.pass-perf { position: relative; height: 0; border-top: 1px dashed var(--line); margin: 0 var(--s-5); }
+.pass-perf::before, .pass-perf::after { content: ''; position: absolute; top: -10px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--line); }
+.pass-perf::before { left: calc(-1 * var(--s-5) - 11px); clip-path: inset(0 0 0 50%); }
+.pass-perf::after { right: calc(-1 * var(--s-5) - 11px); clip-path: inset(0 50% 0 0); }
+.pass-time { display: flex; align-items: baseline; gap: 6px; }
+
+/* ---------- stage track (§7) ---------- */
+.stages { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.stages::before { content: ''; position: absolute; left: 12.5%; right: 12.5%; top: 7px; height: 2px; background: var(--line); }
+.stage { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; text-align: center; }
+.stage-mark { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); }
+.stage--done .stage-mark { border-radius: 2px; background: var(--text-1); border-color: var(--text-1); }
+.stage--now .stage-mark { border-color: var(--accent); border-width: 3px; animation: pulse 1.6s var(--ease) infinite; }
+.stage span { font: 600 10px/13px var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); } }
+
+/* ---------- map panel (until T14 adds Google Maps) ---------- */
+.map { height: 34dvh; min-height: 200px; background: var(--raised); position: relative; overflow: hidden;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px; }
+.map-pin { position: absolute; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r-pill); padding: 6px 12px 6px 8px; font: 500 13px/18px var(--font-ui); box-shadow: var(--shadow-map); }
+.map-halo { display: inline-grid; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 50%; animation: pulse 2s var(--ease) infinite; }
+
+/* ---------- banners, connection ---------- */
+.banner { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 40; background: var(--ink-900);
+  color: var(--white); border-radius: var(--r-md); padding: 12px 16px; border-left: 4px solid var(--accent); font: 500 15px/22px var(--font-ui);
+  animation: drop 250ms var(--ease); text-align: left; border-top: 0; border-right: 0; border-bottom: 0; width: auto; }
+.banner--warn { border-left-color: var(--warn); }
+.banner--danger { border-left-color: var(--danger); }
+@keyframes drop { from { transform: translateY(-120%); } }
+.conn { position: fixed; top: 0; left: 0; right: 0; z-index: 45; background: var(--warn); color: var(--white); text-align: center;
+  font: 600 13px/28px var(--font-ui); padding-top: env(safe-area-inset-top); }
+.error-note { border-radius: var(--r-md); background: var(--danger-soft); color: var(--danger); padding: 12px 16px; font: 500 15px/22px var(--font-ui); }
+
+/* ---------- chat (§8) ---------- */
+.chat { display: flex; flex-direction: column; height: 100dvh; }
+.chat-head { padding: var(--s-3) var(--pad-x); display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.chat-log { flex: 1; overflow-y: auto; padding: var(--s-4) var(--pad-x); display: flex; flex-direction: column; gap: 6px; }
+.bubble-wrap { display: flex; flex-direction: column; max-width: 78%; }
+.bubble-wrap--me { align-self: flex-end; align-items: flex-end; }
+.bubble { padding: 10px 14px; border-radius: var(--r-md); font: 400 16px/22px var(--font-ui); background: var(--raised); border-bottom-left-radius: 4px; overflow-wrap: anywhere; }
+.bubble-wrap--me .bubble { background: var(--accent-soft); color: var(--ink-900); border-radius: var(--r-md); border-bottom-right-radius: 4px; }
+.chat-sys { align-self: center; margin: 12px 0; background: var(--raised); color: var(--text-2); border-radius: var(--r-pill); padding: 4px 12px;
+  font: 600 11px/16px var(--font-ui); text-transform: uppercase; letter-spacing: 0.06em; text-align: center; }
+.chat-input { display: flex; gap: var(--s-2); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--card); }
+.chat-input input { flex: 1; height: 44px; border-radius: var(--r-pill); border: 0; background: var(--raised); padding: 0 var(--s-4); }
+.send { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--accent); color: var(--ink-900); font-weight: 700; }
+.send:disabled { background: var(--raised); color: var(--text-2); }
+
+/* ---------- timelines (driver offer / trip) ---------- */
+.timeline { display: flex; flex-direction: column; }
+.tl-row { display: grid; grid-template-columns: 22px 1fr auto; gap: var(--s-3); align-items: center; padding: 10px 0; position: relative; }
+.tl-row::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.tl-row:first-child::before { top: 50%; }
+.tl-row:last-child::before { bottom: 50%; }
+.tl-row > .mark-ring, .tl-row > .mark-square { position: relative; justify-self: center; }
+.tl-row > .mark-ring { background: var(--card); }   /* hides the line behind the ring; the square stays filled */
+.tl-row--done { color: var(--text-2); }
+
+/* ---------- inputs ---------- */
+.field { height: 56px; border-radius: var(--r-sm); border: 0; background: var(--raised); padding: 0 var(--s-4); width: 100%; }
+.field:focus { outline: none; box-shadow: inset 0 -2px 0 var(--accent); }
+.amount-box { background: var(--danger-soft); border-radius: var(--r-md); padding: var(--s-4); display: flex; justify-content: space-between; align-items: center; }
+.ring { width: 132px; height: 132px; margin: 0 auto; position: relative; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }

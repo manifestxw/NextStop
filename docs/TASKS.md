@@ -36,8 +36,8 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
   - Validate bodies with `req.*` (422 on failure). Token from `Authorization: Bearer`. `ConflictError` → 409 `{code, message, ...extra}`,
     `LoggedOutError` → 401 `{code:'LOGGED_OUT'}`. Rider/driver commands return a `View` → `{ok:true, view}`; demo ones return `DemoView`.
     Fill `DemoView.buildStamp` from the build stamp. `chat.unread` is always 0: the client counts unread locally (shortcut).
-- [ ] **T8** `todo` CX: P0 rider screens: signup, home + trip screen (chips, gender switch, category tiles), matching list + card, host setup, status sheet (stage track, Sync Pass, seat meter), ready check sheet, leave sheets, group chat, trip summary. needs: T5 (can use mock views until T7). (DESIGN §5–§8, §12)
-- [ ] **T9** `todo` CX: P0 driver screens: idle home, trip offer, active trip, rider-left banner, driver summary; demo menu (clock, simulate rider, complete trip, reset, build stamp). needs: T5 (DESIGN §8, §12.2)
+- [ ] **T8** `doing CC` CX→CC (owner, 27 Nov): P0 rider screens: signup, home + trip screen (chips, gender switch, category tiles), matching list + card, host setup, status sheet (stage track, Sync Pass, seat meter), ready check sheet, leave sheets, group chat, trip summary. needs: T5 (can use mock views until T7). (DESIGN §5–§8, §12)
+- [ ] **T9** `doing CC` CX→CC (owner, 27 Nov): P0 driver screens: idle home, trip offer, active trip, rider-left banner, driver summary; demo menu (clock, simulate rider, complete trip, reset, build stamp). needs: T5 (DESIGN §8, §12.2)
 - [x] **T10** `done a824f6d` CC: Demo-script test replaying SPEC §2.2 steps 1–6 end to end (`server/test/demo-script.test.ts`). needs: T6
 - [ ] **T11** `todo` CC: Snapshot source + `npm run snapshot`; generate `data/demo_snapshot.json`; rerun the model on it; regenerate SPEC §2.2/§2.3/§1 and DESIGN numbers. needs: T4, O1 (SPEC §4.2.2)
 - [ ] **T12** `todo` CX: Deploy to Replit (or fallback), verify build stamp, run the §2.2 demo on 3 phones over a hotspot. Fix mobile checks (ARCH §10). **M1 done when this passes.** needs: T7, T8, T9, T10, O2
