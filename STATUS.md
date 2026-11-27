@@ -8,15 +8,13 @@
 ## Just shipped
 - T1–T10: scaffold, contract, golden-exact engine, store/clock/travel, domain + commands, REST,
   web shell, every P0 rider/driver screen + demo menu. T13: DESIGN polish (icons, split-flap, motion, contrast).
-- **T11:** Google keys tested (Routes, Matrix, Places). Google + Snapshot sources, `npm run snapshot`
-  (41 calls), committed `data/demo_snapshot.json`. Seed places are Google Places (owner's choice).
-- Real roads fill only 4 riders with a shared pickup: sims are now Rania @ Arabella, Dana @ University
-  St (with Sara); Noor @ Yarmouk spare. SPEC §1/§2.2/§2.3/§2.6 + DESIGN numbers regenerated.
+- **T11:** Google + Snapshot sources, `npm run snapshot`, committed snapshot; seeds are Google Places.
+- Real roads fit 4 only with a shared pickup: sims Rania @ Arabella, Dana @ University St (with Sara).
 - Demo now: 5.35 solo → 3.10 → 2.20 → **1.70 ×4**; offer 6.71 / collect 6.80 / first pickup 7:20
   (Sara) / respond 7:05; late leave at **6:53** → 1.65 each; Omar 4.95 + 1.70 credit = 6.65.
 
 ## Verification
-- `npm run check`: green, 130 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
+- `npm run check`: green, 139 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests stay on the fixed table (`test/fixtures/places.ts`). Key-leak check: ok.
 - Booted on the snapshot; headless Chromium shows the new numbers. Real phones: not yet (T12).
 - **T14:** real Google map seen on localhost:3000: Paper (riders: own pickup + halo, destination only),
@@ -34,7 +32,7 @@
 - Browser-key referrers set by owner (localhost:3000, 10.100.3.63:3000, *.replit.app). New hotspot IP → add it.
 - O2 Replit (T12). O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.
 - **Keys were pasted in chat:** restrict the server key to Routes + Places; rotate both after the event.
-- [verify] JUST semester dates. Zone/k-means/plan numbers are first guesses. Pitch deck numbers → §2.3.
+- [verify] JUST semester dates; zone/k-means/plan numbers are guesses; pitch deck numbers → §2.3.
 
 ## Decisions (this session)
 - Owner: Google's places for seeds (CC = Irbid City Center mall, Aydoun); 4 riders via shared pickup.
