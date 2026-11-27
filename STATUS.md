@@ -30,12 +30,11 @@
   on 3 phones over a hotspot, run §2.2 (owner: later). CC now: P1 T15/T16 Uni plans, then T20.
 
 ## Blocked / waiting
-- Browser-key referrers set by owner (localhost:3000, 10.100.3.63:3000, *.replit.app). New hotspot IP → add it.
-- O2 Replit (T12). O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.
+- O2 Replit (T12); new hotspot IP → add it to the browser-key referrers. O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.
 - **Keys were pasted in chat:** restrict the server key to Routes + Places; rotate both after the event.
 - [verify] JUST semester dates; zone/k-means/plan numbers are guesses; pitch deck numbers → §2.3.
 
 ## Decisions (this session)
-- Owner: Google's places for seeds (CC = Irbid City Center mall, Aydoun); 4 riders via shared pickup.
-- No-show waits count from the shown minute. Ride gained a `cancelReason` column. Deploy (T12) after P1: owner.
-- Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; Member `pos` column.
+- Owner: Google's places for seeds (CC = Aydoun mall); 4 riders via shared pickup.
+- No-show waits count from the shown minute. Deploy (T12) after P1: owner's call.
+- Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; storage-only Member `pos`, Ride `cancelReason`.
