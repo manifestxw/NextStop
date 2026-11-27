@@ -23,7 +23,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 
 ## M1: walking skeleton (P0)
 - [x] **T1** `done 6747f75` CC: Scaffold npm workspaces `shared/ server/ web/` + root scripts (`dev`, `check:quick`, `check`, `build`, `start`; `seed:reset` lands with T4, `snapshot` with T11), `TZ=UTC` vitest, ESLint, `.gitignore`, `.env.example`, Prisma 6 pinned. needs: — (ARCH §3, §11)
-- [ ] **T2** `todo` CC: `shared/` contract: `views.ts`, `requests.ts` (zod), `errors.ts`, `events.ts` for every P0 endpoint, plus typed stubs for P1/P2 (plans, invites, guest, demand). **Contract freeze:** after this, changes need server + web in one commit. needs: T1 (ARCH §7.1, §9)
+- [ ] **T2** `doing CC` CC: `shared/` contract: `views.ts`, `requests.ts` (zod), `errors.ts`, `events.ts` for every P0 endpoint, plus typed stubs for P1/P2 (plans, invites, guest, demand). **Contract freeze:** after this, changes need server + web in one commit. needs: T1 (ARCH §7.1, §9)
 - [ ] **T3** `todo` CC: Engine port, golden tests first: `pyRound`, `ammanParts`, tariff, geo, fare, plan, `zone.ts` (CATEGORY, zone, seats, gender_ok), matching, leave. Must match SPEC §4.7 + §4.7.1. needs: T1 (ARCH §6)
 - [ ] **T4** `todo` CC: TravelProvider Fixed + cached + select; clock (paused) + scheduler tick; Prisma schema; `store.withLock`; memoryRepo + prismaRepo contract test; `data/seed.json` (places, users, Omar, seeded logins, friend codes). needs: T3 (ARCH §4, §5, §8)
 - [ ] **T5** `todo` CX: Web skeleton: Vite + React + router, `tokens.css` from DESIGN §2–§4 (Paper/Cockpit, `data-category`), fonts, `net/api.ts`, `net/socket.ts`, Zustand session (viewSeq rules), `?as=` seeded login. needs: T2 (ARCH §10)
