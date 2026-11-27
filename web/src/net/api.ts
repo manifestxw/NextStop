@@ -62,6 +62,8 @@ export const api = {
   bannerSeen: (id: string) => withView(post(`/api/banners/${id}/seen`)),
   accept: (rideId: string) => withView(post(`/api/offers/${rideId}/accept`)),
   reject: (rideId: string) => withView(post(`/api/offers/${rideId}/reject`)),
+  stop: (rideId: string, stopId: string, action: 'picked-up' | 'dropped-off' | 'no-show') => withView(post(`/api/rides/${rideId}/stops/${stopId}/${action}`)),
+  driverCancel: (rideId: string) => withView(post(`/api/rides/${rideId}/driver-cancel`)),
 
   demo: {
     view: async (pin: string): Promise<DemoView> => (await call<DemoResponse>('GET', '/api/demo', undefined, pin)).demo,

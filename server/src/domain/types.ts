@@ -63,6 +63,7 @@ export interface Ride {
   dispatch?: { at: string; expiresAt: string; offeredTo: string[] };
   driverUserId?: string;
   summary?: unknown;                              // written at COMPLETED (T6)
+  cancelReason?: 'no-driver' | 'driver-canceled' | 'everyone-left';
   createdAt: string; closedAt?: string;
 }
 

@@ -55,6 +55,12 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
 
   // driver
   app.post('/api/offers/:id/accept', async (r) => view(cmd.accept(token(r), id(r))));
+  app.post('/api/rides/:id/stops/:stopId/:action', async (r) => {
+    const { stopId, action } = r.params as { stopId: string; action: string };
+    if (action !== 'picked-up' && action !== 'dropped-off' && action !== 'no-show') throw new ZodError([{ code: 'custom', path: ['action'], message: 'Unknown stop action', input: action }]);
+    return view(cmd.stop(token(r), id(r), stopId, action));
+  });
+  app.post('/api/rides/:id/driver-cancel', async (r) => view(cmd.driverCancel(token(r), id(r))));
   app.post('/api/offers/:id/reject', async (r) => view(cmd.reject(token(r), id(r))));
 
   // demo menu (PIN)

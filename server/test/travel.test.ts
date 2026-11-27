@@ -47,3 +47,15 @@ describe('TravelProvider', () => {
     expect(selectProvider('google').name).toBe('fixed');
   });
 });
+
+import { withFallback, travelOffline } from '../src/travel/select.js';
+
+describe('live Google fallback', () => {
+  it('a failing live call uses the fixed table and raises the "offline estimates" flag', async () => {
+    const broken = { ...fixedProvider, name: 'google' as const, getMatrix: async () => { throw new Error('boom'); } };
+    const p = withFallback(broken, fixedProvider, 50);
+    expect(travelOffline()).toBe(false);
+    expect((await p.getMatrix(pts, sun(7, 0))).kind).toBe('fixed');
+    expect(travelOffline()).toBe(true);
+  });
+});

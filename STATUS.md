@@ -1,7 +1,7 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13, T14, T25)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T11, T13, T14, T19, T25)
 **Milestone:** M1 code done; only **T12** (deploy + 3 real phones) left · M2: T13 done
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
@@ -22,11 +22,13 @@
 - **T14:** real Google map seen on localhost:3000: Paper (riders: own pickup + halo, destination only),
   Cockpit (driver: numbered pickups fit to view, "1·2" for a shared spot). Key rejection → marks panel.
 - **T25:** demo menu autopilot ("Play next step", 7 steps, state-driven) for rehearsal and as a stage backup.
+- **T19:** driver taps (picked up / dropped off → COMPLETED / no-show 5 min after the shown minute),
+  driver cancel (≥15 min → redispatch, else canceled), "Book a solo ride", pickup-move banners, stale tab, offline flag.
 
 ## Next task
 - **T12 (owner/CC):** deploy to Replit (Reserved VM, Node 22 if offered), set Secrets from `.env`
   (incl. `GOOGLE_SERVER_KEY`, `VITE_GOOGLE_BROWSER_KEY` at build time), open `/?as=lina|sara|omar&pin=…`
-  on 3 phones over a hotspot, run §2.2. Then P1: T19, T17, T15 (and T20 route line).
+  on 3 phones over a hotspot, run §2.2 (owner: later). CC now: P1 T17 friends, then T15 Uni plans, T20.
 
 ## Blocked / waiting
 - Browser-key referrers set by owner (localhost:3000, 10.100.3.63:3000, *.replit.app). New hotspot IP → add it.
@@ -36,5 +38,5 @@
 
 ## Decisions (this session)
 - Owner: Google's places for seeds (CC = Irbid City Center mall, Aydoun); 4 riders via shared pickup.
-- Live Google source: 2.5 s timeout → fixed table (logged); "offline estimates" demo flag still P1.
+- No-show waits count from the shown minute. Ride gained a `cancelReason` column. Deploy (T12) after P1: owner.
 - Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; Member `pos` column.

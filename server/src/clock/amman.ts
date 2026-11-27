@@ -41,3 +41,9 @@ export function toIso(us: number): string {
 
 /** Parse any ISO string with an offset to epoch microseconds. */
 export const fromIso = (iso: string): number => Date.parse(iso) * 1000;
+
+/** "7:05 AM" in Amman, for server-written copy (banners). */
+export function ammanTime12(us: number): string {
+  const p = ammanParts(us);
+  return `${p.hour % 12 || 12}:${String(p.minute).padStart(2, '0')} ${p.hour < 12 ? 'AM' : 'PM'}`;
+}

@@ -3,7 +3,7 @@ import { MapView } from '../components/MapView.js';
 import { Flap } from '../components/Flap.js';
 import { Icon } from '../components/Icon.js';
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { RiderRideView, RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
@@ -21,17 +21,32 @@ export function Status() {
   const d = useDraft();
   const nav = useNavigate();
   const [leaving, setLeaving] = useState(false);
+  const [solo, setSolo] = useState(false);
   const a = useAction();
+  const { id } = useParams();
   const ride = view?.ride;
+  if (view && id && ride?.id !== id) return <Gone />;   // stale tab or old link (SPEC §3.13)
   if (!view || !ride || d.dismissed.includes(ride.id)) return <Navigate to="/" replace />;
   if (ride.state === 'COMPLETED') return <Navigate to={`/ride/${ride.id}/summary`} replace />;
   if (ride.state === 'CANCELED') {
+    const title = ride.cancelReason === 'no-driver' ? 'No driver found' : ride.cancelReason === 'driver-canceled' ? 'Your driver canceled' : 'This ride was canceled';
+    const offerSolo = ride.cancelReason === 'no-driver' || ride.cancelReason === 'driver-canceled';
     return (
       <main className="screen" style={{ justifyContent: 'center' }}>
         <MergeMark size={96} />
-        <h1 className="t-h1">This ride was canceled</h1>
-        <p className="t-body text-2">No fees were charged. You can plan another ride now.</p>
-        <div className="dock"><Button onClick={() => { d.dismiss(ride.id); nav('/'); }}>Done</Button></div>
+        <h1 className="t-h1">{title}</h1>
+        <p className="t-body text-2">No fees were charged.{offerSolo ? ' You can still get there with a solo ride.' : ' You can plan another ride now.'}</p>
+        <div className="dock">
+          {offerSolo && <Button onClick={() => setSolo(true)}>Book a solo ride · {fmtJod(ride.soloJod)}</Button>}
+          <Button kind={offerSolo ? 'secondary' : 'primary'} onClick={() => { d.dismiss(ride.id); nav('/'); }}>Done</Button>
+        </div>
+        {solo && (
+          <Sheet onClose={() => setSolo(false)}>
+            <h2 className="t-h2">Book a solo ride</h2>
+            <p className="t-body text-2">This opens a solo Jeeny booking for {ride.myPickup.name} → {ride.myDest.name}, about {fmtJod(ride.soloJod)}. In the demo the hand-off is mocked.</p>
+            <Button onClick={() => { setSolo(false); d.dismiss(ride.id); nav('/'); }}>OK</Button>
+          </Sheet>
+        )}
       </main>
     );
   }
@@ -165,5 +180,18 @@ function LeaveSheet({ ride, onClose, onLeft }: { ride: RiderRideView; onClose: (
       <Button onClick={onClose}>Keep my seat</Button>
       <Button kind="danger" disabled={a.busy} onClick={leave}>{lateCharge === null ? 'Leave ride' : 'Leave anyway'}</Button>
     </Sheet>
+  );
+}
+
+/** A link or tab to a ride this phone no longer has. */
+function Gone() {
+  const nav = useNavigate();
+  return (
+    <main className="screen" style={{ justifyContent: 'center' }}>
+      <MergeMark size={96} />
+      <h1 className="t-h1">This ride is no longer available</h1>
+      <p className="t-body text-2">It was canceled, completed or replaced by a newer ride.</p>
+      <div className="dock"><Button onClick={() => nav('/')}>Go home</Button></div>
+    </main>
   );
 }

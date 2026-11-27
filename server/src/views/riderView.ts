@@ -76,6 +76,7 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     findDriverAutoAt: toIso(firstPickupUs(ride) - 45 * 60_000_000),
     leave: { free: !late, chargeJod: late ? jod(ride.plan.shareP * seatsOf(mine)) : 0 },
     chat: { group: group.map((m) => chatView(m, users)), unread: 0 },
+    ...(ride.cancelReason ? { cancelReason: ride.cancelReason } : {}),
     ...(summary ? { summary: {
       destArea: summary.destArea[me.id] ?? mine.dest.area, arrivedAt: summary.arrivedAt[me.id] ?? ride.closedAt!,
       paidJod: jod(mySeats?.cashP ?? 0), riders: summary.riders.reduce((n, r) => n + r.seats, 0),

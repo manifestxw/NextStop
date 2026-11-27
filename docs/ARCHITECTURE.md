@@ -313,6 +313,7 @@ model Ride {
   dispatchJson   String?
   driverUserId   String?
   summaryJson    String?
+  cancelReason   String?
   createdAt      String
   closedAt       String?
   members        Member[]

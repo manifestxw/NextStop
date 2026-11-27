@@ -9,18 +9,20 @@ const fixed = cached(fixedProvider);
 const snap = loadSnapshot();
 const snapshot = snap ? cached(snapshotProvider(snap)) : null;
 let google: TravelProvider | null = null;
+let offline = false;
+/** True once a live Google call fell back to the fixed table (demo menu: "offline estimates"). */
+export const travelOffline = () => offline;
 
 /** Live Google with an automatic fallback: an error or a call over 2.5 s uses the fixed table (ARCH §5). */
-function withFallback(live: TravelProvider): TravelProvider {
+export function withFallback(live: TravelProvider, fallback: TravelProvider = fixed, timeoutMs = 2500): TravelProvider {
   const race = <T>(p: Promise<T>, alt: () => Promise<T>) => {
-    const timeout = new Promise<never>((_, no) => setTimeout(() => no(new Error('Google timeout')), 2500));
-    return Promise.race([p, timeout]).catch((e: Error) => { console.warn(`travel: ${e.message}, using the fixed table`); return alt(); });
+    const timeout = new Promise<never>((_, no) => setTimeout(() => no(new Error('Google timeout')), timeoutMs));
+    return Promise.race([p, timeout]).catch((e: Error) => { offline = true; console.warn(`travel: ${e.message}, using the fixed table`); return alt(); });
   };
-  // shortcut: the demo menu's "offline estimates" flag (P1) isn't raised yet; the fallback is logged.
   return {
     name: 'google',
-    getMatrix: (pts, dep, cond) => race(live.getMatrix(pts, dep, cond), () => fixed.getMatrix(pts, dep, cond)),
-    getRoute: (pts, dep) => race(live.getRoute(pts, dep), () => fixed.getRoute(pts, dep)),
+    getMatrix: (pts, dep, cond) => race(live.getMatrix(pts, dep, cond), () => fallback.getMatrix(pts, dep, cond)),
+    getRoute: (pts, dep) => race(live.getRoute(pts, dep), () => fallback.getRoute(pts, dep)),
   };
 }
 

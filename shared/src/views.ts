@@ -101,6 +101,7 @@ export interface RiderRideView {
   pendingInvites?: { firstName: string }[];       // P1
   chat: { group: ChatMessageView[]; driver?: ChatMessageView[]; unread: number };
   summary?: RiderSummary;
+  cancelReason?: 'no-driver' | 'driver-canceled' | 'everyone-left';   // when state is CANCELED
 }
 
 export interface InviteView { id: string; fromFirstName: string; destArea: string; arriveBy: Iso; category: Category }

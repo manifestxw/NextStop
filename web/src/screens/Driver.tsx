@@ -1,4 +1,5 @@
 // Driver app (DESIGN §8, §12.2, Cockpit surfaces): idle home with offers, the offer sheet, the active trip + summary.
+import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { DriverStop, DriverView } from '@nextstop/shared';
 import { api } from '../net/api.js';
@@ -6,7 +7,8 @@ import { Icon } from '../components/Icon.js';
 import { useSession } from '../state/session.js';
 import { useDraft } from '../state/draft.js';
 import { fmtJod, fmtTime } from '../lib/format.js';
-import { Button, CategoryBadge, ErrorNote, GenderBadge, Logo, MergeMark, Ring, Square, useAction } from '../components/ui.js';
+import { useNow } from '../lib/useNow.js';
+import { Button, CategoryBadge, ErrorNote, GenderBadge, Logo, MergeMark, Ring, Sheet, Square, useAction } from '../components/ui.js';
 import { MapView, type Mark } from '../components/MapView.js';
 
 const useDriver = () => useSession((s) => s.view) as DriverView | null;
@@ -115,6 +117,7 @@ export function DriverTrip() {
   const { id } = useParams();
   const d = useDraft();
   const nav = useNavigate();
+  const [canceling, setCanceling] = useState(false);
   if (!view || view.role !== 'driver') return <Navigate to="/" replace />;
   const t = view.trip;
   if (!t || t.rideId !== id) return <Navigate to="/driver" replace />;
@@ -138,9 +141,64 @@ export function DriverTrip() {
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <h1 className="t-h1">{t.category[0]!.toUpperCase() + t.category.slice(1)} · {t.riders} riders</h1>
         <p className="t-body text-2">Collect {fmtJod(t.collectJod)} cash{t.creditJod > 0 ? ` · ${fmtJod(t.creditJod)} credit at trip end` : ''}</p>
-        <section className="card card--tight"><Timeline stops={t.stops} actions /></section>
-        <p className="t-caption text-2">Pickup and drop-off taps come in P1; the demo menu's "Complete trip" finishes the ride.</p>
+        <section className="card card--tight"><StopActions trip={t} /></section>
+        {t.state === 'ACCEPTED' && <button type="button" className="linkbtn" style={{ color: 'var(--danger)', alignSelf: 'flex-start' }} onClick={() => setCanceling(true)}>Cancel trip</button>}
       </div>
+      {canceling && <CancelSheet rideId={t.rideId} onClose={() => setCanceling(false)} />}
     </main>
+  );
+}
+
+/** One row per stop with the driver's taps (P1): Picked up · No-show (5 min after the shown time) · Dropped off. */
+function StopActions({ trip }: { trip: NonNullable<DriverView['trip']> }) {
+  const a = useAction();
+  const now = useNow();
+  const picked = new Set(trip.stops.filter((s) => s.kind === 'P' && s.done).map((s) => s.firstName));
+  const cashFor = (name: string) => trip.stops.find((s) => s.kind === 'P' && s.firstName === name)?.cashDueJod ?? 0;
+  const tap = (stopId: string, action: 'picked-up' | 'dropped-off' | 'no-show') => a.run(() => api.stop(trip.rideId, stopId, action));
+  return (
+    <div className="stack">
+      <div className="timeline">
+        {trip.stops.map((s) => (
+          <div key={s.id} className={`tl-row${s.done ? ' tl-row--done' : ''}`}>
+            {s.kind === 'P' ? <Ring /> : <Square />}
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="t-body" style={{ fontWeight: 600 }}>{fmtTime(s.at)}</span>{' '}
+              <span className="t-body">{s.firstName}{s.guestFirstName ? ' +1' : ''}</span>
+              <span className="t-body text-2 truncate" style={{ display: 'block' }}>{s.shortAddress}</span>
+              {!s.done && s.kind === 'P' && (
+                <span className="row" style={{ gap: 8, marginTop: 6 }}>
+                  <Button kind="secondary" small disabled={a.busy} onClick={() => tap(s.id, 'picked-up')}>Picked up</Button>
+                  {now >= Date.parse(s.at) - (Date.parse(s.at) % 60_000) + 5 * 60_000 && (
+                    <Button kind="danger" small disabled={a.busy} onClick={() => tap(s.id, 'no-show')}>No-show</Button>
+                  )}
+                </span>
+              )}
+              {!s.done && s.kind === 'D' && picked.has(s.firstName) && (
+                <span style={{ display: 'block', marginTop: 6 }}>
+                  <Button small disabled={a.busy} onClick={() => tap(s.id, 'dropped-off')}>Dropped off · collected {fmtJod(cashFor(s.firstName))}</Button>
+                </span>
+              )}
+            </span>
+            <span className="t-body" style={{ fontWeight: 500 }}>{s.done ? <span style={{ color: 'var(--success-text)' }}><Icon name="check" label="done" /></span> : s.kind === 'P' && s.cashDueJod !== undefined ? fmtJod(s.cashDueJod) : ''}</span>
+          </div>
+        ))}
+      </div>
+      <ErrorNote text={a.message} />
+    </div>
+  );
+}
+
+function CancelSheet({ rideId, onClose }: { rideId: string; onClose: () => void }) {
+  const a = useAction();
+  const nav = useNavigate();
+  return (
+    <Sheet onClose={onClose}>
+      <h2 className="t-h2">Cancel this trip?</h2>
+      <p className="t-body text-2">More than 15 minutes before the first pickup, the riders go back to finding a driver. Later, the ride is canceled for everyone.</p>
+      <ErrorNote text={a.message} />
+      <Button onClick={onClose}>Keep the trip</Button>
+      <Button kind="danger" disabled={a.busy} onClick={() => a.run(async () => { await api.driverCancel(rideId); nav('/driver'); })}>Cancel trip</Button>
+    </Sheet>
   );
 }

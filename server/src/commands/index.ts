@@ -17,14 +17,14 @@ import { checkJoin, type RideIn } from '../engine/matching.js';
 import { plan, solo } from '../engine/plan.js';
 import { hav } from '../engine/geo.js';
 import { up05 } from '../engine/pyRound.js';
-import { US_PER_MIN } from '../engine/time.js';
+import { floorMinute, US_PER_MIN } from '../engine/time.js';
 import type { Plan, Us } from '../engine/types.js';
 import { CATEGORY, zone } from '../engine/zone.js';
 import type { Publisher } from '../realtime/publisher.js';
 import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
 import type { Repo, Store } from '../store/repo.js';
 import { loadSeed, resetToSeed } from '../store/seed.js';
-import { selectProvider } from '../travel/select.js';
+import { selectProvider, travelOffline } from '../travel/select.js';
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
 import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
@@ -205,7 +205,7 @@ export function createCommands(ctx: Ctx) {
           const members = [...active, cand];
           await assertFree(repo, order, res.plan!.T0, lastDrop(res.plan!), ride.id);
           ride.members.push(cand);
-          rides.applyPlan(ride, res.plan!, members, piastres(res.share!));
+          rides.applyPlan(ride, res.plan!, members, piastres(res.share!), fx);
           cand.firstShownPickup = cand.shownPickup;
           ride.version++;
           system(fx, ride.id, `${user.firstName} joined`);
@@ -341,7 +341,8 @@ export function createCommands(ctx: Ctx) {
         list.push({ id: r.id, state: r.state, hostFirstName: (await repo.getUser(r.hostUserId))?.firstName ?? '?',
           riders: activeMembers(r).reduce((n, m) => n + seatsOf(m), 0), firstPickupAt: r.plan.firstPickup });
       }
-      return { buildStamp: null, clock: clockView(clock), settings: d.settings, rides: list, autopilot: await nextStep(repo) };
+      const settings = { ...d.settings, offlineFallbackActive: d.settings.offlineFallbackActive || travelOffline() };
+      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo) };
     });
   }
 
@@ -565,6 +566,47 @@ export function createCommands(ctx: Ctx) {
       const user = await auth(token);
       return commit(user.id, async (repo) => {
         if ((await repo.listUnseenBanners(user.id)).some((x) => x.id === bannerId)) await repo.markBannerSeen(bannerId);
+      });
+    },
+
+    /** Driver stop taps (P1): picked up, dropped off, or no-show (5 min after the shown pickup time). */
+    async stop(token: string, rideId: string, stopId: string, action: 'picked-up' | 'dropped-off' | 'no-show') {
+      const user = await auth(token, 'driver');
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || ride.driverUserId !== user.id || (ride.state !== 'ACCEPTED' && ride.state !== 'IN_PROGRESS')) throw illegal('This is not your active trip');
+        const stop = ride.plan.stops.find((x) => x.id === stopId);
+        const member = ride.members.find((m) => m.userId === stop?.userId);
+        if (!stop || !member || stop.done) return;   // double tap
+        const name = (await repo.getUser(member.userId))?.firstName ?? 'Rider';
+        const now = clock.now();
+        if (action === 'picked-up') {
+          if (stop.kind !== 'P') throw illegal('That is a drop-off');
+          rides.pickUp(ride, stop, fx);
+        } else if (action === 'dropped-off') {
+          if (stop.kind !== 'D') throw illegal('That is a pickup');
+          if (member.state !== 'PICKED_UP') throw illegal(`Pick up ${name} first`);
+          rides.dropOff(ride, stop, now, await usersOf(repo, ride.members.map((m) => m.userId)), fx);
+        } else {
+          if (stop.kind !== 'P' || member.state === 'PICKED_UP') throw illegal('No-show is only for a rider not picked up yet');
+          // Count from the minute the rider was shown ("7:21"), not the hidden seconds of the planned arrival.
+          if (now < floorMinute(fromIso(member.shownPickup)) + 5 * MIN) throw illegal('No-show is allowed 5 minutes after the pickup time');
+          rides.leaveFrozen(ride, member.userId, name, now, toTimed(ride.locked!.matrix), ride.locked!.order, pf(ride.category), fx, await repo.listDrivers(), 'no-show');
+        }
+        await repo.putRide(ride);
+      });
+    },
+
+    /** Driver cancels after accepting (P1, SPEC §3.9). */
+    async driverCancel(token: string, rideId: string) {
+      const user = await auth(token, 'driver');
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || ride.driverUserId !== user.id || ride.state !== 'ACCEPTED') throw illegal('Only an accepted trip that has not started can be canceled');
+        const d = (await repo.getDriver(user.id))!;
+        await repo.putDriver({ ...d, rejectedRideIds: [...d.rejectedRideIds, rideId] });
+        rides.driverCancel(ride, user.firstName, clock.now(), (await repo.listDrivers()).map((x) => (x.userId === d.userId ? { ...x, rejectedRideIds: [...x.rejectedRideIds, rideId] } : x)), fx);
+        await repo.putRide(ride);
       });
     },
 

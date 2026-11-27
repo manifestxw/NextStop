@@ -33,7 +33,7 @@ const toRide = (r: RideRow): Ride => ({
   anchor: JSON.parse(r.anchorJson), members: [...r.members].sort((a, b) => a.pos - b.pos).map(toMember),
   plan: JSON.parse(r.planJson), frozen: r.frozenAt === null ? undefined : { at: r.frozenAt }, locked: p(r.lockedJson),
   creditsP: r.creditsP, readyCheck: p(r.readyCheckJson), dispatch: p(r.dispatchJson), driverUserId: opt(r.driverUserId),
-  summary: p(r.summaryJson), createdAt: r.createdAt, closedAt: opt(r.closedAt),
+  summary: p(r.summaryJson), cancelReason: opt(r.cancelReason) as Ride['cancelReason'], createdAt: r.createdAt, closedAt: opt(r.closedAt),
 });
 
 function repoFor(tx: Tx): Repo {
@@ -72,7 +72,7 @@ function repoFor(tx: Tx): Repo {
         version: r.version, state: r.state, hostUserId: r.hostUserId, gender: r.gender, category: r.category, genderMode: r.genderMode,
         zoneJson: JSON.stringify(r.zone), anchorJson: JSON.stringify(r.anchor), planJson: JSON.stringify(r.plan),
         frozenAt: r.frozen?.at ?? null, lockedJson: j(r.locked), creditsP: r.creditsP, readyCheckJson: j(r.readyCheck),
-        dispatchJson: j(r.dispatch), driverUserId: r.driverUserId ?? null, summaryJson: j(r.summary),
+        dispatchJson: j(r.dispatch), driverUserId: r.driverUserId ?? null, summaryJson: j(r.summary), cancelReason: r.cancelReason ?? null,
         createdAt: r.createdAt, closedAt: r.closedAt ?? null,
       };
       await tx.ride.upsert({ where: { id: r.id }, create: { id: r.id, ...data }, update: data });
