@@ -122,7 +122,7 @@ npm workspaces: `shared`, `server`, `web`.
 │  │  ├─ store/         repo.ts, prismaRepo.ts, memoryRepo.ts, lock.ts, seed.ts
 │  │  └─ sim/           simRiders.ts (seed riders, chat lines, auto Ready)
 │  ├─ test/             golden, matching, machine, money, demo-script, mask, views, amman tests
-│  ├─ scripts/make-snapshot.ts, write-build-stamp.ts
+│  ├─ scripts/make-snapshot.ts, write-build-stamp.mjs
 │  └─ public/           Vite build output (git-ignored)
 └─ web/                 React 18 + Vite + TypeScript
    └─ src/

@@ -1,0 +1,157 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id
+  token        String   @unique
+  epoch        Int
+  role         String
+  firstName    String
+  gender       String
+  viewSeq      Int      @default(0)
+  outstandingP Int      @default(0)
+  sameGenderOnly Boolean @default(true)
+  friendCode   String   @unique
+  isSim        Boolean  @default(false)
+  seedLogin    String?  @unique
+  createdAt    String
+  driver       Driver?
+  memberships  Member[]
+}
+
+model Driver {
+  userId          String @id
+  user            User   @relation(fields: [userId], references: [id])
+  car             String
+  plate           String
+  baseJson        String
+  positionJson    String?
+  creditBalanceP  Int    @default(0)
+  rejectedRideIds String @default("[]")
+}
+
+model Ride {
+  id             String  @id
+  version        Int     @default(0)
+  state          String
+  hostUserId     String
+  gender         String
+  category       String
+  genderMode     String
+  zoneJson       String
+  anchorJson     String
+  planJson       String
+  frozenAt       String?
+  lockedJson     String?
+  creditsP       Int     @default(0)
+  readyCheckJson String?
+  dispatchJson   String?
+  driverUserId   String?
+  summaryJson    String?
+  createdAt      String
+  closedAt       String?
+  members        Member[]
+  messages       ChatMessage[]
+  @@index([state])
+}
+
+model Member {
+  rideId           String
+  userId           String
+  ride             Ride   @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  user             User   @relation(fields: [userId], references: [id])
+  pickupJson       String
+  destJson         String
+  arriveBy         String
+  joinedAt         String
+  state            String
+  firstShownPickup String
+  shownPickup      String
+  soloFareP        Int
+  soloInCarMin     Float
+  readyAnswer      String?
+  guestJson        String?
+  uniDiscount      Boolean @default(false)
+  plannedTripId    String?
+  invitedBy        String?
+  leaveJson        String?
+  @@id([rideId, userId])
+}
+
+model ChatMessage {
+  id         String  @id
+  rideId     String
+  ride       Ride    @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  seq        Int
+  channel    String
+  kind       String
+  fromUserId String?
+  text       String
+  at         String
+  @@index([rideId, channel, seq])
+}
+
+model Subscription {
+  id               String @id
+  userId           String
+  kind             String
+  start            String
+  end              String
+  pricePaidP       Int
+  cardJson         String
+  replacementsLeft Int
+}
+
+model PlannedTrip {
+  id             String  @id
+  subscriptionId String
+  userId         String
+  tripJson       String
+  arriveBy       String
+  state          String
+  rideId         String?
+  isReplacement  Boolean @default(false)
+  @@index([state, arriveBy])
+}
+
+model Invite {
+  id         String @id
+  rideId     String
+  fromUserId String
+  toUserId   String
+  at         String
+  state      String
+  @@unique([rideId, toUserId])
+}
+
+model DemandPoint {
+  id     Int    @id @default(autoincrement())
+  lat    Float
+  lng    Float
+  at     String
+  source String
+}
+
+model Banner {
+  id     String  @id
+  userId String
+  text   String
+  tone   String
+  at     String
+  seen   Boolean @default(false)
+  @@index([userId, seen])
+}
+
+model DemoState {            // exactly one row, id = 1
+  id           Int     @id @default(1)
+  epoch        Int
+  demoNowIso   String
+  paused       Boolean @default(true)
+  settingsJson String
+}

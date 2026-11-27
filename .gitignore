@@ -1,0 +1,8 @@
+node_modules/
+dist/
+server/public/
+data/app.db
+data/app.db-journal
+.env
+*.log
+__pycache__/
