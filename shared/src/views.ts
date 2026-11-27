@@ -107,7 +107,7 @@ export interface RiderRideView {
 export interface InviteView { id: string; rideId: string; fromFirstName: string; destArea: string; destKey?: string; arriveBy: Iso; category: Category }
 
 export interface PlanView {
-  kind: 'weekly' | 'semester'; end: Iso; replacementsLeft: number;
+  kind: 'weekly' | 'semester'; end: Iso; replacementsLeft: number; replacementCredits: number;
   card: { last4: string };
   trips: { id: string; arriveBy: Iso; pickupArea: string; destArea: string; state: 'PLANNED' | 'PLACED' | 'CANCELED' | 'UNPLACEABLE'; rideId?: string }[];
 }

@@ -4,7 +4,7 @@ import { ammanParts, ammanTime12, fromIso, toIso } from '../clock/amman.js';
 import { leave as engineLeave } from '../engine/leave.js';
 import { US_PER_MIN } from '../engine/time.js';
 import type { Plan, TimedMatrix, Us } from '../engine/types.js';
-import { ACTIVE_MEMBER, activeMembers, frozenEnginePlan, jod, piastres, seatsOf, toRidePlan } from './bridge.js';
+import { ACTIVE_MEMBER, activeMembers, cashDueP, frozenEnginePlan, jod, piastres, seatsOf, toRidePlan, uniCreditP } from './bridge.js';
 import { system, type Effects } from './effects.js';
 import { illegal } from './errors.js';
 import type { Driver, Member, Place, Ride, User } from './types.js';
@@ -121,7 +121,7 @@ export function leaveFrozen(ride: Ride, userId: string, firstName: string, now: 
   const r = engineLeave(m, frozenEnginePlan(ride, active, order), idx, nSeats - (seatsLeaving - 1), jod(ride.plan.shareP), now,
     { existingCredits: jod(ride.creditsP) + extraCredit, driverAssigned: driverAssigned(ride), priceFactor });
   leaver.state = kind === 'no-show' ? 'NO_SHOW' : 'LEFT';
-  const chargedP = late ? ride.plan.shareP * seatsLeaving : 0;
+  const chargedP = late ? cashDueP(leaver, ride.plan.shareP) : 0;   // what they would have paid (Uni discount kept)
   leaver.leave = { at: toIso(now), late, chargedP };
   ride.version++;
   system(fx, ride.id, kind === 'no-show' ? `${firstName} didn't show up` : `${firstName} left`);
@@ -133,7 +133,7 @@ export function leaveFrozen(ride: Ride, userId: string, firstName: string, now: 
   ride.plan = { ...ride.plan, stops: ride.plan.stops.filter((s) => s.userId !== userId), fareJod: r.fare, shareP: piastres(r.share) };
   if (ride.hostUserId === userId) ride.hostUserId = activeMembers(ride)[0]!.userId;
   if (ride.driverUserId && kind === 'leave') {
-    const cash = jod(ride.plan.shareP * activeMembers(ride).reduce((n, x) => n + seatsOf(x), 0));
+    const cash = jod(activeMembers(ride).reduce((n, x) => n + cashDueP(x, ride.plan.shareP), 0));
     fx.banners.push({ userId: ride.driverUserId, tone: 'danger',
       text: `${firstName} canceled. Collect JOD ${cash.toFixed(2)} cash · JOD ${jod(ride.creditsP).toFixed(2)} credit at trip end` });
   }
@@ -152,7 +152,7 @@ export function accept(ride: Ride, driver: Driver, driverName: string, now: Us, 
 export interface SummaryRecord {
   arrivedAt: Record<string, string>; destArea: Record<string, string>;
   riders: { userId: string; firstName: string; cashP: number; seats: number }[];
-  creditP: number; totalP: number;
+  creditP: number; uniCreditP?: number; totalP: number;
 }
 
 /** Demo "Complete trip" (and the last drop-off, P1): COMPLETED, credits paid to the driver, summary written. */
@@ -165,13 +165,14 @@ export function complete(ride: Ride, now: Us, users: Map<string, User>, fx: Effe
   ride.state = 'COMPLETED';
   ride.closedAt = toIso(now);
   ride.version++;
-  fx.driverCredit.push({ userId: ride.driverUserId!, deltaP: ride.creditsP });
+  const uniP = active.reduce((n, m) => n + uniCreditP(m, ride.plan.shareP), 0);
+  fx.driverCredit.push({ userId: ride.driverUserId!, deltaP: ride.creditsP + uniP });
   const drop = (u: string) => ride.plan.stops.find((s) => s.kind === 'D' && s.userId === u)?.at ?? ride.plan.firstPickup;
-  const riders = active.map((m) => ({ userId: m.userId, firstName: users.get(m.userId)!.firstName, cashP: ride.plan.shareP * seatsOf(m), seats: seatsOf(m) }));
+  const riders = active.map((m) => ({ userId: m.userId, firstName: users.get(m.userId)!.firstName, cashP: cashDueP(m, ride.plan.shareP), seats: seatsOf(m) }));
   const summary: SummaryRecord = {
     arrivedAt: Object.fromEntries(ride.members.map((m) => [m.userId, drop(m.userId)])),
     destArea: Object.fromEntries(ride.members.map((m) => [m.userId, m.dest.area])),
-    riders, creditP: ride.creditsP, totalP: riders.reduce((a, r) => a + r.cashP, 0) + ride.creditsP,
+    riders, creditP: ride.creditsP, uniCreditP: uniP, totalP: riders.reduce((a, r) => a + r.cashP, 0) + ride.creditsP + uniP,
   };
   ride.summary = summary;
   touchAll(ride, fx);

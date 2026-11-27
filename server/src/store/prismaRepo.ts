@@ -1,7 +1,7 @@
 // SQLite Repo via Prisma (ARCH §4.1). Nested objects are JSON strings; the only raw storage detail
 // beyond ARCH is Member.pos, which keeps member order (host first) when joins share a timestamp.
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { ACTIVE_STATES, type Invite, type Member, type Ride, type User } from '../domain/types.js';
+import { ACTIVE_STATES, type Invite, type Member, type PlannedTrip, type Ride, type Subscription, type User } from '../domain/types.js';
 import { createLock } from './lock.js';
 import type { Repo, Store } from './repo.js';
 
@@ -34,6 +34,11 @@ const toRide = (r: RideRow): Ride => ({
   plan: JSON.parse(r.planJson), frozen: r.frozenAt === null ? undefined : { at: r.frozenAt }, locked: p(r.lockedJson),
   creditsP: r.creditsP, readyCheck: p(r.readyCheckJson), dispatch: p(r.dispatchJson), driverUserId: opt(r.driverUserId),
   summary: p(r.summaryJson), cancelReason: opt(r.cancelReason) as Ride['cancelReason'], createdAt: r.createdAt, closedAt: opt(r.closedAt),
+});
+
+const toPlanned = (x: Prisma.PlannedTripGetPayload<object>): PlannedTrip => ({
+  id: x.id, subscriptionId: x.subscriptionId, userId: x.userId, arriveBy: x.arriveBy, state: x.state as PlannedTrip['state'],
+  rideId: opt(x.rideId), isReplacement: x.isReplacement, ...(JSON.parse(x.tripJson) as Pick<PlannedTrip, 'pickup' | 'dest' | 'category' | 'sameGenderOnly'>),
 });
 
 function repoFor(tx: Tx): Repo {
@@ -108,6 +113,24 @@ function repoFor(tx: Tx): Repo {
     listInvitesForUser: async (toUserId) => (await tx.invite.findMany({ where: { toUserId }, orderBy: { at: 'asc' } })) as Invite[],
     listInvitesForRide: async (rideId) => (await tx.invite.findMany({ where: { rideId }, orderBy: { at: 'asc' } })) as Invite[],
     expireInvites: async (rideId) => { await tx.invite.updateMany({ where: { rideId, state: 'PENDING' }, data: { state: 'EXPIRED' } }); },
+    getSubscription: async (userId) => {
+      const x = await tx.subscription.findFirst({ where: { userId }, orderBy: { start: 'desc' } });
+      return x && { id: x.id, userId: x.userId, kind: x.kind as Subscription['kind'], start: x.start, end: x.end, pricePaidP: x.pricePaidP,
+        card: JSON.parse(x.cardJson), replacementsLeft: x.replacementsLeft, replacementCredits: x.replacementCredits };
+    },
+    putSubscription: async (x) => {
+      const data = { userId: x.userId, kind: x.kind, start: x.start, end: x.end, pricePaidP: x.pricePaidP, cardJson: JSON.stringify(x.card),
+        replacementsLeft: x.replacementsLeft, replacementCredits: x.replacementCredits };
+      await tx.subscription.upsert({ where: { id: x.id }, create: { id: x.id, ...data }, update: data });
+    },
+    getPlannedTrip: async (id) => { const x = await tx.plannedTrip.findUnique({ where: { id } }); return x && toPlanned(x); },
+    listPlannedTrips: async (userId) => (await tx.plannedTrip.findMany({ where: { userId }, orderBy: { arriveBy: 'asc' } })).map(toPlanned),
+    listPlannedBefore: async (iso) => (await tx.plannedTrip.findMany({ where: { state: 'PLANNED', arriveBy: { lte: iso } }, orderBy: { arriveBy: 'asc' } })).map(toPlanned),
+    putPlannedTrip: async (x) => {
+      const data = { subscriptionId: x.subscriptionId, userId: x.userId, arriveBy: x.arriveBy, state: x.state, rideId: x.rideId ?? null, isReplacement: x.isReplacement,
+        tripJson: JSON.stringify({ pickup: x.pickup, dest: x.dest, category: x.category, sameGenderOnly: x.sameGenderOnly }) };
+      await tx.plannedTrip.upsert({ where: { id: x.id }, create: { id: x.id, ...data }, update: data });
+    },
     getDemoState: async () => {
       const d = await tx.demoState.findUnique({ where: { id: 1 } });
       return d && { epoch: d.epoch, nowIso: d.demoNowIso, paused: d.paused, settings: JSON.parse(d.settingsJson) };

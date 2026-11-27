@@ -55,6 +55,9 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.post('/api/rides/:id/guest/remove', async (r) => view(cmd.removeGuest(token(r), id(r), body(schema.GuestRemoveBody, r))));
   app.post('/api/rides/:id/invite', async (r) => view(cmd.invite(token(r), id(r), body(schema.InviteBody, r))));
   app.post('/api/invites/:id/decline', async (r) => view(cmd.declineInvite(token(r), id(r))));
+  app.post('/api/plans/subscribe', async (r) => view(cmd.subscribe(token(r), body(schema.SubscribeBody, r))));
+  app.post('/api/plans/trips/:id/cancel', async (r) => view(cmd.cancelPlanned(token(r), id(r))));
+  app.post('/api/plans/trips', async (r) => view(cmd.planReplacement(token(r), body(schema.ReplacementBody, r))));
   app.post('/api/banners/:id/seen', async (r) => view(cmd.bannerSeen(token(r), id(r))));
 
   // driver
@@ -73,6 +76,7 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.post('/api/demo/simulate-rider', async (r) => { pin(r); return demo(cmd.demo.simulateRider(body(schema.DemoRideBody, r))); });
   app.post('/api/demo/complete-trip', async (r) => { pin(r); return demo(cmd.demo.completeTrip(body(schema.DemoRideBody, r))); });
   app.post('/api/demo/reset', async (r) => { pin(r); return demo(cmd.demo.reset()); });
+  app.post('/api/demo/place-planned', async (r) => { pin(r); return demo(cmd.demo.placePlanned()); });
   app.post('/api/demo/autopilot', async (r) => { pin(r); return demo(cmd.demo.autopilot()); });
   app.post('/api/demo/settings', async (r) => { pin(r); return demo(cmd.demo.settings(body(schema.DemoSettingsBody, r))); });
 }

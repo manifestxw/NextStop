@@ -3,7 +3,7 @@
 import type { DriverOffer, DriverStop, DriverTripView, DriverView } from '@nextstop/shared';
 import { fromIso } from '../clock/amman.js';
 import type { Clock } from '../clock/clock.js';
-import { activeMembers, jod, seatsOf } from '../domain/bridge.js';
+import { activeMembers, cashDueP, jod, seatsOf, uniCreditP } from '../domain/bridge.js';
 import type { SummaryRecord } from '../domain/rides.js';
 import type { Driver, Ride, User } from '../domain/types.js';
 import type { Repo } from '../store/repo.js';
@@ -22,14 +22,15 @@ async function stopsOf(repo: Repo, ride: Ride, withPlaces: boolean): Promise<Dri
       id: s.id, kind: s.kind, firstName: u?.firstName ?? '?',
       ...(m.guest && !m.guest.leave ? { guestFirstName: m.guest.firstName } : {}),
       shortAddress: s.place.name, at: s.at, done: s.done,
-      ...(s.kind === 'P' ? { shareJod: jod(ride.plan.shareP), cashDueJod: jod(ride.plan.shareP * seatsOf(m)), uniCreditJod: 0 } : {}),
+      ...(s.kind === 'P' ? { shareJod: jod(ride.plan.shareP), cashDueJod: jod(cashDueP(m, ride.plan.shareP)), uniCreditJod: jod(uniCreditP(m, ride.plan.shareP)) } : {}),
       ...(withPlaces ? { place: { lat: s.place.lat, lng: s.place.lng } } : {}),
     });
   }
   return out;
 }
 
-const collectP = (ride: Ride) => ride.plan.shareP * activeMembers(ride).reduce((n, m) => n + seatsOf(m), 0);
+const collectP = (ride: Ride) => activeMembers(ride).reduce((n, m) => n + cashDueP(m, ride.plan.shareP), 0);
+const uniP = (ride: Ride) => activeMembers(ride).reduce((n, m) => n + uniCreditP(m, ride.plan.shareP), 0);
 
 export async function driverView(repo: Repo, user: User, driver: Driver, clock: Clock, epoch: number): Promise<DriverView> {
   const now = clock.now();
@@ -54,11 +55,11 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
     trip = {
       rideId: t.id, state: t.state, category: t.category,
       riders: activeMembers(t).reduce((n, m) => n + seatsOf(m), 0) || (summary?.riders.reduce((n, r) => n + r.seats, 0) ?? 0),
-      fareJod: t.plan.fareJod, collectJod: jod(summary ? summary.totalP - summary.creditP : collectP(t)),
-      creditJod: jod(t.creditsP), uniCreditJod: 0, stops: await stopsOf(repo, t, true),
+      fareJod: t.plan.fareJod, collectJod: jod(summary ? summary.totalP - summary.creditP - (summary.uniCreditP ?? 0) : collectP(t)),
+      creditJod: jod(t.creditsP), uniCreditJod: jod(summary?.uniCreditP ?? uniP(t)), stops: await stopsOf(repo, t, true),
       ...(summary ? { summary: {
         riders: summary.riders.map((r) => ({ firstName: r.firstName, cashJod: jod(r.cashP) })),
-        creditJod: jod(summary.creditP), uniCreditJod: 0, totalJod: jod(summary.totalP),
+        creditJod: jod(summary.creditP), uniCreditJod: jod(summary.uniCreditP ?? 0), totalJod: jod(summary.totalP),
       } } : {}),
     };
   }

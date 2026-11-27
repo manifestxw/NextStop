@@ -367,6 +367,7 @@ model Subscription {
   pricePaidP       Int
   cardJson         String
   replacementsLeft Int
+  replacementCredits Int @default(0)
 }
 
 model PlannedTrip {

@@ -2,6 +2,7 @@
 // Point layout: member k in `order` has pickup at index 2k and destination at 2k + 1.
 import { fromIso, toIso } from '../clock/amman.js';
 import { CATEGORY } from '../engine/zone.js';
+import { uniPaid } from '../engine/uni.js';
 import type { LatLng, Plan, RiderIn, Stop as EngineStop, Us } from '../engine/types.js';
 import type { Config } from '../config.js';
 import type { Member, Ride, RidePlan, User } from './types.js';
@@ -52,3 +53,9 @@ export function frozenEnginePlan(ride: Ride, active: Member[], order: string[]):
 export const lastDropUs = (plan: RidePlan): Us => Math.max(...plan.stops.filter((s) => s.kind === 'D').map((s) => fromIso(s.at)));
 export const jod = (p: number) => Math.round(p) / 100;
 export const piastres = (j: number) => Math.round(j * 100);
+
+/** What a member pays the driver in cash: their seat (80% with a Uni plan on a uni ride) + a +1's full share. */
+export const cashDueP = (m: Pick<Member, 'uniDiscount' | 'guest'>, shareP: number) =>
+  (m.uniDiscount ? piastres(uniPaid(jod(shareP))) : shareP) + (m.guest && !m.guest.leave ? shareP : 0);
+/** What RideSync pays the driver for this member's Uni discount (SPEC §3.19). */
+export const uniCreditP = (m: Pick<Member, 'uniDiscount'>, shareP: number) => (m.uniDiscount ? shareP - piastres(uniPaid(jod(shareP))) : 0);

@@ -75,6 +75,20 @@ export interface ChatMessage {
   at: string;
 }
 
+export interface Subscription {                    // SPEC §3.19
+  id: string; userId: string; kind: 'weekly' | 'semester';
+  start: string; end: string; pricePaidP: number; card: { brand: 'demo'; last4: string };
+  replacementsLeft: number;                        // allowance still unused
+  replacementCredits: number;                      // replacements granted and not yet planned
+}
+
+export interface PlannedTrip {
+  id: string; subscriptionId: string; userId: string;
+  pickup: Place; dest: Place; arriveBy: string; category: 'economy' | 'comfort'; sameGenderOnly: boolean;
+  state: 'PLANNED' | 'PLACED' | 'CANCELED' | 'UNPLACEABLE';
+  rideId?: string; isReplacement: boolean;
+}
+
 export interface Invite {                          // SPEC §3.17 B
   id: string; rideId: string; fromUserId: string; toUserId: string;
   at: string; state: 'PENDING' | 'USED' | 'EXPIRED';

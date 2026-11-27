@@ -4,15 +4,15 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { AuthResponse, CategoryQuote, ChatMessageView, DemoView, MatchCard, QuoteView, View, req } from '@nextstop/shared';
 import type { z } from 'zod';
-import { fromIso, toIso } from '../clock/amman.js';
+import { ammanParts, fromIso, toIso } from '../clock/amman.js';
 import type { Clock } from '../clock/clock.js';
 import type { Config } from '../config.js';
-import { ACTIVE_MEMBER, activeMembers, jod, lastDropUs, piastres, points, riderIn, seatsOf } from '../domain/bridge.js';
+import { ACTIVE_MEMBER, activeMembers, cashDueP, jod, lastDropUs, piastres, points, riderIn, seatsOf } from '../domain/bridge.js';
 import { maskChat } from '../domain/chat.js';
 import { applyEffects, newEffects, system, type Effects } from '../domain/effects.js';
 import { ConflictError, LoggedOutError, illegal } from '../domain/errors.js';
 import * as rides from '../domain/rides.js';
-import { ACTIVE_STATES, type Member, type Place, type Ride, type User } from '../domain/types.js';
+import { ACTIVE_STATES, type Member, type PlannedTrip, type Place, type Ride, type Subscription, type User } from '../domain/types.js';
 import { checkJoin, type RideIn } from '../engine/matching.js';
 import { plan, solo } from '../engine/plan.js';
 import { hav } from '../engine/geo.js';
@@ -20,6 +20,8 @@ import { up05 } from '../engine/pyRound.js';
 import { floorMinute, US_PER_MIN } from '../engine/time.js';
 import type { Plan, Us } from '../engine/types.js';
 import { CATEGORY, zone } from '../engine/zone.js';
+import { cancelOutcome, isTestCard, replacementsFor, SEMESTER_WEEK_PRICE_P, UNI_RADIUS_KM, uniPaid, WEEKLY_PRICE_P } from '../engine/uni.js';
+import { planDates, SEMESTER_END } from '../domain/plans.js';
 import type { Publisher } from '../realtime/publisher.js';
 import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
 import type { Repo, Store } from '../store/repo.js';
@@ -168,6 +170,18 @@ export function createCommands(ctx: Ctx) {
     }
   }
 
+  /** A subscriber on a uni ride (own pickup or destination at a campus) pays 80% (SPEC §3.19). */
+  async function uniFor(repo: Repo, userId: string, t: Pick<Trip, 'pickup' | 'dest' | 'by'>): Promise<boolean> {
+    const sub = await repo.getSubscription(userId);
+    if (!sub || t.by > fromIso(sub.end) || clock.now() > fromIso(sub.end)) return false;
+    return isUniTrip(t.pickup, t.dest);
+  }
+  const plannedFrom = (sub: Subscription, userId: string, x: Trip, isReplacement: boolean): PlannedTrip => ({
+    id: randomUUID(), subscriptionId: sub.id, userId, pickup: x.pickup, dest: x.dest, arriveBy: x.arriveBy,
+    category: x.category === 'comfort' ? 'comfort' : 'economy', sameGenderOnly: x.sameGenderOnly, state: 'PLANNED', isReplacement,
+  });
+  const isUniTrip = (a: Place, b: Place) => campuses.some((c) => hav(a, c) <= UNI_RADIUS_KM || hav(b, c) <= UNI_RADIUS_KM);
+
   const rideIn = (ride: Ride, active: Member[], order: string[], users: Map<string, User>): RideIn => ({
     riders: active.map((x) => riderIn(x, order, users.get(x.userId)!, ride)),
     firstShown: Object.fromEntries(active.map((x) => [x.userId, fromIso(x.firstShownPickup)])),
@@ -202,6 +216,7 @@ export function createCommands(ctx: Ctx) {
           const s = solo(m, jIn, { earlyMax: CATEGORY[ride.category].early, priceFactor: pf(ride.category) })!;
           cand.soloFareP = piastres(up05(s.fare));
           cand.soloInCarMin = s.incar[0]!;
+          cand.uniDiscount = (await uniFor(repo, user.id, t)) || undefined;
           const members = [...active, cand];
           await assertFree(repo, order, res.plan!.T0, lastDrop(res.plan!), ride.id);
           ride.members.push(cand);
@@ -235,6 +250,45 @@ export function createCommands(ctx: Ctx) {
       fx.messages.push({ rideId, channel: 'group', kind: 'user', fromUserId: user.id, text: maskChat(text.trim()) });
       for (const m of activeMembers(ride)) fx.touched.add(m.userId);
     });
+  }
+
+  /** Create a ride as this user (host). Used by riders and by Uni plan placement. Returns the new ride id. */
+  async function createAs(user: User, t: Trip, { placement = false } = {}): Promise<{ view: View; rideId: string }> {
+    const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
+    const settings = (await demo()).settings;
+    const provider = selectProvider(settings.source);
+    const m = toTimed(await provider.getMatrix(points([cand]), t.by - HOUR, { level: settings.traffic, weather: settings.weather }));
+    const cat = CATEGORY[t.category];
+    const s = solo(m, riderIn(cand, [user.id], user, { category: t.category }), { earlyMax: cat.early, priceFactor: pf(t.category) });
+    if (!s) throw new ConflictError('NOT_ELIGIBLE', "We couldn't plan this trip");
+    const now = clock.now();
+    if (s.T0 < now + HOUR) throw new ConflictError('TOO_SOON');
+    // Placement skips the 24 h window (SPEC §3.19): planned rides are placed early on purpose.
+    if (!placement && s.T0 > now + 24 * HOUR) throw new ConflictError('NOT_ELIGIBLE', 'Shared rides can be planned up to 24 hours ahead');
+    const route = await provider.getRoute([t.pickup, t.dest], s.T0);
+    const [zp, zd] = zone(t.category, s.km);
+    let rideId = '';
+    const view = await commit(user.id, async (repo, fx) => {
+      await assertFree(repo, [user.id], s.T0, lastDrop(s));
+      cand.soloFareP = piastres(up05(s.fare));
+      cand.soloInCarMin = s.incar[0]!;
+      const ride: Ride = {
+        id: randomUUID(), version: 0, state: 'OPEN', hostUserId: user.id, gender: user.gender,
+        category: t.category, genderMode: t.sameGenderOnly ? 'same' : 'mixed', zone: { pickupKm: zp, destKm: zd },
+        anchor: { pickup: t.pickup, dest: t.dest, arriveBy: t.arriveBy, route, km: s.km },
+        members: [cand], plan: { stops: [], firstPickup: '', km: 0, durMin: 0, fareJod: 0, shareP: 0, inCarMin: {} },
+        creditsP: 0, createdAt: toIso(clock.now()),
+      };
+      rides.applyPlan(ride, s, [cand], cand.soloFareP);
+      cand.firstShownPickup = cand.shownPickup;
+      cand.uniDiscount = (await uniFor(repo, user.id, t)) || undefined;
+      rideId = ride.id;
+      await repo.putRide(ride);
+      const fresh = (await repo.getUser(user.id))!;
+      await repo.putUser({ ...fresh, sameGenderOnly: t.sameGenderOnly });
+      fx.touched.add(user.id);
+    });
+    return { view, rideId };
   }
 
   // ---------- leaving ----------
@@ -317,7 +371,43 @@ export function createCommands(ctx: Ctx) {
     await repo.putDemoState({ ...d, nowIso: toIso(clock.now()), paused: clock.snapshot().paused });   // survives a restart
   }
 
-  const tick = () => commit(undefined, (repo, fx) => runDue(repo, fx, clock.now()));
+  const tick = async () => {
+    await commit(undefined, (repo, fx) => runDue(repo, fx, clock.now()));
+    await placeDue(clock.now() + 12 * HOUR);   // Uni plans: rides are placed 12 h before arrive-by (SPEC §3.19)
+  };
+
+  /** Place every PLANNED trip arriving by `untilUs`: join the fullest ride that passes every rule, else host one.
+   *  Runs outside the lock (each join/create takes it); a trip that can't be placed becomes a free replacement. */
+  async function placeDue(untilUs: Us) {
+    const due = await store.withLock((r) => r.listPlannedBefore(toIso(untilUs)));
+    for (const pt of due) {
+      const user = await store.withLock((r) => r.getUser(pt.userId));
+      if (!user) continue;
+      const t: Trip = { pickup: pt.pickup, dest: pt.dest, arriveBy: pt.arriveBy, by: fromIso(pt.arriveBy), category: pt.category, sameGenderOnly: pt.sameGenderOnly };
+      const open = (await store.withLock((r) => r.listActiveRides()))
+        .filter((r) => r.state === 'OPEN' && r.category === pt.category && !r.members.some((m) => m.userId === user.id))
+        .sort((a, b) => activeMembers(b).length - activeMembers(a).length || a.createdAt.localeCompare(b.createdAt));
+      let rideId: string | undefined;
+      for (const r of open) {
+        try { await joinAs(user, r.id, t); rideId = r.id; break; } catch (e) { if (!(e instanceof ConflictError)) throw e; }
+      }
+      if (!rideId) {
+        try { rideId = (await createAs(user, t, { placement: true })).rideId; } catch (e) { if (!(e instanceof ConflictError)) throw e; }
+      }
+      await commit(undefined, async (repo, fx) => {
+        const fresh = await repo.getPlannedTrip(pt.id);
+        if (!fresh || fresh.state !== 'PLANNED') return;
+        if (rideId) await repo.putPlannedTrip({ ...fresh, state: 'PLACED', rideId });
+        else {
+          await repo.putPlannedTrip({ ...fresh, state: 'UNPLACEABLE' });
+          const sub = await repo.getSubscription(user.id);
+          if (sub) await repo.putSubscription({ ...sub, replacementCredits: sub.replacementCredits + 1 });
+          fx.banners.push({ userId: user.id, tone: 'warn', text: "We couldn't plan one of your rides. You have a free replacement." });
+        }
+        fx.touched.add(user.id);
+      });
+    }
+  }
 
   function nextDueAt(list: Ride[]): Us | null {
     const times = list.flatMap((r) =>
@@ -420,7 +510,7 @@ export function createCommands(ctx: Ctx) {
       const pickup = resolvePlace(b.pickup), dest = resolvePlace(b.dest), by = fromIso(b.arriveBy);
       const cand = rides.newMember('q', pickup, dest, toIso(by), clock.now(), 0, 0);
       const m = toTimed(await fetchMatrix([cand], by - HOUR));
-      const uniTrip = campuses.some((c) => hav(pickup, c) <= 1.0 || hav(dest, c) <= 1.0);   // SPEC §3.19
+      const uniTrip = isUniTrip(pickup, dest);   // SPEC §3.19
       const categories: CategoryQuote[] = (['economy', 'comfort', 'airport'] as const).map((category) => {
         const cat = CATEGORY[category];
         const available = category === 'airport' ? isAirport(dest) : !isAirport(dest);
@@ -461,45 +551,15 @@ export function createCommands(ctx: Ctx) {
           seatsLeft: CATEGORY[ride.category].maxRiders - seatsUsed,
           pickupArea: ride.anchor.pickup.area, destArea: ride.anchor.dest.area,
           effectiveArriveBy: [...active.map((x) => x.arriveBy), t.arriveBy].sort()[0]!,
-          myPickupAt: toIso(res.plan!.pick[active.length]!), eachJod: res.share!, myPaysJod: res.share!,
+          myPickupAt: toIso(res.plan!.pick[active.length]!), eachJod: res.share!,
+          myPaysJod: (await store.withLock((repo) => uniFor(repo, user.id, t))) ? uniPaid(res.share!) : res.share!,
         });
       }
       return cards.sort((a, b2) => a.eachJod - b2.eachJod);
     },
 
     async createRide(token: string, b: Body<typeof req.CreateRideBody>) {
-      const user = await auth(token, 'rider');
-      const t = tripOf(b);
-      const cand = rides.newMember(user.id, t.pickup, t.dest, t.arriveBy, clock.now(), 0, 0);
-      const settings = (await demo()).settings;
-      const provider = selectProvider(settings.source);
-      const m = toTimed(await provider.getMatrix(points([cand]), t.by - HOUR, { level: settings.traffic, weather: settings.weather }));
-      const cat = CATEGORY[t.category];
-      const s = solo(m, riderIn(cand, [user.id], user, { category: t.category }), { earlyMax: cat.early, priceFactor: pf(t.category) });
-      if (!s) throw new ConflictError('NOT_ELIGIBLE', "We couldn't plan this trip");
-      const now = clock.now();
-      if (s.T0 < now + HOUR) throw new ConflictError('TOO_SOON');
-      if (s.T0 > now + 24 * HOUR) throw new ConflictError('NOT_ELIGIBLE', 'Shared rides can be planned up to 24 hours ahead');
-      const route = await provider.getRoute([t.pickup, t.dest], s.T0);
-      const [zp, zd] = zone(t.category, s.km);
-      return commit(user.id, async (repo, fx) => {
-        await assertFree(repo, [user.id], s.T0, lastDrop(s));
-        cand.soloFareP = piastres(up05(s.fare));
-        cand.soloInCarMin = s.incar[0]!;
-        const ride: Ride = {
-          id: randomUUID(), version: 0, state: 'OPEN', hostUserId: user.id, gender: user.gender,
-          category: t.category, genderMode: t.sameGenderOnly ? 'same' : 'mixed', zone: { pickupKm: zp, destKm: zd },
-          anchor: { pickup: t.pickup, dest: t.dest, arriveBy: t.arriveBy, route, km: s.km },
-          members: [cand], plan: { stops: [], firstPickup: '', km: 0, durMin: 0, fareJod: 0, shareP: 0, inCarMin: {} },
-          creditsP: 0, createdAt: toIso(clock.now()),
-        };
-        rides.applyPlan(ride, s, [cand], cand.soloFareP);
-        cand.firstShownPickup = cand.shownPickup;
-        await repo.putRide(ride);
-        const fresh = (await repo.getUser(user.id))!;
-        await repo.putUser({ ...fresh, sameGenderOnly: t.sameGenderOnly });
-        fx.touched.add(user.id);
-      });
+      return (await createAs(await auth(token, 'rider'), tripOf(b))).view;
     },
 
     async join(token: string, rideId: string, b: Body<typeof req.JoinBody>) {
@@ -575,6 +635,76 @@ export function createCommands(ctx: Ctx) {
       });
     },
 
+    // ---------- Uni plans (P1, SPEC §3.19) ----------
+
+    async subscribe(token: string, b: Body<typeof req.SubscribeBody>) {
+      const user = await auth(token, 'rider');
+      const now = clock.now();
+      const number = b.card.number.replace(/[\s-]/g, '');
+      const [mm, yy] = b.card.expiry.split('/').map(Number);
+      const nowParts = ammanParts(now);
+      const expired = 2000 + yy! < nowParts.year || (2000 + yy! === nowParts.year && mm! < nowParts.month);
+      if (!isTestCard(number) || expired) throw new ConflictError('NOT_TEST_CARD');
+      const end = b.kind === 'weekly' ? toIso(now + 7 * 24 * HOUR) : SEMESTER_END;
+      const trips: Trip[] = b.kind === 'weekly'
+        ? b.trips.map((x) => tripOf(x))
+        : planDates(b.pattern, now + 12 * HOUR, fromIso(SEMESTER_END)).map(({ index, arriveBy }) => {
+          const it = b.pattern[index]!;
+          return tripOf({ pickup: it.pickup, dest: it.dest, arriveBy, category: it.category, sameGenderOnly: it.sameGenderOnly });
+        });
+      for (const x of trips) {
+        if (x.category === 'airport') throw new ConflictError('NOT_ELIGIBLE', "Airport rides aren't part of Uni plans");
+        if (!isUniTrip(x.pickup, x.dest)) throw new ConflictError('NOT_ELIGIBLE', 'Uni plans cover rides to or from campus');
+        if (x.by < now + 12 * HOUR) throw new ConflictError('NOT_ELIGIBLE', 'Plan each ride at least 12 hours ahead');
+        if (x.by > fromIso(end)) throw new ConflictError('NOT_ELIGIBLE', 'A weekly plan covers the next 7 days');
+      }
+      if (trips.length === 0) throw new ConflictError('NOT_ELIGIBLE', 'No rides left in this semester for that pattern');
+      const weeks = Math.ceil((fromIso(end) - now) / (7 * 24 * HOUR));
+      return commit(user.id, async (repo, fx) => {
+        const current = await repo.getSubscription(user.id);
+        if (current && fromIso(current.end) >= now) throw new ConflictError('NOT_ELIGIBLE', 'You already have a Uni plan');
+        const sub: Subscription = {
+          id: randomUUID(), userId: user.id, kind: b.kind, start: toIso(now), end,
+          pricePaidP: b.kind === 'weekly' ? WEEKLY_PRICE_P : SEMESTER_WEEK_PRICE_P * weeks,
+          card: { brand: 'demo', last4: number.slice(-4) }, replacementsLeft: replacementsFor(b.kind, trips.length), replacementCredits: 0,
+        };
+        await repo.putSubscription(sub);
+        for (const x of trips) await repo.putPlannedTrip(plannedFrom(sub, user.id, x, false));
+        fx.touched.add(user.id);
+      });
+    },
+
+    /** ≥ 12 h before: removed, plus a replacement while under the limit. < 12 h: it's placed, use the normal leave. */
+    async cancelPlanned(token: string, tripId: string) {
+      const user = await auth(token, 'rider');
+      return commit(user.id, async (repo, fx) => {
+        const pt = await repo.getPlannedTrip(tripId);
+        const sub = await repo.getSubscription(user.id);
+        if (!pt || pt.userId !== user.id || !sub) throw new ConflictError('RIDE_GONE');
+        if (pt.state === 'CANCELED' || pt.state === 'UNPLACEABLE') return;
+        const [outcome, left] = cancelOutcome((fromIso(pt.arriveBy) - clock.now()) / MIN, sub.replacementsLeft);
+        if (outcome === 'use_leave' || pt.state === 'PLACED') throw new ConflictError('USE_LEAVE');
+        await repo.putPlannedTrip({ ...pt, state: 'CANCELED' });
+        if (outcome === 'replacement') await repo.putSubscription({ ...sub, replacementsLeft: left, replacementCredits: sub.replacementCredits + 1 });
+        fx.touched.add(user.id);
+      });
+    },
+
+    async planReplacement(token: string, b: Body<typeof req.ReplacementBody>) {
+      const user = await auth(token, 'rider');
+      const x = tripOf(b.trip);
+      const now = clock.now();
+      return commit(user.id, async (repo, fx) => {
+        const sub = await repo.getSubscription(user.id);
+        if (!sub || sub.replacementCredits <= 0) throw new ConflictError('NO_REPLACEMENTS');
+        if (!isUniTrip(x.pickup, x.dest)) throw new ConflictError('NOT_ELIGIBLE', 'Uni plans cover rides to or from campus');
+        if (x.by < now + 12 * HOUR || x.by > fromIso(sub.end)) throw new ConflictError('NOT_ELIGIBLE', 'Plan it at least 12 hours ahead and before your plan ends');
+        await repo.putPlannedTrip(plannedFrom(sub, user.id, x, true));
+        await repo.putSubscription({ ...sub, replacementCredits: sub.replacementCredits - 1 });
+        fx.touched.add(user.id);
+      });
+    },
+
     // ---------- friends (P1, SPEC §3.17) ----------
 
     /** +1: a friend riding from my pickup to my destination. Same stops and fare, one more seat. */
@@ -624,7 +754,7 @@ export function createCommands(ctx: Ctx) {
         system(fx, ride.id, `${me.guest.firstName} (${user.firstName}'s friend) left`);
         if (ride.driverUserId && rides.driverAssigned(ride)) {
           fx.banners.push({ userId: ride.driverUserId, tone: 'danger',
-            text: `${me.guest.firstName} canceled. Collect JOD ${jod(shareP * seats).toFixed(2)} cash · JOD ${jod(ride.creditsP).toFixed(2)} credit at trip end` });
+            text: `${me.guest.firstName} canceled. Collect JOD ${jod(activeMembers(ride).reduce((n, m) => n + cashDueP(m, shareP), 0)).toFixed(2)} cash · JOD ${jod(ride.creditsP).toFixed(2)} credit at trip end` });
         }
         for (const m of ride.members) fx.touched.add(m.userId);
         await repo.putRide(ride);
@@ -764,6 +894,12 @@ export function createCommands(ctx: Ctx) {
         clock.jump(cfg.demoStartUs);
         clock.setPaused(true);
         publisher.logout();
+        return demoView();
+      },
+
+      /** Place every planned ride arriving in the next 36 h now, without moving the clock (SPEC §2.5). */
+      async placePlanned(): Promise<DemoView> {
+        await placeDue(clock.now() + 36 * HOUR);
         return demoView();
       },
 

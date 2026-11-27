@@ -24,7 +24,12 @@
 - **T17/T18:** +1 (same stops/fare, one more seat, gender + seat + solo checks, late removal charged to the
   bringer), friend-code invites (banner, invite card with own pickup, every rule, expire at ready check).
 
+- **T15 (server done, UI not started):** subscribe (demo card, last4 only), weekly/semester planning, cancel ≥12 h →
+  replacement, replacements, 12 h placement in the tick, 20% per subscriber + RideSync credit to driver. 140 server tests.
+
 ## Next task
+- **Resume here:** T16 Uni plans UI (entry card, plan picker/week grid, demo card sheet, My plan, discount display,
+  demo-menu "Place planned rides") on `api` → `/api/plans/*`. Seed Huda's semester plan (SPEC §2.6) not done yet.
 - **T12 (owner/CC):** deploy to Replit (Reserved VM, Node 22 if offered), set Secrets from `.env`
   (incl. `GOOGLE_SERVER_KEY`, `VITE_GOOGLE_BROWSER_KEY` at build time), open `/?as=lina|sara|omar&pin=…`
   on 3 phones over a hotspot, run §2.2 (owner: later). CC now: P1 T15/T16 Uni plans, then T20.

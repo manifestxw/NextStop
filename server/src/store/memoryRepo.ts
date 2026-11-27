@@ -1,13 +1,13 @@
 // In-memory Repo for domain tests. Same contract as prismaRepo; rollback = restore a snapshot.
-import { ACTIVE_STATES, type Banner, type ChatMessage, type DemoState, type Driver, type Invite, type Ride, type User } from '../domain/types.js';
+import { ACTIVE_STATES, type Banner, type ChatMessage, type DemoState, type Driver, type Invite, type PlannedTrip, type Ride, type Subscription, type User } from '../domain/types.js';
 import { createLock } from './lock.js';
 import type { Repo, Store } from './repo.js';
 
 interface State {
   users: Map<string, User>; drivers: Map<string, Driver>; rides: Map<string, Ride>;
-  messages: ChatMessage[]; banners: Banner[]; invites: Invite[]; demo: DemoState | null;
+  messages: ChatMessage[]; banners: Banner[]; invites: Invite[]; subs: Subscription[]; planned: PlannedTrip[]; demo: DemoState | null;
 }
-const empty = (): State => ({ users: new Map(), drivers: new Map(), rides: new Map(), messages: [], banners: [], invites: [], demo: null });
+const empty = (): State => ({ users: new Map(), drivers: new Map(), rides: new Map(), messages: [], banners: [], invites: [], subs: [], planned: [], demo: null });
 const c = structuredClone;   // never hand out or keep references that could change outside the lock
 
 export function createMemoryStore(): Store {
@@ -45,6 +45,12 @@ export function createMemoryStore(): Store {
     listInvitesForUser: async (uid) => c(s.invites.filter((x) => x.toUserId === uid)),
     listInvitesForRide: async (rid) => c(s.invites.filter((x) => x.rideId === rid)),
     expireInvites: async (rid) => { for (const x of s.invites) if (x.rideId === rid && x.state === 'PENDING') x.state = 'EXPIRED'; },
+    getSubscription: async (uid) => c(s.subs.filter((x) => x.userId === uid).sort((a, b) => b.start.localeCompare(a.start))[0] ?? null),
+    putSubscription: async (x) => { s.subs = s.subs.filter((y) => y.id !== x.id); s.subs.push(c(x)); },
+    getPlannedTrip: async (id) => c(s.planned.find((x) => x.id === id) ?? null),
+    listPlannedTrips: async (uid) => c(s.planned.filter((x) => x.userId === uid).sort((a, b) => a.arriveBy.localeCompare(b.arriveBy))),
+    listPlannedBefore: async (iso) => c(s.planned.filter((x) => x.state === 'PLANNED' && x.arriveBy <= iso).sort((a, b) => a.arriveBy.localeCompare(b.arriveBy))),
+    putPlannedTrip: async (x) => { s.planned = s.planned.filter((y) => y.id !== x.id); s.planned.push(c(x)); },
     getDemoState: async () => c(s.demo),
     putDemoState: async (d) => { s.demo = c(d); },
     wipe: async () => { s = empty(); },

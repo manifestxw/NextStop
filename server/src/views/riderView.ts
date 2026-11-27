@@ -3,7 +3,7 @@
 import type { PlaceView, RiderRideView, RiderView } from '@nextstop/shared';
 import { fromIso, toIso } from '../clock/amman.js';
 import type { Clock } from '../clock/clock.js';
-import { activeMembers, jod, seatsOf } from '../domain/bridge.js';
+import { activeMembers, cashDueP, jod, seatsOf, uniCreditP } from '../domain/bridge.js';
 import { driverAssigned, firstPickupUs, isLateNow, type SummaryRecord } from '../domain/rides.js';
 import { ACTIVE_STATES, type Place, type Ride, type User } from '../domain/types.js';
 import { CATEGORY } from '../engine/zone.js';
@@ -37,6 +37,7 @@ export async function riderView(repo: Repo, user: User, clock: Clock, epoch: num
       friendCode: user.friendCode, outstandingJod: jod(user.outstandingP) },
     ...(ride ? { ride: await rideView(repo, ride, user, now) } : {}),
     invites: await invitesFor(repo, user.id),
+    ...(await planFor(repo, user.id, now)),
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),
   };
@@ -60,7 +61,8 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     category: ride.category, genderMode: ride.genderMode,
     zoneKm: { pickup: ride.zone.pickupKm, dest: ride.zone.destKm },
     seats: seatViews(ride, me.id, users), seatsLeft: Math.max(0, CATEGORY[ride.category].maxRiders - seatsUsed),
-    shareJod: jod(ride.plan.shareP), soloJod: jod(mine.soloFareP), myCashDueJod: jod(ride.plan.shareP * seatsOf(mine)),
+    shareJod: jod(ride.plan.shareP), soloJod: jod(mine.soloFareP), myCashDueJod: jod(cashDueP(mine, ride.plan.shareP)),
+    ...(uniCreditP(mine, ride.plan.shareP) > 0 ? { uniDiscountJod: jod(uniCreditP(mine, ride.plan.shareP)) } : {}),
     beReadyBy: mine.shownPickup,
     effectiveArriveBy: active.map((m) => m.arriveBy).sort()[0] ?? mine.arriveBy,
     myPickup: placeView(mine.pickup), myDest: placeView(mine.dest),
@@ -74,7 +76,7 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
         status: m.state === 'LEFT' ? 'LEFT' as const : m.readyAnswer === 'READY' ? 'READY' as const : 'WAITING' as const })),
     } } : {}),
     findDriverAutoAt: toIso(firstPickupUs(ride) - 45 * 60_000_000),
-    leave: { free: !late, chargeJod: late ? jod(ride.plan.shareP * seatsOf(mine)) : 0 },
+    leave: { free: !late, chargeJod: late ? jod(cashDueP(mine, ride.plan.shareP)) : 0 },
     chat: { group: group.map((m) => chatView(m, users)), unread: 0 },
     ...(ride.cancelReason ? { cancelReason: ride.cancelReason } : {}),
     ...(mine.guest && !mine.guest.leave ? { myGuest: { firstName: mine.guest.firstName } } : {}),
@@ -84,7 +86,7 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     ...(summary ? { summary: {
       destArea: summary.destArea[me.id] ?? mine.dest.area, arrivedAt: summary.arrivedAt[me.id] ?? ride.closedAt!,
       paidJod: jod(mySeats?.cashP ?? 0), riders: summary.riders.reduce((n, r) => n + r.seats, 0),
-      savedJod: mySeats ? jod(mine.soloFareP - ride.plan.shareP) : 0,
+      savedJod: mySeats ? jod(mine.soloFareP - cashDueP({ uniDiscount: mine.uniDiscount }, ride.plan.shareP)) : 0,
       outstandingJod: jod(me.outstandingP),
       ...(mine.leave?.late ? { leftLate: { chargedJod: jod(mine.leave.chargedP) } } : {}),
     } } : {}),
@@ -105,4 +107,15 @@ async function invitesFor(repo: Repo, userId: string): Promise<RiderView['invite
     });
   }
   return out;
+}
+
+/** The rider's current Uni plan, with every planned ride (SPEC §3.19). */
+async function planFor(repo: Repo, userId: string, nowUs: number): Promise<{ plan?: RiderView['plan'] }> {
+  const sub = await repo.getSubscription(userId);
+  if (!sub || fromIso(sub.end) < nowUs) return {};
+  const trips = (await repo.listPlannedTrips(userId)).filter((t) => t.subscriptionId === sub.id);
+  return { plan: {
+    kind: sub.kind, end: sub.end, replacementsLeft: sub.replacementsLeft, replacementCredits: sub.replacementCredits, card: { last4: sub.card.last4 },
+    trips: trips.map((t) => ({ id: t.id, arriveBy: t.arriveBy, pickupArea: t.pickup.area, destArea: t.dest.area, state: t.state, ...(t.rideId ? { rideId: t.rideId } : {}) })),
+  } };
 }
