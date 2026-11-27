@@ -27,7 +27,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [x] **T3** `done ccb131f` CC: Engine port, golden tests first: `pyRound`, `ammanParts`, tariff, geo, fare, plan, `zone.ts` (CATEGORY, zone, seats, gender_ok), matching, leave. Must match SPEC §4.7 + §4.7.1. needs: T1 (ARCH §6)
 - [x] **T4** `done 5bd3e09` CC: TravelProvider Fixed + cached + select; clock (paused) + scheduler tick; Prisma schema; `store.withLock`; memoryRepo + prismaRepo contract test; `data/seed.json` (places, users, Omar, seeded logins, friend codes). needs: T3 (ARCH §4, §5, §8)
 - [ ] **T5** `todo` CX: Web skeleton: Vite + React + router, `tokens.css` from DESIGN §2–§4 (Paper/Cockpit, `data-category`), fonts, `net/api.ts`, `net/socket.ts`, Zustand session (viewSeq rules), `?as=` seeded login. needs: T2 (ARCH §10)
-- [x] **T6** `done HASH` CC: Domain + commands (P0) (incl. stepped fast-forward + due events in the scheduler `onTick`; env CALIBRATION × category price as `priceFactor`): create, join, leave (free/late, credits), find-driver, ready check (+ sim auto-Ready), dispatch, accept, reject, complete trip, summary; chat with masking + system messages; `views/` with privacy tests; Socket.IO pushes. needs: T2, T4 (ARCH §7, §9, SPEC §3)
+- [x] **T6** `done a824f6d` CC: Domain + commands (P0) (incl. stepped fast-forward + due events in the scheduler `onTick`; env CALIBRATION × category price as `priceFactor`): create, join, leave (free/late, credits), find-driver, ready check (+ sim auto-Ready), dispatch, accept, reject, complete trip, summary; chat with masking + system messages; `views/` with privacy tests; Socket.IO pushes. needs: T2, T4 (ARCH §7, §9, SPEC §3)
 - [ ] **T7** `todo` CX: `http/routes.ts` for every P0 endpoint (+ demo PIN), auth, error mapping, `/api/health` with build stamp, static SPA serving. needs: T6 (ARCH §7.1, §11)
   - Wire to `createCommands()` (`server/src/commands/index.ts`, already built in `index.ts` as `commands`). 1:1 map:
     signup→`signup` · demo/login→`demoLogin` · me→`me` · quote→`quote` · search→`search` · POST rides→`createRide` ·
@@ -38,7 +38,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
     Fill `DemoView.buildStamp` from the build stamp. `chat.unread` is always 0: the client counts unread locally (shortcut).
 - [ ] **T8** `todo` CX: P0 rider screens: signup, home + trip screen (chips, gender switch, category tiles), matching list + card, host setup, status sheet (stage track, Sync Pass, seat meter), ready check sheet, leave sheets, group chat, trip summary. needs: T5 (can use mock views until T7). (DESIGN §5–§8, §12)
 - [ ] **T9** `todo` CX: P0 driver screens: idle home, trip offer, active trip, rider-left banner, driver summary; demo menu (clock, simulate rider, complete trip, reset, build stamp). needs: T5 (DESIGN §8, §12.2)
-- [x] **T10** `done HASH` CC: Demo-script test replaying SPEC §2.2 steps 1–6 end to end (`server/test/demo-script.test.ts`). needs: T6
+- [x] **T10** `done a824f6d` CC: Demo-script test replaying SPEC §2.2 steps 1–6 end to end (`server/test/demo-script.test.ts`). needs: T6
 - [ ] **T11** `todo` CC: Snapshot source + `npm run snapshot`; generate `data/demo_snapshot.json`; rerun the model on it; regenerate SPEC §2.2/§2.3/§1 and DESIGN numbers. needs: T4, O1 (SPEC §4.2.2)
 - [ ] **T12** `todo` CX: Deploy to Replit (or fallback), verify build stamp, run the §2.2 demo on 3 phones over a hotspot. Fix mobile checks (ARCH §10). **M1 done when this passes.** needs: T7, T8, T9, T10, O2
 
