@@ -1,8 +1,8 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1 scaffold)
-**Milestone:** M1 walking skeleton (T1 of T12 done)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1 scaffold, T2 contract)
+**Milestone:** M1 walking skeleton (T1–T2 of T12 done)
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
 ## Just shipped
@@ -12,6 +12,7 @@
 - Server: `/api/health` (build stamp), static SPA + client-route fallback, JSON 404 for `/api/*`.
   Web: hello page that calls `/api/health`. Prisma schema copied from ARCH §4.1.
 - `.env.example`, `.gitignore`, key-leak check, build stamp, `data/.gitkeep`.
+- **T2:** `shared/` views, zod request schemas (`req.*`), error codes + messages, socket events.
 
 ## Verification
 - `npm run check`: green (typecheck, build, eslint, 2 tests, key-leak skipped: no key yet).
@@ -19,8 +20,8 @@
 - `npm run dev`: Vite :5173 proxies `/api` to the server :3000. Works on 3 phones: not yet (T12).
 
 ## Next task
-- Board: `docs/TASKS.md`. Next CC: **T2** (shared contract), then T3 (engine port).
-- Next CX: **T5** after T2. Owner: O1–O4 in parallel.
+- Board: `docs/TASKS.md`. CC is on **T3** (engine port). T2 contract is frozen in `shared/src/`.
+- **CX: T5 is unblocked.** Import types from `@nextstop/shared`, schemas as `req.*`.
 
 ## Blocked / waiting
 - Owner: O1 Google keys, O2 Replit (needed by T11, T12). O3 Jeeny screenshots. O4 commission.
