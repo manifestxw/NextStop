@@ -58,5 +58,8 @@ describe('reverse geocoding → pin name', () => {
     expect(streetFrom([{ formatted_address: 'GVV4+VHF, Irbid, Jordan', types: ['plus_code'], address_components: comps },
       { formatted_address: 'Irbid, Jordan', types: ['locality', 'political'], address_components: comps }])).toBeNull();
     expect(streetFrom([])).toBeNull();
+    // A "street address" that is only a city once cleaned says nothing useful: use the nearest place.
+    expect(streetFrom([{ formatted_address: 'GVR3+2Q, Irbid, Jordan', types: ['premise'], address_components: comps }])).toBeNull();
+    expect(streetFrom([{ formatted_address: 'Ar-Ramtha, Jordan', types: ['route'], address_components: comps }])).toBeNull();
   });
 });

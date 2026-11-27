@@ -78,7 +78,8 @@ export function streetFrom(results: GeoResult[]): { name: string; parts: Address
   const r = results.find((x) => x.types.some((t) => STREET_TYPES.includes(t)));
   if (!r) return null;
   const name = r.formatted_address.replace(PLUS_CODE, '').replace(/,?\s*Jordan$/, '').replace(/\s+\d{5}\b/g, '').trim();
-  return name ? { name, parts: (r.address_components ?? []).map((c) => ({ text: c.long_name, types: c.types })) } : null;
+  if (!name.includes(',')) return null;   // only a city left: not an address
+  return { name, parts: (r.address_components ?? []).map((c) => ({ text: c.long_name, types: c.types })) };
 }
 
 /** The street address at a pin (Geocoding API). Server only; the key is in the URL, so the URL is never logged. */

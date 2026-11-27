@@ -588,7 +588,7 @@ export function createCommands(ctx: Ctx) {
       const key = cfg.googleServerKey;
       const soft = <T>(x: Promise<T>) => x.catch((e: Error) => { console.warn(`places: ${e.message}`); return null; });
       const [street, near] = key ? await Promise.all([soft(reverseGeocode(key, p)), soft(nearestPlace(key, p))]) : [null, null];
-      const area = areaFor(p, street?.parts ?? near?.parts ?? [], seedPlaces);
+      const area = areaFor(p, [...(near?.parts ?? []), ...(street?.parts ?? [])], seedPlaces);   // a neighbourhood from either
       if (street) return remember({ placeId: `pin:${p.lat},${p.lng}`, name: street.name, address: near ? `Near ${near.name}` : '', area, ...p });
       return remember({ placeId: `pin:${p.lat},${p.lng}`, name: pinName(near?.name), address: near?.address ?? '', area, ...p });
     },
