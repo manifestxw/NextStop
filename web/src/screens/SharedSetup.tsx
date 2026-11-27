@@ -1,4 +1,5 @@
 // Host setup "Start your own sync" (DESIGN §7): ready-by, price ladder, sync zone, gender switch.
+import { Icon } from '../components/Icon.js';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
@@ -26,7 +27,7 @@ export function SharedSetup() {
   });
   return (
     <main className="screen">
-      <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav('/shared')}>‹</button></div>
+      <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav('/shared')}><Icon name="back" /></button></div>
       <div className="row" style={{ gap: 8 }}><h1 className="t-h2">Start your own sync</h1><CategoryBadge category={d.category} /></div>
       <label className="row card card--tight"><span className="grow t-body-l">Arrive by</span>
         <input type="time" step={300} value={d.time} onChange={(e) => e.target.value && d.set({ time: e.target.value })} className="field" style={{ width: 156, height: 44 }} />

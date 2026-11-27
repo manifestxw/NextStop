@@ -1,4 +1,5 @@
 // Group chat (DESIGN §8): last 100 messages, masked by the server, bubbles with dir="auto".
+import { Icon } from '../components/Icon.js';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderView } from '@nextstop/shared';
@@ -25,7 +26,7 @@ export function Chat() {
   return (
     <main className="chat">
       <header className="chat-head">
-        <div className="row" style={{ width: '100%' }}><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav(`/ride/${ride.id}`)}>‹</button>
+        <div className="row" style={{ width: '100%' }}><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav(`/ride/${ride.id}`)}><Icon name="back" /></button>
           <span className="t-eyebrow grow center">To {ride.myDest.area} · {fmtTime(ride.effectiveArriveBy)}</span><span style={{ width: 44 }} /></div>
         <div style={{ width: 200 }}><SeatMeter mini seats={ride.seats} max={ride.seats.length + ride.seatsLeft} closed={ride.state !== 'OPEN'} /></div>
       </header>
@@ -53,7 +54,7 @@ export function Chat() {
             {text.length > 250 && <span className="t-caption text-2" style={{ fontSize: 12 }}>{text.length}/300</span>}
             <input value={text} maxLength={300} dir="auto" placeholder="Message the group…" onChange={(e) => setText(e.target.value)} aria-label="Message" />
           </div>
-          <button type="submit" className="send" disabled={!text.trim() || a.busy} aria-label="Send">➤</button>
+          <button type="submit" className="send" disabled={!text.trim() || a.busy} aria-label="Send"><Icon name="send" /></button>
         </form>
       )}
     </main>

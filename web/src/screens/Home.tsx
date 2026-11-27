@@ -1,5 +1,6 @@
 // Home + trip screen (DESIGN §7): places, arrive-by, "Same gender only", category tiles, Find rides.
 // Prices on the tiles come from /api/quote; nothing is computed here.
+import { Icon, type IconName } from '../components/Icon.js';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { Category, QuoteView, RiderView } from '@nextstop/shared';
@@ -10,8 +11,8 @@ import { arriveByIso, fmtJod } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
 import { Button, ErrorNote, Logo, MapPanel, Ring, Square, Switch } from '../components/ui.js';
 
-export const CATS: { id: Category; name: string; icon: string }[] = [
-  { id: 'economy', name: 'Economy', icon: '🚗' }, { id: 'comfort', name: 'Comfort', icon: '🛋️' }, { id: 'airport', name: 'Airport', icon: '✈️' },
+export const CATS: { id: Category; name: string; icon: IconName }[] = [
+  { id: 'economy', name: 'Economy', icon: 'car' }, { id: 'comfort', name: 'Comfort', icon: 'armchair' }, { id: 'airport', name: 'Airport', icon: 'plane' },
 ];
 
 /** Quote for the current draft (refetches when the trip changes). */
@@ -53,7 +54,11 @@ export function Home() {
       <MapPanel pickup={d.pickupKey ? placeName(d.pickupKey) : undefined} dest={d.destKey ? placeName(d.destKey) : undefined} pulse />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">Code {view.me.friendCode}</span></div>
-        {view.me.outstandingJod > 0 && <p className="card card--tight t-body">⚠️ Outstanding balance {fmtJod(view.me.outstandingJod)}</p>}
+        {view.me.outstandingJod > 0 && (
+          <p className="card card--tight row t-body-l" style={{ background: 'var(--raised)', border: 0 }}>
+            <span style={{ color: 'var(--warn)' }}><Icon name="alert" /></span><span className="grow">Outstanding balance {fmtJod(view.me.outstandingJod)}</span>
+          </p>
+        )}
 
         <section className="card stack" aria-label="Your trip">
           {(['pickup', 'dest'] as const).map((which) => {
@@ -80,7 +85,7 @@ export function Home() {
               </div>
             );
           })}
-          <label className="row"><span aria-hidden>🕗</span><span className="grow t-body-l">Arrive by</span>
+          <label className="row"><Icon name="clock" /><span className="grow t-body-l">Arrive by</span>
             <input type="time" step={300} value={d.time} onChange={(e) => e.target.value && d.set({ time: e.target.value })}
               className="field" style={{ width: 156, height: 44 }} />
           </label>
@@ -98,7 +103,7 @@ export function Home() {
             return (
               <button key={c.id} type="button" className="tile" data-cat={c.id} aria-pressed={d.category === c.id}
                 disabled={!!quote && !cq?.available} onClick={() => d.set({ category: c.id })}>
-                <span aria-hidden>{c.icon}</span>
+                <Icon name={c.icon} size={24} />
                 <span className="t-name">{c.name}</span>
                 <span className="t-body" style={{ fontWeight: 600 }}>{cq?.available ? `from ${fmtJod(cq.fromJod)}` : c.id === 'airport' ? 'To the airport' : '—'}</span>
                 <span className="t-caption" style={{ opacity: 0.8 }}>up to {c.id === 'economy' ? 4 : 3}</span>

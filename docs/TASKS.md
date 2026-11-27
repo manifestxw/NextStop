@@ -43,7 +43,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [ ] **T12** `todo` CX: Deploy to Replit (or fallback), verify build stamp, run the §2.2 demo on 3 phones over a hotspot. Fix mobile checks (ARCH §10). **M1 done when this passes.** needs: T7, T8, T9, T10, O2
 
 ## M2: RideSync skin (P0 polish)
-- [ ] **T13** `todo` CX: Impeccable pass against DESIGN.md: split-flap numbers, merge mark/loader, perforated Sync Pass, motion + reduced motion, contrast. needs: T12
+- [ ] **T13** `doing CC` CX→CC (owner, 27 Nov; before T12 by owner choice): Impeccable pass against DESIGN.md: split-flap numbers, merge mark/loader, perforated Sync Pass, motion + reduced motion, contrast. needs: T12
 - [ ] **T14** `todo` CC: Google map wiring data: rider view own ring + destination only, driver stops; recheck privacy tests. needs: T12
 
 ## P1 (only after every P0 item works on the deployed URL)

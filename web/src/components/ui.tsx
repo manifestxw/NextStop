@@ -1,9 +1,9 @@
 // Shared UI pieces (DESIGN §5–§6). Presentational only: everything they show comes from a server view.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { BannerView, Category, Gender, GenderMode, SeatView } from '@nextstop/shared';
 import { api, ApiError } from '../net/api.js';
 import { useSession } from '../state/session.js';
-import { fmtJod } from '../lib/format.js';
+import { Icon } from './Icon.js';
 
 export function Button({ kind = 'primary', small, ...p }: { kind?: 'primary' | 'secondary' | 'danger'; small?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return <button type="button" {...p} className={`btn btn--${kind}${small ? ' btn--small' : ''} ${p.className ?? ''}`} />;
@@ -48,15 +48,20 @@ export function RoutePair({ from, to }: { from: ReactNode; to: ReactNode }) {
   );
 }
 
-/** The Merge mark (§5): three lines merging into one that ends in the destination square. */
-export function MergeMark({ size = 32, done }: { size?: number; done?: boolean }) {
+/** The Merge mark (§5): three lines merging into one that ends in the destination square.
+ *  `loading` draws the lines in turn and repeats every 1.6 s (replaces any spinner); `done` plays once
+ *  and fills the square in success (trip summary). */
+export function MergeMark({ size = 32, done, loading }: { size?: number; done?: boolean; loading?: boolean }) {
+  const mode = loading ? ' merge--loop' : done ? ' merge--done' : '';
   return (
-    <svg width={size} height={size * 0.6} viewBox="0 0 50 30" aria-hidden>
+    <svg className={`merge${mode}`} width={size} height={size * 0.6} viewBox="0 0 50 30" aria-hidden>
       <g fill="none" stroke="var(--text-1)" strokeWidth="3" strokeLinecap="round">
-        <path d="M2 4 C14 4 16 15 26 15" /><path d="M2 15 H26" /><path d="M2 26 C14 26 16 15 26 15" />
+        <path className="merge-l1" pathLength={1} d="M2 4 C14 4 16 15 26 15" />
+        <path className="merge-l2" pathLength={1} d="M2 15 H26" />
+        <path className="merge-l3" pathLength={1} d="M2 26 C14 26 16 15 26 15" />
       </g>
-      <path d="M26 15 H40" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" />
-      <rect x="40" y="9" width="10" height="12" fill={done ? 'var(--success)' : 'var(--text-1)'} />
+      <path className="merge-trunk" pathLength={1} d="M26 15 H40" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" />
+      <rect className="merge-end" x="40" y="9" width="10" height="12" />
     </svg>
   );
 }
@@ -73,23 +78,35 @@ export function GenderBadge({ mode, gender }: { mode: GenderMode; gender?: Gende
 export const CategoryBadge = ({ category, fill }: { category: Category; fill?: boolean }) =>
   <span className={`badge ${fill ? 'badge--fill' : 'badge--accent'}`}>{category}</span>;
 
-/** Seat meter (§5). `max` seats; empty ones are dashed, or solid once joining has closed. */
+/** Seat meter (§5). `max` seats; empty ones are dashed, or solid once joining has closed.
+ *  A seat that fills sweeps in left to right (300 ms); seats already filled on arrival don't move. */
 export function SeatMeter({ seats, max, closed, mini }: { seats: Pick<SeatView, 'initials' | 'isMe' | 'isHost' | 'ready' | 'guestOf'>[]; max: number; closed?: boolean; mini?: boolean }) {
   const slots = Array.from({ length: max }, (_, i) => seats[i]);
+  const box = useRef<HTMLDivElement>(null);
+  const filled = useRef(seats.length);
+  useLayoutEffect(() => {
+    const before = filled.current;
+    filled.current = seats.length;
+    if (seats.length <= before || !box.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    box.current.querySelectorAll<HTMLElement>('.seat-dot:not(.seat-dot--empty)').forEach((dot, i) => {
+      if (i >= before) dot.animate([{ clipPath: 'inset(0 100% 0 0 round 50%)' }, { clipPath: 'inset(0 0 0 0 round 50%)' }],
+        { duration: 300, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    });
+  }, [seats.length]);
   return (
-    <div className={`seats${mini ? ' seats--mini' : ''}`}>
+    <div ref={box} className={`seats${mini ? ' seats--mini' : ''}`}>
       {slots.map((s, i) => (
         <div className="seat" key={i}>
           {s ? (
             <>
               <span className={`seat-dot${s.isMe ? ' seat-dot--me' : ''}`} aria-label={s.guestOf ? `${s.initials}, with ${s.guestOf}` : s.initials}>{s.initials}</span>
-              {s.ready && <span className={`seat-badge${s.ready === 'READY' ? '' : ' seat-badge--wait'}`}>{s.ready === 'READY' ? '✓' : '•'}</span>}
-              {!mini && <span className="t-eyebrow text-2" style={{ fontSize: 10 }}>{s.isHost ? 'Host' : s.guestOf ? '+1' : ' '}</span>}
+              {s.ready && <span className={`seat-badge${s.ready === 'READY' ? '' : ' seat-badge--wait'}`} aria-label={s.ready === 'READY' ? 'ready' : 'waiting'}>{s.ready === 'READY' ? <Icon name="check" size={10} /> : ''}</span>}
+              {!mini && <span className="t-eyebrow text-2" style={{ fontSize: 10 }}>{s.isHost ? 'Host' : s.guestOf ? '+1' : '\u00a0'}</span>}
             </>
           ) : (
             <>
-              <span className={`seat-dot seat-dot--empty${closed ? ' seat-dot--closed' : ''}`}>{closed ? '' : '+'}</span>
-              {!mini && <span className="t-eyebrow" style={{ fontSize: 10 }}>{' '}</span>}
+              <span className={`seat-dot seat-dot--empty${closed ? ' seat-dot--closed' : ''}`} aria-label={closed ? 'closed seat' : 'free seat'}>{closed ? '' : '+'}</span>
+              {!mini && <span className="t-eyebrow" style={{ fontSize: 10 }}>{'\u00a0'}</span>}
             </>
           )}
         </div>
@@ -101,10 +118,6 @@ export function SeatMeter({ seats, max, closed, mini }: { seats: Pick<SeatView, 
 export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return <button type="button" role="switch" aria-checked={on} aria-label={label} className="switch" onClick={() => onChange(!on)} />;
 }
-
-export const Money = ({ jod, big }: { jod: number; big?: boolean }) =>
-  big ? <span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-eyebrow">JOD</span><span className="t-big">{jod.toFixed(2)}</span></span>
-    : <span>{fmtJod(jod)}</span>;
 
 /** In-app banners (§6): newest unseen one, auto-hides after 4 s, tap to dismiss. Seen = told to the server. */
 export function Banners({ banners }: { banners: BannerView[] }) {

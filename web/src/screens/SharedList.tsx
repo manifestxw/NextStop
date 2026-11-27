@@ -1,4 +1,5 @@
 // "Rides going your way" (DESIGN §7): matching rides first, then "Start your own sync".
+import { Icon } from '../components/Icon.js';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { MatchCard } from '@nextstop/shared';
@@ -33,15 +34,15 @@ export function SharedList() {
   const join = (rideId: string) => a.run(async () => { await api.join(rideId, body); nav(`/ride/${rideId}`); });
   return (
     <main className="screen">
-      <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav('/')}>‹</button>
+      <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav('/')}><Icon name="back" /></button>
         <span className="t-eyebrow grow center">Rides going your way</span><span style={{ width: 44 }} /></div>
       <div className="card card--tight row" style={{ background: 'var(--raised)', border: 0 }}>
         <span className="grow"><span className="t-eyebrow" style={{ display: 'block' }}>{placeName(d.pickupKey)} → {placeName(d.destKey)}</span>
-          <span className="t-body text-2">Arrive by {fmtTime(body.arriveBy)} · {d.category} · {sameGender ? 'Same gender' : 'Mixed'}</span></span>
+          <span className="t-body text-2">Arrive by {fmtTime(body.arriveBy)} · {d.category[0]!.toUpperCase() + d.category.slice(1)} · {sameGender ? 'Same gender' : 'Mixed'}</span></span>
         <button type="button" className="linkbtn" onClick={() => nav('/')}>Edit</button>
       </div>
       <ErrorNote text={a.message} />
-      {cards === null && <p className="t-body text-2 center"><MergeMark /> Looking for rides…</p>}
+      {cards === null && !a.message && <p className="row t-body text-2" style={{ justifyContent: 'center', marginTop: 'var(--s-8)' }}><MergeMark loading /> Looking for rides…</p>}
       {cards?.length === 0 && (
         <div className="stack center" style={{ alignItems: 'center', marginTop: 'var(--s-8)' }}>
           <MergeMark size={96} />

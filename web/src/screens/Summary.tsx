@@ -1,4 +1,5 @@
 // Trip summary (DESIGN §8, SPEC §3.15). Shown when the ride completes; chat becomes read-only.
+import { Icon } from '../components/Icon.js';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderView } from '@nextstop/shared';
 import { useSession } from '../state/session.js';
@@ -29,7 +30,7 @@ export function Summary() {
             <>
               <span className="t-eyebrow text-2">You paid</span>
               <span className="t-hero">{fmtJod(s.paidJod)}</span>
-              <span className="t-body">💵 Cash</span>
+              <span className="row t-body" style={{ gap: 8 }}><span style={{ color: 'var(--success)' }}><Icon name="banknote" /></span>Cash</span>
             </>
           )}
         </div>
@@ -37,8 +38,8 @@ export function Summary() {
         <div className="pass-bottom">
           {ride.seats.length > 0 && <SeatMeter seats={ride.seats} max={ride.seats.length} closed />}
           <span className="t-body">{s.riders} riders synced this ride</span>
-          {!s.leftLate && s.savedJod > 0 && <span className="t-body" style={{ color: 'var(--success)', fontWeight: 600 }}>You saved {fmtJod(s.savedJod)} vs riding solo</span>}
-          {s.outstandingJod > 0 && <span className="t-body">⚠️ Outstanding balance {fmtJod(s.outstandingJod)}</span>}
+          {!s.leftLate && s.savedJod > 0 && <span className="t-body" style={{ color: 'var(--success-text)', fontWeight: 600 }}>You saved {fmtJod(s.savedJod)} vs riding solo</span>}
+          {s.outstandingJod > 0 && <span className="row t-body" style={{ gap: 8 }}><span style={{ color: 'var(--warn)' }}><Icon name="alert" /></span>Outstanding balance {fmtJod(s.outstandingJod)}</span>}
         </div>
       </section>
       <div className="dock"><Button onClick={done}>Done</Button></div>

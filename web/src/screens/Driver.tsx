@@ -2,6 +2,7 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { DriverStop, DriverView } from '@nextstop/shared';
 import { api } from '../net/api.js';
+import { Icon } from '../components/Icon.js';
 import { useSession } from '../state/session.js';
 import { useDraft } from '../state/draft.js';
 import { fmtJod, fmtTime } from '../lib/format.js';
@@ -22,7 +23,7 @@ export function DriverHome() {
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">{view.me.car} · {view.me.plate}</span></div>
         <p className="row t-h1" style={{ gap: 10 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--success)' }} />You're online</p>
-        {view.offers.length === 0 && <p className="row t-body text-2"><MergeMark /> Waiting for scheduled offers</p>}
+        {view.offers.length === 0 && <p className="row t-body text-2"><MergeMark loading /> Waiting for scheduled offers</p>}
         {view.offers.map((o) => (
           <button key={o.rideId} type="button" className="card stack" style={{ textAlign: 'left' }} onClick={() => nav(`/driver/offer/${o.rideId}`)}>
             <span className="row" style={{ gap: 8 }}><CategoryBadge category={o.category} fill /><GenderBadge mode={o.genderMode} /></span>
@@ -46,7 +47,7 @@ function Timeline({ stops, actions }: { stops: DriverStop[]; actions?: boolean }
             <span className="t-body">{s.firstName}{s.guestFirstName ? ' +1' : ''}</span>
             <span className="t-body text-2 truncate" style={{ display: 'block' }}>{s.shortAddress}</span>
           </span>
-          <span className="t-body" style={{ fontWeight: 500 }}>{s.kind === 'P' && s.cashDueJod !== undefined ? fmtJod(s.cashDueJod) : s.done && actions ? '✓' : ''}</span>
+          <span className="t-body" style={{ fontWeight: 500 }}>{s.kind === 'P' && s.cashDueJod !== undefined ? fmtJod(s.cashDueJod) : s.done && actions ? <span style={{ color: 'var(--success-text)' }}><Icon name="check" label="done" /></span> : ''}</span>
         </div>
       ))}
     </div>

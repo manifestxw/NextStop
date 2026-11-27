@@ -10,6 +10,14 @@ body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }   /* spacing comes from layout gaps, never default margins */
+input, textarea { caret-color: var(--accent-text); }
+::placeholder { color: var(--text-2); opacity: 1; }
+::selection { background: var(--accent-soft); color: var(--ink-900); }
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+img, svg { display: block; }
+/* Phone-width column on laptops (demo laptop, judges' screens); full width on phones. */
+#root { max-width: 480px; margin: 0 auto; min-height: 100dvh; background: var(--surface); }
 input, select, textarea { font-size: 16px; }   /* iOS zooms on inputs under 16 px */
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

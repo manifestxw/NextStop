@@ -66,7 +66,7 @@ They never hard-code a hex value. The accent comes from the **category**, not th
 | `--paper-100` | #EDE9E1 | Chips, switch track (off), others' chat bubbles, input fill |
 | `--ink-200` | #DCD8D0 | Dividers, card borders, perforation dashes |
 | `--ink-300` | #BDB9B1 | Empty-seat dashed ring, strong borders |
-| `--ink-500` | #6F727A | Secondary text, placeholders, system messages |
+| `--ink-500` | #666970 | Secondary text, placeholders, system messages (≥4.5:1 on paper-50 and paper-100) |
 | `--ink-700` | #3A3D45 | Body text, icons |
 | `--ink-900` | #15171C | Headings, numbers, text on accent, pickup/destination marks, button keel |
 
@@ -88,6 +88,7 @@ Text on accent stays `--ink-900` in the Cockpit too.
 |---|---|---|
 | `--success` | #1E9A55 | "Ready ✓", savings, "Completed", online dot |
 | `--success-soft` | #DDF3E6 | Summary check circle, success banners |
+| `--success-text` | #167A43 (Cockpit #4CC982) | Success-colored text ("Ready ✓", savings): `--success` is for fills only |
 | `--danger` | #D93A3F | "Leave ride", late-leave amount, errors |
 | `--danger-soft` | #FBE3E3 | Late-leave amount box |
 | `--warn` | #B7791F | Outstanding balance icon, countdown under 1:00 (as text, not fill) |

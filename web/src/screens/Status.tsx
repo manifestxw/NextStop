@@ -1,4 +1,6 @@
 // Ride status (DESIGN §7): stage track, Sync Pass, chat card, locations, leave. Ready check + leave sheets.
+import { Flap } from '../components/Flap.js';
+import { Icon } from '../components/Icon.js';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { RiderRideView, RiderView } from '@nextstop/shared';
@@ -41,7 +43,7 @@ export function Status() {
     'Your ride is set',
     ride.driver ? `${ride.driver.firstName} · ${ride.driver.car}` : '',
   ][stage];
-  const unread = ride.chat.group.filter((m) => m.seq > (d.chatSeen[ride.id] ?? 0) && m.fromUserId !== view.me.id).length;
+  const unread = ride.chat.group.filter((m) => m.kind === 'user' && m.seq > (d.chatSeen[ride.id] ?? 0) && m.fromUserId !== view.me.id).length;
   const last = ride.chat.group.at(-1);
 
   return (
@@ -51,41 +53,43 @@ export function Status() {
         <div className="stages" aria-label="Progress">
           {STAGES.map((s, i) => <div key={s} className={`stage${i < stage ? ' stage--done' : i === stage ? ' stage--now' : ''}`}><span className="stage-mark" /><span>{s}</span></div>)}
         </div>
-        <div className="row" style={{ gap: 10 }}>{stage === 2 && <MergeMark />}<h1 className="t-h1">{title}</h1></div>
-        <p className="t-body text-2" style={{ marginTop: -8 }}>{subtitle}
+        <div className="stack" style={{ gap: 4 }}>
+          <div className="row" style={{ gap: 10 }}>{stage === 2 && <MergeMark loading />}<h1 className="t-h1">{title}</h1></div>
+          <p className="t-body text-2">{subtitle}
           {stage === 3 && ride.driver && <> · <span className="badge badge--raised" style={{ border: '1px solid var(--text-1)' }}>{ride.driver.plate}</span></>}</p>
+        </div>
 
         <section className="pass" aria-label="Your ride">
           <div className="pass-top">
             <div className="row row--between"><span className="t-eyebrow truncate">{ride.myPickup.area} → {ride.myDest.area}</span><CategoryBadge category={ride.category} /></div>
             <span className="t-eyebrow text-2">Be ready by</span>
-            <span className="pass-time"><span className="t-hero">{fmtTime(ride.beReadyBy).replace(/ [AP]M$/, '')}</span>
+            <span className="pass-time"><Flap className="t-hero" value={fmtTime(ride.beReadyBy).replace(/ [AP]M$/, '')} />
               <span className="t-body-l" style={{ fontWeight: 600 }}>{fmtTime(ride.beReadyBy).slice(-2)}</span></span>
             <span className="t-body text-2">Pickup {ride.myStop.index} of {ride.myStop.of} · Arrive by {fmtTime(ride.effectiveArriveBy)}</span>
           </div>
           <div className="pass-perf" />
           <div className="pass-bottom">
             <SeatMeter seats={ride.seats} max={MAX[ride.category]} closed={stage > 0} />
-            <span className="t-body" style={{ fontWeight: 600 }}>{filled} of {filled + ride.seatsLeft} synced</span>
-            <div className="row row--between"><span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-big">{fmtJod(ride.shareJod)}</span><span className="t-body text-2">each</span></span>
+            <span className="t-body" style={{ fontWeight: 600 }}><Flap value={String(filled)} /> of {filled + ride.seatsLeft} synced</span>
+            <div className="row row--between"><span className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="t-eyebrow">JOD</span><Flap className="t-big" value={ride.shareJod.toFixed(2)} /><span className="t-body text-2">each</span></span>
               <GenderBadge mode={ride.genderMode} gender={view.me.gender} /></div>
           </div>
         </section>
 
         <button type="button" className="card card--tight" style={{ textAlign: 'left' }} onClick={() => nav(`/ride/${ride.id}/chat`)}>
-          <span className="row"><span aria-hidden>💬</span><span className="grow t-body-l" style={{ fontWeight: 600 }}>Group chat</span>
-            {unread > 0 && <span className="badge badge--fill">{unread}</span>}<span aria-hidden>›</span></span>
+          <span className="row"><Icon name="message" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>Group chat</span>
+            {unread > 0 && <span className="badge badge--fill" aria-label={`${unread} unread`}>{unread}</span>}<span className="text-2"><Icon name="next" size={16} /></span></span>
           {last && <span className="t-body text-2 truncate" style={{ display: 'block', marginTop: 4 }}>{last.fromFirstName ? `${last.fromFirstName}: ` : ''}{last.text}</span>}
         </button>
 
         <section className="card card--tight">
           <div className="card-row"><Ring /><span className="grow"><span className="t-caption text-2" style={{ display: 'block' }}>Start location</span><span className="t-body-l truncate" style={{ display: 'block' }}>{ride.myPickup.name}</span></span></div>
           <div className="card-row"><Square /><span className="grow"><span className="t-caption text-2" style={{ display: 'block' }}>Your destination</span><span className="t-body-l truncate" style={{ display: 'block' }}>{ride.myDest.name}</span></span></div>
-          <div className="card-row"><span aria-hidden>💵</span><span className="grow t-body-l">Cash · {fmtJod(ride.myCashDueJod)}</span></div>
+          <div className="card-row"><span style={{ color: 'var(--success)' }}><Icon name="banknote" /></span><span className="grow t-body-l">Cash · {fmtJod(ride.myCashDueJod)}</span></div>
         </section>
 
         <button type="button" className="card card--tight row" style={{ color: 'var(--danger)', textAlign: 'left' }} onClick={() => setLeaving(true)}>
-          <span aria-hidden>↩</span><span className="t-body-l" style={{ fontWeight: 600 }}>Leave ride</span>
+          <Icon name="logout" /><span className="t-body-l" style={{ fontWeight: 600 }}>Leave ride</span>
         </button>
         <ErrorNote text={a.message} />
       </div>
@@ -122,13 +126,13 @@ function ReadyCheck({ ride }: { ride: RiderRideView }) {
       <div className="stack">
         {rc.answers.map((x, i) => (
           <div key={i} className="row row--between t-body-l"><span>{x.firstName}</span>
-            <span style={{ color: x.status === 'READY' ? 'var(--success)' : x.status === 'LEFT' ? 'var(--danger)' : 'var(--text-2)', fontWeight: 600 }}>
+            <span style={{ color: x.status === 'READY' ? 'var(--success-text)' : x.status === 'LEFT' ? 'var(--danger)' : 'var(--text-2)', fontWeight: 600 }}>
               {x.status === 'READY' ? 'Ready ✓' : x.status === 'LEFT' ? 'Left' : 'Waiting…'}</span></div>
         ))}
       </div>
       <ErrorNote text={a.message} />
       {meReady
-        ? <p className="center t-body" style={{ color: 'var(--success)', fontWeight: 600, background: 'var(--success-soft)', borderRadius: 'var(--r-pill)', padding: 12 }}>You're ready. Waiting for others…</p>
+        ? <p className="center t-body" style={{ color: 'var(--success-text)', fontWeight: 600, background: 'var(--success-soft)', borderRadius: 'var(--r-pill)', padding: 12 }}>You're ready. Waiting for others…</p>
         : <Button disabled={a.busy} onClick={() => a.run(() => api.ready(ride.id, 'READY'))}>I'm ready</Button>}
       <Button kind="secondary" disabled={a.busy} onClick={() => a.run(() => api.ready(ride.id, 'CANCEL'))}>Cancel ride for me</Button>
       <p className="t-caption text-2 center">Leaving now is free.</p>
