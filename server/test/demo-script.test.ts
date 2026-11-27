@@ -84,5 +84,25 @@ describe('demo autopilot (demo menu "Play next step")', () => {
     const ds = driver(await h.cmd.me(omar)).trip!.summary!;
     expect([ds.riders.map((x) => x.cashJod), ds.creditJod, ds.totalJod]).toEqual([[1.65, 1.65, 1.65], 1.7, 6.65]);
     expect((await h.cmd.demo.view()).autopilot).toBeNull();
+
+    // The demo menu explains every step and logs what really happened after each tap.
+    const v = await h.cmd.demo.view();
+    expect(v.script.map((x) => x.title)).toEqual(labels);
+    expect(v.script.every((x) => x.who && x.does && x.watch.length > 0 && x.expect)).toBe(true);
+    const log = (n: number) => v.log.find((e) => e.step === n)!.lines.join('\n');
+    expect(v.log.map((e) => e.step)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(log(1)).toContain('1 rider · JOD 5.35 each');
+    expect(log(2)).toContain('2 riders · JOD 3.10 each');
+    expect(log(3)).toContain('4 riders · JOD 1.70 each');
+    expect(log(4)).toMatch(/Lina · City Center area .* ready: yes/);
+    expect(log(4)).toMatch(/Rania .* ready: waiting/);
+    expect(log(5)).toContain('Driver Omar · collects JOD 6.80');
+    expect(log(5)).toContain('First pickup 7:20 AM');
+    expect(log(6)).toContain('Sara left late at 6:53 AM · charged JOD 1.70');
+    expect(log(6)).toContain('3 riders · JOD 1.65 each');
+    expect(log(7)).toContain('Omar earns JOD 6.65 (4.95 cash + 1.70 credit)');
+    expect(v.now).toEqual([]);   // no active script ride after completion
+    await h.cmd.demo.reset();
+    expect((await h.cmd.demo.view()).log).toEqual([]);
   });
 });

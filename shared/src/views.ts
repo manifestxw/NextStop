@@ -190,4 +190,10 @@ export interface DemoView {
   rides: { id: string; state: RideState; hostFirstName: string; riders: number; firstPickupAt: Iso }[];
   /** The demo menu's "Play next step": the next SPEC §2.2 step, or null when the script is done. */
   autopilot: { step: number; label: string } | null;
+  /** The whole script, explained: who acts, what it does, what to watch on which phone, the expected numbers. */
+  script: { step: number; title: string; who: string; does: string; watch: { phone: string; what: string }[]; expect: string }[];
+  /** What each autopilot tap actually did (the script ride's state right after it). */
+  log: { step: number; title: string; at: Iso; lines: string[] }[];
+  /** The script ride's live state, or [] when there is none. */
+  now: string[];
 }

@@ -28,6 +28,7 @@ import type { Repo, Store } from '../store/repo.js';
 import { loadSeed, resetToSeed } from '../store/seed.js';
 import { selectProvider, travelOffline } from '../travel/select.js';
 import { searchPlaces } from '../travel/google.js';
+import { SCRIPT, describeRide } from './script.js';
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
 import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
@@ -450,14 +451,15 @@ export function createCommands(ctx: Ctx) {
           riders: activeMembers(r).reduce((n, m) => n + seatsOf(m), 0), firstPickupAt: r.plan.firstPickup });
       }
       const settings = { ...d.settings, offlineFallbackActive: d.settings.offlineFallbackActive || travelOffline() };
-      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo) };
+      const mine = await linaRide(repo);
+      const now = mine && ACTIVE_STATES.includes(mine.state) ? await describeRide(repo, mine) : [];
+      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: SCRIPT, log: [...apLog], now };
     });
   }
 
   // ---------- demo autopilot: the SPEC §2.2 script, one step per tap, read from the ride's state ----------
 
-  const STEPS = ['', 'Lina creates a ride', 'Sara joins and says hi', 'Two simulated riders join',
-    'Lina finds a driver; Lina and Sara are ready', 'Omar accepts', '6:53: Sara leaves late', 'Complete trip'];
+  const apLog: DemoView['log'] = [];   // what each autopilot tap did; in memory, cleared on reset
 
   async function linaRide(repo: Repo): Promise<Ride | null> {
     const lina = await repo.getUserBySeedLogin('lina');
@@ -475,7 +477,7 @@ export function createCommands(ctx: Ctx) {
       if (ride.state === 'READY_CHECK' || ride.state === 'DISPATCHED') return 5;
       return saraIn ? 6 : 7;
     })();
-    return step ? { step, label: STEPS[step]! } : null;
+    return step ? { step, label: SCRIPT[step - 1]!.title } : null;
   }
 
   async function newFriendCode(repo: Repo) {
@@ -922,6 +924,7 @@ export function createCommands(ctx: Ctx) {
 
       async reset(): Promise<DemoView> {
         await store.withLock((r) => resetToSeed(r, cfg));
+        apLog.length = 0;
         clock.jump(cfg.demoStartUs);
         clock.setPaused(true);
         publisher.logout();
@@ -987,6 +990,8 @@ export function createCommands(ctx: Ctx) {
           }
           case 7: await self.demo.completeTrip((await ride()).id); break;
         }
+        const lines = await store.withLock(async (r) => { const x = await linaRide(r); return x ? describeRide(r, x) : []; });
+        apLog.push({ step: next.step, title: next.label, at: toIso(clock.now()), lines });
         publisher.clock(clockView(clock));
         return demoView();
       },

@@ -16,11 +16,13 @@ export function DemoMenu() {
   const [jump, setJump] = useState('06:35');
   const [msg, setMsg] = useState<string | null>(null);
 
+  const [busy, setBusy] = useState(false);
   const act = useCallback(async (fn: () => Promise<DemoView>) => {
+    setBusy(true);
     try { const d = await fn(); setDemo(d); setMsg(null); } catch (e) {
       setMsg(e instanceof ApiError ? (e.code === 'BAD_PIN' ? 'Wrong PIN' : e.message) : 'Server unreachable');
       if (e instanceof ApiError && e.code === 'BAD_PIN') setDemo(null);
-    }
+    } finally { setBusy(false); }
   }, []);
 
   useEffect(() => {
@@ -49,11 +51,7 @@ export function DemoMenu() {
   return (
     <main style={{ font: '16px system-ui', padding: 20, background: '#fff', color: '#111', minHeight: '100dvh', display: 'grid', gap: 12 }}>
       <h1 style={{ margin: 0 }}>Demo menu</h1>
-      <section style={{ border: '2px solid #111', borderRadius: 8, padding: 12, display: 'grid', gap: 8 }}>
-        <b>Autopilot (SPEC §2.2 script)</b>
-        <span>{demo.autopilot ? `Next: step ${demo.autopilot.step} of 7: ${demo.autopilot.label}` : 'Script done. Reset to run it again.'}</span>
-        <button style={{ ...big, background: '#111', color: '#fff' }} disabled={!demo.autopilot} onClick={() => act(() => api.demo.autopilot(pin))}>Play next step</button>
-      </section>
+      <Autopilot demo={demo} busy={busy} play={() => act(() => api.demo.autopilot(pin))} />
       <p style={{ margin: 0 }}>Build <b>{demo.buildStamp?.hash ?? 'dev'}</b> · source <b>{demo.settings.source}</b> · clock <b>{fmtTime(demo.clock.nowIso)}</b>{demo.clock.paused ? ' (paused)' : ' (running)'}</p>
       {msg && <p style={{ color: '#b00', margin: 0 }}>{msg}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -97,5 +95,57 @@ export function DemoMenu() {
       <button style={{ ...big, borderColor: '#b00', color: '#b00' }} onClick={() => { if (confirm('Reset everything and log out all phones?')) void act(() => api.demo.reset(pin)); }}>Reset demo</button>
       <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=lina&amp;pin=…</code> · <code>/?as=sara&amp;pin=…</code> · <code>/?as=omar&amp;pin=…</code></p>
     </main>
+  );
+}
+
+const box: React.CSSProperties = { border: '1px solid #bbb', borderRadius: 8, padding: 12, display: 'grid', gap: 6 };
+
+/** The SPEC §2.2 script as a checklist: done steps show what really happened, the next one says what to watch. */
+function Autopilot({ demo, busy, play }: { demo: DemoView; busy: boolean; play: () => void }) {
+  const next = demo.autopilot?.step ?? demo.script.length + 1;
+  const cur = demo.script.find((x) => x.step === next);
+  return (
+    <section style={{ border: '2px solid #111', borderRadius: 8, padding: 12, display: 'grid', gap: 10 }}>
+      <b style={{ fontSize: 18 }}>Autopilot · the pitch script (SPEC §2.2)</b>
+      <span style={{ color: '#555' }}>Each tap acts as the seeded people through the same commands their phones use. Keep Lina, Sara and Omar open to watch it happen.
+        Numbers assume the snapshot travel source.</span>
+      <ol style={{ margin: 0, paddingLeft: 22, display: 'grid', gap: 4 }}>
+        {demo.script.map((x) => (
+          <li key={x.step} style={{ color: x.step < next ? '#167A43' : x.step === next ? '#111' : '#777', fontWeight: x.step === next ? 700 : 400 }}>
+            {x.step < next ? '✓ ' : x.step === next ? '▶ ' : ''}{x.title}
+          </li>
+        ))}
+      </ol>
+      {cur ? (
+        <div style={{ ...box, borderColor: '#111', background: '#f6f6f6' }}>
+          <b>Next: step {cur.step} of {demo.script.length}: {cur.title}</b>
+          <span><b>Who:</b> {cur.who}</span>
+          <span><b>What happens:</b> {cur.does}</span>
+          <b>Watch:</b>
+          <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 2 }}>
+            {cur.watch.map((w) => <li key={w.phone}><b>{w.phone}:</b> {w.what}</li>)}
+          </ul>
+          <span><b>Expect:</b> {cur.expect}</span>
+        </div>
+      ) : <b style={{ color: '#167A43' }}>Script done. Reset to run it again.</b>}
+      <button style={{ ...big, background: '#111', color: '#fff' }} disabled={!cur || busy} onClick={play}>{busy ? 'Playing…' : cur ? `Play step ${cur.step}: ${cur.title}` : 'Play next step'}</button>
+      {demo.now.length > 0 && (
+        <div style={box}>
+          <b>Live: Lina's ride now</b>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', font: '14px ui-monospace, monospace' }}>{demo.now.join('\n')}</pre>
+        </div>
+      )}
+      {demo.log.length > 0 && (
+        <details open style={box}>
+          <summary style={{ fontWeight: 700, cursor: 'pointer' }}>What happened ({demo.log.length} step{demo.log.length === 1 ? '' : 's'})</summary>
+          {[...demo.log].reverse().map((e, i) => (
+            <div key={i} style={{ borderTop: '1px solid #ddd', paddingTop: 6 }}>
+              <b>{fmtTime(e.at)} · step {e.step}: {e.title}</b>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', font: '14px ui-monospace, monospace' }}>{e.lines.join('\n')}</pre>
+            </div>
+          ))}
+        </details>
+      )}
+    </section>
   );
 }
