@@ -926,6 +926,19 @@ export function createCommands(ctx: Ctx) {
         return demoView();
       },
 
+      /** Move a driver to a seed place, for demand spots (P2). */
+      async driverPosition(b: Body<typeof req.DriverPositionBody>): Promise<DemoView> {
+        const place = seedPlaces.find((p) => p.key === b.placeKey);
+        if (!place) throw new ConflictError('NOT_ELIGIBLE', 'Unknown place');
+        await commit(undefined, async (repo, fx) => {
+          const d = await repo.getDriver(b.driverId);
+          if (!d) throw new ConflictError('NOT_ELIGIBLE', 'Unknown driver');
+          await repo.putDriver({ ...d, position: place });
+          fx.touched.add(d.userId);
+        });
+        return demoView();
+      },
+
       /** Place every planned ride arriving in the next 36 h now, without moving the clock (SPEC §2.5). */
       async placePlanned(): Promise<DemoView> {
         await placeDue(clock.now() + 36 * HOUR);

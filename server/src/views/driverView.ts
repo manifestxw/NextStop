@@ -7,6 +7,9 @@ import { activeMembers, cashDueP, jod, seatsOf, uniCreditP } from '../domain/bri
 import type { SummaryRecord } from '../domain/rides.js';
 import type { Driver, Ride, User } from '../domain/types.js';
 import type { Repo } from '../store/repo.js';
+import { demandSpots, sampleHistory, type DemandPoint } from '../engine/kmeans.js';
+import { loadSeed } from '../store/seed.js';
+import type { DemandView } from '@nextstop/shared';
 import { bannerView, chatView, clockView } from './common.js';
 
 const DAY_US = 24 * 3_600_000_000;
@@ -68,7 +71,7 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
   return {
     role: 'driver', epoch, viewSeq: user.viewSeq,
     me: { id: user.id, firstName: user.firstName, car: driver.car, plate: driver.plate },
-    offers, ...(trip ? { trip } : {}),
+    offers, ...(trip ? { trip } : { demand: demandFor(driver, now) }),
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),
   };
@@ -81,4 +84,26 @@ async function chatsFor(repo: Repo, ride: Ride): Promise<Record<string, ChatMess
   const out: Record<string, ChatMessageView[]> = {};
   for (const m of ride.members) out[m.userId] = (await repo.listMessages(ride.id, `driver:${m.userId}`, 100)).map((x) => chatView(x, users));
   return out;
+}
+
+// Demand spots (P2, SPEC §3.18). History = the deterministic sample (SPEC §2.6) for the seed places.
+// shortcut: real completed pickups aren't added to the history yet; the card says "sample data".
+let history: { places: Record<string, { lat: number; lng: number }>; points: DemandPoint[] } | null = null;
+const spotCache = new Map<string, DemandView>();
+
+function demandFor(driver: Driver, now: number): DemandView {
+  if (!history) {
+    const places = Object.fromEntries(loadSeed().places.filter((p) => p.key).map((p) => [p.key!, { lat: p.lat, lng: p.lng }]));
+    history = { places, points: sampleHistory(places) };
+  }
+  const at = driver.position ?? driver.base;
+  const key = `${Math.floor(now / 900_000_000)}|${at.lat},${at.lng}`;   // one computation per 15-min bucket and position
+  let v = spotCache.get(key);
+  if (!v) {
+    const r = demandSpots(history.points, at, now, history.places);
+    v = { sample: true, inside: r.inside, bestIndex: r.best ? r.spots.indexOf(r.best) : null,
+      spots: r.spots.map((s) => ({ center: s.center, area: s.area, points: s.points, radiusKm: s.radiusKm, perHour: s.perHour, km: s.km, min: s.min })) };
+    spotCache.set(key, v);
+  }
+  return v;
 }

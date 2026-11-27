@@ -76,6 +76,12 @@ export function DemoMenu() {
         <button style={big} disabled={!ride} onClick={() => ride && act(() => api.demo.completeTrip(pin, ride.id))}>Complete trip</button>
         <button style={{ ...big, gridColumn: 'span 2' }} onClick={() => act(() => api.demo.placePlanned(pin))}>Place planned rides now (next 36 h)</button>
       </div>
+      <label>Omar's position (demand spots):{' '}
+        <select defaultValue="" onChange={(e) => e.target.value && act(() => api.demo.driverPosition(pin, 'u-omar', e.target.value))} style={{ ...big, padding: 8 }}>
+          <option value="" disabled>choose…</option>
+          {['CC', 'HS', 'US', 'YU', 'AM'].map((k) => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </label>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <input type="checkbox" checked={demo.settings.simAutoReady} onChange={(e) => act(() => api.demo.settings(pin, { simAutoReady: e.target.checked }))} />
         Simulated riders answer Ready automatically

@@ -12,22 +12,22 @@
   (Sara) / respond 7:05; late leave at **6:53** → 1.65 each; Omar 4.95 + 1.70 credit = 6.65.
 
 ## Verification
-- `npm run check`: green, 161 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
+- `npm run check`: green, 167 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests on the fixed table. Every flow checked in headless Chromium. Phones: T12.
-- **T14:** real Google map (Paper riders: own pickup + destination only; Cockpit driver: numbered pickups).
-- **T19/T25:** driver taps, no-show, driver cancel, solo fallback, banners, stale tab; demo autopilot.
-- **T17/T18:** +1 seats and friend-code invites.
+- **T14:** real Google map (riders: own pickup + destination only; driver: numbered pickups).
+- **T17–T19/T25:** friends (+1, invites), driver taps, no-show, driver cancel, solo fallback; demo autopilot.
 
 - **T15/T16:** Uni plans end to end: picker, week grid, demo card (test numbers, last4 only), My plan (states,
   cancel ≥12 h → replacement, plan a replacement), 12 h placement, 20% per subscriber + RideSync credit. Huda seeded.
 
 - **T20/T21:** driver route line, rider ↔ driver chat (private per rider), live place search (server proxy);
   Airport place + snapshot pairs (existing cells untouched).
+- **T22/T23 (P2):** k-means demand spots (exact port, golden vs model), driver spot circles + best-spot card.
 
 ## Next task
 - **T12 (owner): deploy on Replit.** Import the GitHub repo; `.replit` sets Node 22, build `npm ci --include=dev && npm run build`,
   run `npm start`, port 3000→80, Reserved VM. Secrets: `GOOGLE_SERVER_KEY`, `VITE_GOOGLE_BROWSER_KEY`, `DEMO_PIN` (not 1337).
-  Then open `https://<app>.replit.app/?as=lina&pin=<PIN>` etc. on 3 phones. CC: P2 (T22–T24) or DESIGN changes.
+  Then open `https://<app>.replit.app/?as=lina&pin=<PIN>` etc. on 3 phones. CC: T24 demo controls, then DESIGN changes.
 
 ## Blocked / waiting
 - O2 Replit (T12); new hotspot IP → add it to the browser-key referrers. O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.

@@ -94,7 +94,25 @@ function RouteLine({ path }: { path: { lat: number; lng: number }[] }) {
   return null;
 }
 
-function Inner({ marks, dark, fit, route, fallback }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[]; fallback: React.ReactNode }) {
+export interface SpotCircle { lat: number; lng: number; radiusKm: number; best: boolean; strength: number }   // strength 0..1
+
+/** Demand spots (P2): soft accent circles, never individual points; the best one has a solid edge (DESIGN §8). */
+function Spots({ spots }: { spots: SpotCircle[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !spots.length) return;
+    const accent = token('--accent') || '#FF6A2B';
+    const circles = spots.map((s) => new google.maps.Circle({ map, center: s, radius: Math.max(150, s.radiusKm * 1000),
+      fillColor: accent, fillOpacity: 0.08 + 0.12 * s.strength, strokeColor: accent, strokeOpacity: s.best ? 1 : 0.5, strokeWeight: s.best ? 2.5 : 1.5, clickable: false }));
+    const b = new google.maps.LatLngBounds();
+    spots.forEach((s) => b.extend(s));
+    map.fitBounds(b, 48);
+    return () => circles.forEach((c) => c.setMap(null));
+  }, [map, spots]);
+  return null;
+}
+
+function Inner({ marks, dark, fit, route, spots, fallback }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[]; spots?: SpotCircle[]; fallback: React.ReactNode }) {
   const status = useApiLoadingStatus();
   const rejected = useAuthFailed();
   if (rejected || status === APILoadingStatus.FAILED || status === APILoadingStatus.AUTH_FAILURE) return <>{fallback}</>;
@@ -105,18 +123,19 @@ function Inner({ marks, dark, fit, route, fallback }: { marks: Mark[]; dark?: bo
         <Marker key={`${m.kind}-${i}-${m.lat}`} position={m} icon={iconFor(m)} title={m.label} zIndex={m.me ? 10 : 2} />
       ))}
       {route && status === APILoadingStatus.LOADED && <RouteLine path={route} />}
+      {spots && status === APILoadingStatus.LOADED && <Spots spots={spots} />}
       <FitBounds marks={marks} pickupsOnly={fit === 'pickups'} />
     </Map>
   );
 }
 
 /** `fit="pickups"`: frame the pickups (driver), not the far-away destination too. */
-export function MapView({ marks, dark, fit = 'all', route }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[] }) {
+export function MapView({ marks, dark, fit = 'all', route, spots }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[]; spots?: SpotCircle[] }) {
   const pickup = marks.find((m) => m.kind === 'pickup' && (m.me || m.n?.startsWith('1'))) ?? marks.find((m) => m.kind === 'pickup');
   const dest = marks.find((m) => m.kind === 'dest');
   const fallback = <MapPanel pickup={pickup?.label} dest={dest?.label} pulse={pickup?.me} />;
   if (!MAPS_KEY) return fallback;
-  return <Inner marks={marks} dark={dark} fit={fit} route={route} fallback={fallback} />;
+  return <Inner marks={marks} dark={dark} fit={fit} route={route} spots={spots} fallback={fallback} />;
 }
 
 /** One provider for the whole app (main.tsx): one script load and one auth-failure callback. */

@@ -13,6 +13,46 @@ import { MapView, type Mark } from '../components/MapView.js';
 
 const useDriver = () => useSession((s) => s.view) as DriverView | null;
 
+const spotCircles = (d: DriverView['demand']) => {
+  const max = Math.max(1, ...(d?.spots ?? []).map((s) => s.perHour));
+  return d?.spots.map((s, i) => ({ ...s.center, radiusKm: s.radiusKm, best: i === d.bestIndex, strength: s.perHour / max }));
+};
+
+/** Best spot card (DESIGN §8, SPEC §3.18): advice only, offers still follow dispatch. */
+function BestSpot({ demand }: { demand: NonNullable<DriverView['demand']> }) {
+  const best = demand.bestIndex !== null ? demand.spots[demand.bestIndex] : undefined;
+  if (!best) return null;
+  const max = Math.max(...demand.spots.map((s) => s.perHour));
+  return (
+    <section className="card stack">
+      <span className="t-eyebrow text-2">Best spot near you</span>
+      {demand.inside ? (
+        <><h2 className="t-h1">You're in a busy area</h2><p className="t-body text-2">Stay close to {best.area.replace(' area', '')}.</p></>
+      ) : (
+        <>
+          <h2 className="t-h1">{best.area}</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {[[`${best.km.toFixed(1)} km`, 'away'], [`~${Math.round(best.min)} min`, 'drive'], [`~${Math.round(best.perHour)}`, 'pickups / hr']].map(([v, l]) => (
+              <span key={l} className="stack" style={{ gap: 0 }}><span className="t-big" style={{ fontSize: 24 }}>{v}</span><span className="t-caption text-2">{l}</span></span>
+            ))}
+          </div>
+        </>
+      )}
+      <p className="t-caption text-2">Busy in the next hour · from 4 weeks of pickups</p>
+      {demand.sample && <p className="t-caption" style={{ color: 'var(--warn)' }}>Sample data</p>}
+      <div className="stack" style={{ gap: 6 }}>
+        {demand.spots.map((s, i) => (
+          <div key={i} className="row t-body" style={{ gap: 8 }}>
+            <span className="grow truncate">{s.area}</span><span className="text-2">{s.km.toFixed(1)} km</span>
+            <span style={{ width: 60, height: 6, borderRadius: 3, background: 'var(--raised)', overflow: 'hidden' }}>
+              <span style={{ display: 'block', height: '100%', width: `${(s.perHour / max) * 100}%`, background: 'var(--accent)' }} /></span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /** Accepted trip only (offers carry no coordinates): pickups numbered in stop order, one square per destination. */
 function stopMarks(stops: DriverStop[]): Mark[] {
   const marks: Mark[] = [];
@@ -39,11 +79,12 @@ export function DriverHome() {
   if (view.trip && !dismissed.includes(view.trip.rideId)) return <Navigate to={`/driver/trip/${view.trip.rideId}`} replace />;
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapView marks={[]} dark />
+      <MapView marks={[]} dark spots={spotCircles(view.demand)} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">{view.me.car} · {view.me.plate}</span></div>
         <p className="row t-h1" style={{ gap: 10 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--success)' }} />You're online</p>
         {view.offers.length === 0 && <p className="row t-body text-2"><MergeMark loading /> Waiting for scheduled offers</p>}
+        {view.offers.length === 0 && view.demand && <BestSpot demand={view.demand} />}
         {view.offers.map((o) => (
           <button key={o.rideId} type="button" className="card stack" style={{ textAlign: 'left' }} onClick={() => nav(`/driver/offer/${o.rideId}`)}>
             <span className="row" style={{ gap: 8 }}><CategoryBadge category={o.category} fill /><GenderBadge mode={o.genderMode} /></span>

@@ -56,8 +56,8 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [x] **T21** `done f7a69cb` CC: Airport: QAIA seed place + snapshot pairs. needs: T11
 
 ## P2 (only if time remains before the 9:30 PM freeze)
-- [ ] **T22** `todo` CC: Demand spots: `kmeans.ts` port (mulberry32), `data/demand_seed.json` from `sample_history`, `GET /api/driver/demand`, demo driver-position. needs: T12 (SPEC §3.18)
-- [ ] **T23** `todo` CX: Demand map + best spot card. needs: T22
+- [ ] **T22** `doing CC` CC: Demand spots: `kmeans.ts` port (mulberry32), `data/demand_seed.json` from `sample_history`, `GET /api/driver/demand`, demo driver-position. needs: T12 (SPEC §3.18)
+- [ ] **T23** `doing CC` CX→CC (owner): Demand map + best spot card. needs: T22
 - [ ] **T24** `todo` CC: Traffic/weather/supply demo controls. needs: T12
 
 ## Added during the build
