@@ -6,8 +6,7 @@
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
 ## Just shipped
-- T1–T10: engine, store, domain, REST, every P0 screen + demo menu. T13: DESIGN polish.
-- **T11:** Google + Snapshot sources, `npm run snapshot`, committed snapshot; seeds are Google Places.
+- T1–T11, T13: engine, store, domain, REST, every P0 screen, demo menu, snapshot (Google places), polish.
 - Real roads fit 4 only with a shared pickup: sims Rania @ Arabella, Dana @ University St (with Sara).
 - Demo now: 5.35 solo → 3.10 → 2.20 → **1.70 ×4**; offer 6.71 / collect 6.80 / first pickup 7:20
   (Sara) / respond 7:05; late leave at **6:53** → 1.65 each; Omar 4.95 + 1.70 credit = 6.65.
@@ -16,10 +15,8 @@
 - `npm run check`: green, 161 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests on the fixed table. Every flow checked in headless Chromium. Phones: T12.
 - **T14:** real Google map (Paper riders: own pickup + destination only; Cockpit driver: numbered pickups).
-- **T25:** demo menu autopilot ("Play next step") for rehearsal and as a stage backup.
-- **T19:** driver taps + no-show, driver cancel/redispatch, "Book a solo ride", pickup banners, stale tab.
-- **T17/T18:** +1 (same stops/fare, one more seat, gender + seat + solo checks, late removal charged to the
-  bringer), friend-code invites (banner, invite card with own pickup, every rule, expire at ready check).
+- **T19/T25:** driver taps, no-show, driver cancel, solo fallback, banners, stale tab; demo autopilot.
+- **T17/T18:** +1 seats and friend-code invites.
 
 - **T15/T16:** Uni plans end to end: picker, week grid, demo card (test numbers, last4 only), My plan (states,
   cancel ≥12 h → replacement, plan a replacement), 12 h placement, 20% per subscriber + RideSync credit. Huda seeded.
