@@ -1,4 +1,4 @@
-// Seed data (SPEC §2.6): places, demo accounts, Omar, simulated riders. Boot seeds an empty DB;
+// Seed data (SPEC §2.6): places, demo accounts, Yazeed, simulated riders. Boot seeds an empty DB;
 // the demo menu's Reset wipes everything, bumps the epoch (logs every phone out) and reloads.
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';

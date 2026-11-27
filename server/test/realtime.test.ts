@@ -34,13 +34,13 @@ const next = <T>(s: Socket, ev: string) => new Promise<T>((ok) => s.once(ev, ok)
 describe('realtime', () => {
   it('pushes the full view on connect, then live views after another rider joins', async () => {
     const { cmd, open } = await server();
-    const lina = (await cmd.demoLogin({ as: 'lina' })).token, sara = (await cmd.demoLogin({ as: 'sara' })).token;
-    const created = await cmd.createRide(lina, trip('CC'));
-    const s = open(lina);
+    const laith = (await cmd.demoLogin({ as: 'laith' })).token, saed = (await cmd.demoLogin({ as: 'saed' })).token;
+    const created = await cmd.createRide(laith, trip('CC'));
+    const s = open(laith);
     const first = await next<View>(s, 'view');
     expect(first.role).toBe('rider');
     const live = next<View>(s, 'view');
-    await cmd.join(sara, (created as { ride: { id: string } }).ride.id, trip('US'));
+    await cmd.join(saed, (created as { ride: { id: string } }).ride.id, trip('US'));
     expect((await live as { ride: { shareJod: number } }).ride.shareJod).toBe(4.0);
   });
 

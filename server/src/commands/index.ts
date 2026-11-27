@@ -522,8 +522,8 @@ export function createCommands(ctx: Ctx) {
   const apLog: DemoView['log'] = [];   // what each autopilot tap did; in memory, cleared on reset
 
   async function linaRide(repo: Repo): Promise<Ride | null> {
-    const lina = await repo.getUserBySeedLogin('lina');
-    const rides = lina ? (await repo.listRidesForUser(lina.id)).filter((r) => r.hostUserId === lina.id || r.members[0]?.userId === lina.id) : [];
+    const laith = await repo.getUserBySeedLogin('laith');
+    const rides = laith ? (await repo.listRidesForUser(laith.id)).filter((r) => r.hostUserId === laith.id || r.members[0]?.userId === laith.id) : [];
     return rides.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
   }
 
@@ -532,8 +532,8 @@ export function createCommands(ctx: Ctx) {
     const step = (() => {
       if (!ride || ride.state === 'CANCELED') return 1;
       if (ride.state === 'COMPLETED') return 0;
-      const active = activeMembers(ride), saraIn = active.some((m) => m.userId === 'u-sara');
-      if (ride.state === 'OPEN') return !ride.members.some((m) => m.userId === 'u-sara') ? 2 : active.length < 4 ? 3 : 4;
+      const active = activeMembers(ride), saraIn = active.some((m) => m.userId === 'u-saed');
+      if (ride.state === 'OPEN') return !ride.members.some((m) => m.userId === 'u-saed') ? 2 : active.length < 4 ? 3 : 4;
       if (ride.state === 'READY_CHECK' || ride.state === 'DISPATCHED') return 5;
       return saraIn ? 6 : 7;
     })();
@@ -1100,38 +1100,38 @@ export function createCommands(ctx: Ctx) {
       async autopilot(): Promise<DemoView> {
         const next = await store.withLock(nextStep);
         if (!next) throw new ConflictError('NOT_ELIGIBLE', 'The demo script is done. Reset to run it again.');
-        const [lina, sara, omar] = await store.withLock(async (r) =>
-          Promise.all((['lina', 'sara', 'omar'] as const).map(async (as) => (await r.getUserBySeedLogin(as))!.token)));
+        const [laith, saed, yazeed] = await store.withLock(async (r) =>
+          Promise.all((['laith', 'saed', 'yazeed'] as const).map(async (as) => (await r.getUserBySeedLogin(as))!.token)));
         const day = toIso(clock.now()).slice(0, 10);
         const trip = (key: string) => ({ pickup: { key }, dest: { key: 'JUST' }, arriveBy: `${day}T08:00:00+03:00`, category: 'economy' as const, sameGenderOnly: true });
         const ride = async () => (await store.withLock(linaRide))!;
         switch (next.step) {
-          case 1: await self.createRide(lina!, trip('CC')); break;
+          case 1: await self.createRide(laith!, trip('CC')); break;
           case 2: {
             const id = (await ride()).id;
-            await self.join(sara!, id, trip('US'));
-            await self.chat(sara!, id, { channel: 'group', text: "Hi! I'm near University Street" });
+            await self.join(saed!, id, trip('US'));
+            await self.chat(saed!, id, { channel: 'group', text: "Hi! I'm near University Street" });
             break;
           }
           case 3: for (let i = 0; i < 3 && activeMembers(await ride()).length < 4; i++) await self.demo.simulateRider((await ride()).id); break;
           case 4: {
             const id = (await ride()).id;
-            await self.findDriver(lina!, id);
-            await self.ready(lina!, id, { answer: 'READY' });
-            await self.ready(sara!, id, { answer: 'READY' });
+            await self.findDriver(laith!, id);
+            await self.ready(laith!, id, { answer: 'READY' });
+            await self.ready(saed!, id, { answer: 'READY' });
             break;
           }
           case 5: {
             if ((await ride()).state === 'READY_CHECK') await tick();
             if ((await ride()).state === 'READY_CHECK') throw new ConflictError('NOT_ELIGIBLE', 'Waiting for the simulated riders to answer the ready check (about 3 s)');
-            await self.accept(omar!, (await ride()).id);
+            await self.accept(yazeed!, (await ride()).id);
             break;
           }
           case 6: {
             const r = await ride();
             const t = fromIso(r.plan.firstPickup) - 27 * MIN;   // the late-leave moment: 27 min before the first pickup
             if (t > clock.now()) await advanceTo(t);
-            await self.leave(sara!, r.id, { acceptCharge: true });
+            await self.leave(saed!, r.id, { acceptCharge: true });
             break;
           }
           case 7: await self.demo.completeTrip((await ride()).id); break;

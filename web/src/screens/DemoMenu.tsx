@@ -86,8 +86,8 @@ export function DemoMenu() {
         <label>Drivers<select value={demo.settings.driversNearby} onChange={(e) => act(() => api.demo.settings(pin, { driversNearby: Number(e.target.value) as 2 | 8 | 20 }))} style={{ ...big, padding: 8, width: '100%' }}>
           {[2, 8, 20].map((v) => <option key={v} value={v}>{v} nearby</option>)}</select></label>
       </div>
-      <label>Omar's position (demand spots):{' '}
-        <select defaultValue="" onChange={(e) => e.target.value && act(() => api.demo.driverPosition(pin, 'u-omar', e.target.value))} style={{ ...big, padding: 8 }}>
+      <label>Yazeed's position (demand spots):{' '}
+        <select defaultValue="" onChange={(e) => e.target.value && act(() => api.demo.driverPosition(pin, 'u-yazeed', e.target.value))} style={{ ...big, padding: 8 }}>
           <option value="" disabled>choose…</option>
           {['CC', 'HS', 'US', 'YU', 'AM'].map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
@@ -97,7 +97,7 @@ export function DemoMenu() {
         Simulated riders answer Ready automatically
       </label>
       <button style={{ ...big, borderColor: '#b00', color: '#b00' }} onClick={() => { if (confirm('Reset everything and log out all phones?')) void act(() => api.demo.reset(pin)); }}>Reset demo</button>
-      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=lina&amp;pin=…</code> · <code>/?as=sara&amp;pin=…</code> · <code>/?as=omar&amp;pin=…</code> · <code>/?as=noor&amp;pin=…</code> (friend to invite, code NOOR26) · <code>/?as=huda&amp;pin=…</code> (Uni plan)</p>
+      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=laith&amp;pin=…</code> · <code>/?as=saed&amp;pin=…</code> · <code>/?as=yazeed&amp;pin=…</code> · <code>/?as=noor&amp;pin=…</code> (friend to invite, code NOOR26) · <code>/?as=huda&amp;pin=…</code> (Uni plan)</p>
     </main>
   );
 }
@@ -111,7 +111,7 @@ function Autopilot({ demo, busy, play }: { demo: DemoView; busy: boolean; play: 
   return (
     <section style={{ border: '2px solid #111', borderRadius: 8, padding: 12, display: 'grid', gap: 10 }}>
       <b style={{ fontSize: 18 }}>Autopilot · the pitch script (SPEC §2.2)</b>
-      <span style={{ color: '#555' }}>Each tap acts as the seeded people through the same commands their phones use. Keep Lina, Sara and Omar open to watch it happen.
+      <span style={{ color: '#555' }}>Each tap acts as the seeded people through the same commands their phones use. Keep Laith, Saed and Yazeed open to watch it happen.
         Numbers assume the snapshot travel source.</span>
       <ol style={{ margin: 0, paddingLeft: 22, display: 'grid', gap: 4 }}>
         {demo.script.map((x) => (
@@ -135,7 +135,7 @@ function Autopilot({ demo, busy, play }: { demo: DemoView; busy: boolean; play: 
       <button style={{ ...big, background: '#111', color: '#fff' }} disabled={!cur || busy} onClick={play}>{busy ? 'Playing…' : cur ? `Play step ${cur.step}: ${cur.title}` : 'Play next step'}</button>
       {demo.now.length > 0 && (
         <div style={box}>
-          <b>Live: Lina's ride now</b>
+          <b>Live: Laith's ride now</b>
           <pre style={{ margin: 0, whiteSpace: 'pre-wrap', font: '14px ui-monospace, monospace' }}>{demo.now.join('\n')}</pre>
         </div>
       )}

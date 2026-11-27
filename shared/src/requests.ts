@@ -29,7 +29,7 @@ export const SignupBody = z.object({ firstName: FirstName, lastName: LastName, g
 export const OtpRequestBody = z.object({ phone: z.string().trim().min(6).max(24) }).strict();
 export const OtpVerifyBody = z.object({ phone: z.string().trim().min(6).max(24), code: z.string().regex(/^\d{6}$/) }).strict();
 export const ProfileBody = z.object({ firstName: FirstName.optional(), lastName: LastName.optional(), sameGenderOnly: z.boolean().optional() }).strict();
-export const DemoLoginBody = z.object({ as: z.enum(['lina', 'sara', 'omar', 'noor', 'huda']) }).strict();
+export const DemoLoginBody = z.object({ as: z.enum(['laith', 'saed', 'yazeed', 'noor', 'huda']) }).strict();
 
 export const QuoteBody = z.object({ pickup: PlaceRef, dest: PlaceRef, arriveBy: IsoTime }).strict();
 export const TripBody = QuoteBody.extend({ category: Category, sameGenderOnly: z.boolean() }).strict();

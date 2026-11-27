@@ -28,18 +28,18 @@ describe('areaFor', () => {
 describe('places without a Google key (tests, offline)', () => {
   it('search falls back to the seed places; a pin gets the nearest seed area; the server keeps the area', async () => {
     const h = await makeHarness();
-    const lina = await h.login('lina');
-    expect((await h.cmd.places(lina, 'arab')).map((p) => [p.name, p.area])).toEqual([['Arabella Mall', 'Arabella area']]);
-    const pin = await h.cmd.placeAt(lina, 32.5450, 35.8570);
+    const laith = await h.login('laith');
+    expect((await h.cmd.places(laith, 'arab')).map((p) => [p.name, p.area])).toEqual([['Arabella Mall', 'Arabella area']]);
+    const pin = await h.cmd.placeAt(laith, 32.5450, 35.8570);
     expect([pin.name, pin.area, pin.placeId.startsWith('pin:')]).toEqual(['Pinned location', 'University Street area', true]);
     // A client can't choose its own area: the server uses what it computed for that place.
-    const v = rider(await h.cmd.createRide(lina, { pickup: { placeId: pin.placeId, name: 'My house, 12 Hidden St', lat: pin.lat, lng: pin.lng },
+    const v = rider(await h.cmd.createRide(laith, { pickup: { placeId: pin.placeId, name: 'My house, 12 Hidden St', lat: pin.lat, lng: pin.lng },
       dest: { key: 'JUST' }, arriveBy: '2026-11-29T08:00:00+03:00', category: 'economy', sameGenderOnly: true }));
     expect(v.ride!.myPickup.area).toBe('University Street area');
   });
   it('pins outside Jordan are refused', async () => {
     const h = await makeHarness();
-    await expect(h.cmd.placeAt(await h.login('lina'), 31.5, 34.4)).rejects.toThrow(/Jordan/);
+    await expect(h.cmd.placeAt(await h.login('laith'), 31.5, 34.4)).rejects.toThrow(/Jordan/);
   });
 });
 

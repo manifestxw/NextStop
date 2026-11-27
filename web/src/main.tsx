@@ -12,12 +12,12 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
 
-/** `/?as=lina&pin=1337` logs this phone in as a seeded account, then cleans the URL (SPEC §2.6). */
+/** `/?as=laith&pin=1337` logs this phone in as a seeded account, then cleans the URL (SPEC §2.6). */
 async function seededLogin() {
   const q = new URLSearchParams(location.search);
   const as = q.get('as'), pin = q.get('pin');
   if (q.get('demo') === '1') history.replaceState(null, '', '/demo');
-  if (as !== 'lina' && as !== 'sara' && as !== 'omar' && as !== 'noor' && as !== 'huda') return;
+  if (as !== 'laith' && as !== 'saed' && as !== 'yazeed' && as !== 'noor' && as !== 'huda') return;
   if (!pin) return;
   q.delete('as'); q.delete('pin');
   history.replaceState(null, '', location.pathname + (q.size ? `?${q}` : ''));

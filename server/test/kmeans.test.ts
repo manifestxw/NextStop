@@ -51,15 +51,15 @@ import { makeHarness, trip, rider, driver } from './helpers.js';
 describe('demand spots in the driver view (P2)', () => {
   it('an idle driver gets spots and a best spot (sample data); the demo can move the driver; none during a trip', async () => {
     const h = await makeHarness({ stage: true });
-    const omar = await h.login('omar');
-    const d = driver(await h.cmd.me(omar)).demand!;
+    const yazeed = await h.login('yazeed');
+    const d = driver(await h.cmd.me(yazeed)).demand!;
     expect([d.sample, d.spots.length > 0, d.bestIndex !== null]).toEqual([true, true, true]);
-    await h.cmd.demo.driverPosition({ driverId: 'u-omar', placeKey: 'HS' });
-    const moved = driver(await h.cmd.me(omar)).demand!;
+    await h.cmd.demo.driverPosition({ driverId: 'u-yazeed', placeKey: 'HS' });
+    const moved = driver(await h.cmd.me(yazeed)).demand!;
     expect(moved.spots[moved.bestIndex!]!.area).toBe('Al-Hashmi area');
-    const lina = await h.login('lina'), id = rider(await h.cmd.createRide(lina, trip('CC'))).ride!.id;
-    await h.cmd.findDriver(lina, id); await h.cmd.ready(lina, id, { answer: 'READY' });
-    await h.cmd.accept(omar, id);
-    expect(driver(await h.cmd.me(omar)).demand).toBeUndefined();
+    const laith = await h.login('laith'), id = rider(await h.cmd.createRide(laith, trip('CC'))).ride!.id;
+    await h.cmd.findDriver(laith, id); await h.cmd.ready(laith, id, { answer: 'READY' });
+    await h.cmd.accept(yazeed, id);
+    expect(driver(await h.cmd.me(yazeed)).demand).toBeUndefined();
   });
 });
