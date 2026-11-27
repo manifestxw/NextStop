@@ -106,10 +106,14 @@ export function Status() {
         </button>
 
         {ride.driver && (
-          <button type="button" className="card card--tight row" style={{ textAlign: 'left' }} onClick={() => nav(`/ride/${ride.id}/driver-chat`)}>
-            <Icon name="message" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>Message {ride.driver.firstName}</span>
-            {(ride.chat.driver?.length ?? 0) > 0 && <span className="t-caption text-2">{ride.chat.driver!.length}</span>}<span className="text-2"><Icon name="next" size={16} /></span>
-          </button>
+          <div className="row" style={{ gap: 'var(--s-2)' }}>
+            <button type="button" className="card card--tight row grow" style={{ textAlign: 'left' }} onClick={() => nav(`/ride/${ride.id}/driver-chat`)}>
+              <Icon name="message" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>Message {ride.driver.firstName}</span>
+              {(ride.chat.driver?.length ?? 0) > 0 && <span className="t-caption text-2">{ride.chat.driver!.length}</span>}<span className="text-2"><Icon name="next" size={16} /></span>
+            </button>
+            {ride.driver.phone && <a className="card card--tight row" href={`tel:${ride.driver.phone}`} aria-label={`Call ${ride.driver.firstName}`} style={{ textDecoration: 'none', color: 'var(--text-1)', fontWeight: 600 }}>
+              <Icon name="phone" /> Call</a>}
+          </div>
         )}
         {ride.state === 'OPEN' && <FriendsCard ride={ride} />}
 

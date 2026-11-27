@@ -16,6 +16,10 @@ export const ERROR_MESSAGES = {
   NOT_TEST_CARD: 'Demo only: use a test card.',
   NO_REPLACEMENTS: 'No replacements left',
   USE_LEAVE: '',                                          // under 12 h: client opens the leave sheet
+  BAD_PHONE: 'Enter a Jordanian mobile number, like 079 123 4567',
+  OTP_WRONG: "That code isn't right",
+  OTP_EXPIRED: 'That code has expired. Send a new one.',
+  OTP_WAIT: 'Wait a few seconds before sending another code',
 } as const;
 
 export type ConflictCode = keyof typeof ERROR_MESSAGES;

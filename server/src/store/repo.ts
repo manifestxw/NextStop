@@ -7,6 +7,7 @@ export interface Repo {
   getUserByToken(token: string): Promise<User | null>;
   getUserBySeedLogin(as: NonNullable<User['seedLogin']>): Promise<User | null>;
   getUserByFriendCode(code: string): Promise<User | null>;
+  getUserByPhone(phone: string): Promise<User | null>;
   listUsers(): Promise<User[]>;
   putUser(u: User): Promise<void>;
 

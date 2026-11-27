@@ -22,13 +22,18 @@ async function api() {
 const trip = { pickup: { key: 'CC' }, dest: { key: 'JUST' }, arriveBy: '2026-11-29T08:00:00+03:00', category: 'economy', sameGenderOnly: true };
 
 describe('HTTP routes', () => {
-  it('signup returns a token and view; me needs the Bearer token', async () => {
+  it('phone code → signup returns a token and view; me needs the Bearer token; log out ends it', async () => {
     const { call, bearer } = await api();
-    const s = await call('POST', '/api/signup', { firstName: 'Maya', gender: 'F', role: 'rider' });
+    const otp = await call('POST', '/api/otp/request', { phone: '079 555 0199' });
+    expect([otp.status, otp.body.phone]).toEqual([200, '+962795550199']);
+    const ver = await call('POST', '/api/otp/verify', { phone: '0795550199', code: otp.body.demoCode });
+    const s = await call('POST', '/api/signup', { firstName: 'Maya', gender: 'F', role: 'rider', ticket: ver.body.ticket });
     expect(s.status).toBe(200);
     expect(s.body.view.me.firstName).toBe('Maya');
     expect((await call('GET', '/api/me', undefined, bearer(s.body.token))).body).toMatchObject({ ok: true, view: { role: 'rider' } });
     expect(await call('GET', '/api/me')).toEqual({ status: 401, body: { code: 'LOGGED_OUT' } });
+    expect((await call('POST', '/api/logout', {}, bearer(s.body.token))).status).toBe(200);
+    expect((await call('GET', '/api/me', undefined, bearer(s.body.token))).status).toBe(401);
   });
 
   it('rejects an invalid body with 422 and the issues', async () => {
@@ -36,7 +41,7 @@ describe('HTTP routes', () => {
     const r = await call('POST', '/api/signup', { firstName: '', gender: 'X', role: 'rider' });
     expect(r.status).toBe(422);
     expect(r.body.code).toBe('INVALID');
-    expect(r.body.issues.map((i: { path: string }) => i.path).sort()).toEqual(['firstName', 'gender']);
+    expect(r.body.issues.map((i: { path: string }) => i.path).sort()).toEqual(['firstName', 'gender', 'ticket']);
   });
 
   it('demo calls need the PIN (403 BAD_PIN)', async () => {

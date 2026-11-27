@@ -52,6 +52,10 @@ export function DemoMenu() {
     <main style={{ font: '16px system-ui', padding: 20, background: '#fff', color: '#111', minHeight: '100dvh', display: 'grid', gap: 12 }}>
       <h1 style={{ margin: 0 }}>Demo menu</h1>
       <Autopilot demo={demo} busy={busy} play={() => act(() => api.demo.autopilot(pin))} />
+      {demo.otps.length > 0 && (
+        <div style={box}><b>Sign-in codes waiting (no SMS in the demo)</b>
+          {demo.otps.map((o) => <span key={o.phone}>{o.phone} → <b style={{ letterSpacing: '0.1em' }}>{o.code}</b> · {Math.ceil(o.secondsLeft / 60)} min left</span>)}</div>
+      )}
       <p style={{ margin: 0 }}>Build <b>{demo.buildStamp?.hash ?? 'dev'}</b> · source <b>{demo.settings.source}</b> · clock <b>{fmtTime(demo.clock.nowIso)}</b>{demo.clock.paused ? ' (paused)' : ' (running)'}</p>
       {msg && <p style={{ color: '#b00', margin: 0 }}>{msg}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

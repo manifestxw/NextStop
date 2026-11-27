@@ -33,7 +33,7 @@ export async function riderView(repo: Repo, user: User, clock: Clock, epoch: num
   const ride = await currentRideFor(repo, user.id, now);
   return {
     role: 'rider', epoch, viewSeq: user.viewSeq,
-    me: { id: user.id, firstName: user.firstName, gender: user.gender, sameGenderOnly: user.sameGenderOnly,
+    me: { id: user.id, firstName: user.firstName, gender: user.gender, sameGenderOnly: user.sameGenderOnly, ...(user.phone ? { phone: user.phone } : {}),
       friendCode: user.friendCode, outstandingJod: jod(user.outstandingP) },
     ...(ride ? { ride: await rideView(repo, ride, user, now) } : {}),
     invites: await invitesFor(repo, user.id),
@@ -68,7 +68,8 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     effectiveArriveBy: active.map((m) => m.arriveBy).sort()[0] ?? mine.arriveBy,
     myPickup: placeView(mine.pickup), myDest: placeView(mine.dest),
     myStop: { index: pickups.findIndex((s) => s.userId === me.id) + 1, of: pickups.length },
-    ...(driver && driverUser ? { driver: { firstName: driverUser.firstName, car: driver.car, plate: driver.plate } } : {}),
+    ...(driver && driverUser ? { driver: { firstName: driverUser.firstName, car: driver.car, plate: driver.plate,
+      ...(driverAssigned(ride) && driverUser.phone ? { phone: driverUser.phone } : {}) } } : {}),   // call the driver: while assigned only
     ...(ride.state === 'READY_CHECK' && ride.readyCheck ? { readyCheck: {
       endsAt: ride.readyCheck.endsAt,
       startedByFirstName: ride.readyCheck.startedBy === 'host' ? (users.get(ride.hostUserId)?.firstName ?? '') : 'RideSync',

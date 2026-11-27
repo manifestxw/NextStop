@@ -61,7 +61,8 @@ export function Home() {
       ] : []} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo />
-          <button type="button" className="chip" onClick={() => setProfile(true)} aria-label="Your friend code"><Icon name="ticket" size={16} />{view.me.friendCode}</button></div>
+          <span className="row" style={{ gap: 8 }}><button type="button" className="chip" onClick={() => setProfile(true)} aria-label="Your friend code"><Icon name="ticket" size={16} />{view.me.friendCode}</button>
+          <button type="button" className="iconbtn" aria-label="Profile" onClick={() => nav('/profile')}><Icon name="user" /></button></span></div>
         {view.invites.map((inv) => <InviteCard key={inv.id} invite={inv} sameGenderOnly={sameGender} gender={view.me.gender} />)}
         <button type="button" className="card card--tight row" style={{ background: 'var(--accent-soft)', border: 0, textAlign: 'left', color: 'var(--ink-900)' }} onClick={() => nav('/plan')}>
           <Icon name="cap" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>{view.plan ? `${view.plan.kind === 'weekly' ? 'Weekly' : 'Semester'} plan · my rides` : 'Uni plan · 20% off every campus ride'}</span><Icon name="next" size={16} />

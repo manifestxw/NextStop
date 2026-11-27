@@ -24,7 +24,10 @@ export const PlaceRef = z.union([
 
 const FirstName = z.string().trim().min(1).max(30);
 
-export const SignupBody = z.object({ firstName: FirstName, gender: Gender, role: Role }).strict();
+export const SignupBody = z.object({ firstName: FirstName, gender: Gender, role: Role, ticket: z.string().min(16).max(64) }).strict();
+export const OtpRequestBody = z.object({ phone: z.string().trim().min(6).max(24) }).strict();
+export const OtpVerifyBody = z.object({ phone: z.string().trim().min(6).max(24), code: z.string().regex(/^\d{6}$/) }).strict();
+export const ProfileBody = z.object({ firstName: FirstName.optional(), sameGenderOnly: z.boolean().optional() }).strict();
 export const DemoLoginBody = z.object({ as: z.enum(['lina', 'sara', 'omar', 'noor', 'huda']) }).strict();
 
 export const QuoteBody = z.object({ pickup: PlaceRef, dest: PlaceRef, arriveBy: IsoTime }).strict();

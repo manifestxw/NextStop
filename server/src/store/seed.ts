@@ -13,7 +13,7 @@ import type { Repo } from './repo.js';
 
 interface SeedFile {
   places: (Omit<Place, 'placeId'> & { key: string; placeId: string | null })[];
-  users: Pick<User, 'id' | 'firstName' | 'gender' | 'role' | 'seedLogin' | 'friendCode' | 'isSim'>[];
+  users: Pick<User, 'id' | 'firstName' | 'gender' | 'role' | 'seedLogin' | 'friendCode' | 'isSim' | 'phone'>[];
   drivers: { userId: string; car: string; plate: string; baseKey: string }[];
   simRiders: { userId: string; pickupKey: string; destKey: string; arriveBy: string; chatLine: string }[];
 }

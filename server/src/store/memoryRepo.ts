@@ -18,6 +18,7 @@ export function createMemoryStore(): Store {
     getUserByToken: async (t) => c([...s.users.values()].find((u) => u.token === t) ?? null),
     getUserBySeedLogin: async (as) => c([...s.users.values()].find((u) => u.seedLogin === as) ?? null),
     getUserByFriendCode: async (code) => c([...s.users.values()].find((u) => u.friendCode === code) ?? null),
+    getUserByPhone: async (phone) => c([...s.users.values()].find((u) => u.phone === phone) ?? null),
     listUsers: async () => c([...s.users.values()]),
     putUser: async (u) => { s.users.set(u.id, c(u)); },
     getDriver: async (id) => c(s.drivers.get(id) ?? null),

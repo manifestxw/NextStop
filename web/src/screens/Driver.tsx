@@ -81,7 +81,8 @@ export function DriverHome() {
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
       <MapView marks={[]} dark spots={spotCircles(view.demand)} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
-        <div className="row row--between"><Logo /><span className="t-caption text-2">{view.me.car} · {view.me.plate}</span></div>
+        <div className="row row--between"><Logo /><span className="row" style={{ gap: 8 }}><span className="t-caption text-2">{view.me.car} · {view.me.plate}</span>
+          <button type="button" className="iconbtn" aria-label="Profile" onClick={() => nav('/profile')}><Icon name="user" /></button></span></div>
         <p className="row t-h1" style={{ gap: 10 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--success)' }} />You're online</p>
         {view.offers.length === 0 && <p className="row t-body text-2"><MergeMark loading /> Waiting for scheduled offers</p>}
         {view.offers.length === 0 && view.demand && <BestSpot demand={view.demand} />}
@@ -212,8 +213,9 @@ function StopActions({ trip }: { trip: NonNullable<DriverView['trip']> }) {
               {!!s.uniCreditJod && <span className="t-caption text-2" style={{ display: 'block' }}>+ {s.uniCreditJod.toFixed(2)} from RideSync (Uni plan)</span>}
               {!s.done && s.kind === 'P' && (
                 <span className="row" style={{ gap: 8, marginTop: 6 }}>
-                  <Button kind="secondary" small disabled={a.busy} onClick={() => tap(s.id, 'picked-up')}>Picked up</Button>
+                  <Button kind="secondary" small disabled={a.busy} onClick={() => tap(s.id, 'picked-up')} style={{ whiteSpace: 'nowrap' }}>Picked up</Button>
                   <button type="button" className="iconbtn" aria-label={`Message ${s.firstName}`} onClick={() => nav(`/driver/trip/${trip.rideId}/chat/${s.id.slice(2)}`)}><Icon name="message" /></button>
+                  {s.phone && <a className="iconbtn" href={`tel:${s.phone}`} aria-label={`Call ${s.firstName}`}><Icon name="phone" /></a>}
                   {now >= Date.parse(s.at) - (Date.parse(s.at) % 60_000) + 5 * 60_000 && (
                     <Button kind="danger" small disabled={a.busy} onClick={() => tap(s.id, 'no-show')}>No-show</Button>
                   )}

@@ -93,7 +93,7 @@ export interface RiderRideView {
   beReadyBy: Iso; effectiveArriveBy: Iso;
   myPickup: PlaceView; myDest: PlaceView;
   myStop: { index: number; of: number };          // "Pickup 2 of 3"
-  driver?: { firstName: string; car: string; plate: string };
+  driver?: { firstName: string; car: string; plate: string; phone?: string };   // phone while the driver is assigned
   readyCheck?: { endsAt: Iso; startedByFirstName: string; answers: { firstName: string; status: 'READY' | 'WAITING' | 'LEFT' }[] };
   findDriverAutoAt: Iso;
   fewDrivers?: boolean;     // P2, SPEC §4.6: host sees "Few drivers nearby"
@@ -119,7 +119,7 @@ export interface PlanView {
 
 export interface RiderView {
   role: 'rider'; epoch: number; viewSeq: number;
-  me: { id: string; firstName: string; gender: Gender; sameGenderOnly: boolean; friendCode: string; outstandingJod: number };
+  me: { id: string; firstName: string; gender: Gender; sameGenderOnly: boolean; friendCode: string; outstandingJod: number; phone?: string };
   ride?: RiderRideView;
   invites: InviteView[];    // P1
   plan?: PlanView;          // P1
@@ -139,6 +139,7 @@ export interface DriverStop {
   uniCreditJod?: number;    // pickups: paid by RideSync at completion
   done: boolean;
   place?: LatLng;           // only after accept
+  phone?: string;           // pickups, only after accept: the driver can call the rider
 }
 
 export interface DriverOffer {
@@ -172,7 +173,7 @@ export interface DemandView { spots: DemandSpotView[]; bestIndex: number | null;
 
 export interface DriverView {
   role: 'driver'; epoch: number; viewSeq: number;
-  me: { id: string; firstName: string; car: string; plate: string };
+  me: { id: string; firstName: string; car: string; plate: string; phone?: string };
   offers: DriverOffer[];
   trip?: DriverTripView;
   demand?: DemandView;      // P2
@@ -200,4 +201,6 @@ export interface DemoView {
   log: { step: number; title: string; at: Iso; lines: string[] }[];
   /** The script ride's live state, or [] when there is none. */
   now: string[];
+  /** Sign-in codes still waiting to be used (demo: no SMS is sent). */
+  otps: { phone: string; code: string; secondsLeft: number }[];
 }

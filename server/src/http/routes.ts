@@ -39,6 +39,10 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
 
   // auth
   app.post('/api/signup', async (r) => cmd.signup(body(schema.SignupBody, r)));
+  app.post('/api/otp/request', async (r) => ({ ok: true, ...(await cmd.requestOtp(body(schema.OtpRequestBody, r))) }));
+  app.post('/api/otp/verify', async (r) => cmd.verifyOtp(body(schema.OtpVerifyBody, r)));
+  app.post('/api/me', async (r) => view(cmd.updateProfile(token(r), body(schema.ProfileBody, r))));
+  app.post('/api/logout', async (r) => cmd.logout(token(r)));
   app.post('/api/demo/login', async (r) => { pin(r); return cmd.demoLogin(body(schema.DemoLoginBody, r)); });
   app.get('/api/me', async (r) => view(cmd.me(token(r))));
 

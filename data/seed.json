@@ -66,7 +66,8 @@
       "role": "rider",
       "seedLogin": "lina",
       "friendCode": "LINA26",
-      "isSim": false
+      "isSim": false,
+      "phone": "+962790000001"
     },
     {
       "id": "u-sara",
@@ -75,7 +76,8 @@
       "role": "rider",
       "seedLogin": "sara",
       "friendCode": "SARA26",
-      "isSim": false
+      "isSim": false,
+      "phone": "+962790000002"
     },
     {
       "id": "u-rania",
@@ -83,7 +85,8 @@
       "gender": "F",
       "role": "rider",
       "friendCode": "RANI26",
-      "isSim": true
+      "isSim": true,
+      "phone": "+962790000003"
     },
     {
       "id": "u-dana",
@@ -91,7 +94,8 @@
       "gender": "F",
       "role": "rider",
       "friendCode": "DANA26",
-      "isSim": true
+      "isSim": true,
+      "phone": "+962790000004"
     },
     {
       "id": "u-noor",
@@ -100,7 +104,8 @@
       "gender": "F",
       "role": "rider",
       "friendCode": "NOOR26",
-      "isSim": true
+      "isSim": true,
+      "phone": "+962790000005"
     },
     {
       "id": "u-huda",
@@ -109,7 +114,8 @@
       "gender": "F",
       "role": "rider",
       "friendCode": "HUDA26",
-      "isSim": false
+      "isSim": false,
+      "phone": "+962790000006"
     },
     {
       "id": "u-ahmad",
@@ -117,7 +123,8 @@
       "gender": "M",
       "role": "rider",
       "friendCode": "AHMD26",
-      "isSim": true
+      "isSim": true,
+      "phone": "+962790000007"
     },
     {
       "id": "u-khaled",
@@ -125,7 +132,8 @@
       "gender": "M",
       "role": "rider",
       "friendCode": "KHLD26",
-      "isSim": true
+      "isSim": true,
+      "phone": "+962790000008"
     },
     {
       "id": "u-omar",
@@ -134,7 +142,8 @@
       "role": "driver",
       "seedLogin": "omar",
       "friendCode": "OMAR26",
-      "isSim": false
+      "isSim": false,
+      "phone": "+962790000009"
     }
   ],
   "drivers": [

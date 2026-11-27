@@ -20,9 +20,11 @@ model User {
   friendCode   String   @unique
   isSim        Boolean  @default(false)
   seedLogin    String?  @unique
+  phone        String?            // one account per number: enforced by the server (no unique index, so db push never asks)
   createdAt    String
   driver       Driver?
   memberships  Member[]
+  @@index([phone])
 }
 
 model Driver {

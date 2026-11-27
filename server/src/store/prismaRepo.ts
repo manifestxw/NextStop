@@ -16,7 +16,7 @@ const opt = <T>(v: T | null): T | undefined => (v === null ? undefined : v);
 const toUser = (u: Prisma.UserGetPayload<object>): User => ({
   id: u.id, token: u.token, epoch: u.epoch, role: u.role as User['role'], firstName: u.firstName, gender: u.gender as User['gender'],
   sameGenderOnly: u.sameGenderOnly, friendCode: u.friendCode, viewSeq: u.viewSeq, outstandingP: u.outstandingP,
-  isSim: u.isSim, seedLogin: opt(u.seedLogin) as User['seedLogin'], createdAt: u.createdAt,
+  isSim: u.isSim, seedLogin: opt(u.seedLogin) as User['seedLogin'], phone: opt(u.phone), createdAt: u.createdAt,
 });
 
 const toMember = (m: MemberRow): Member => ({
@@ -48,9 +48,10 @@ function repoFor(tx: Tx): Repo {
     getUserByToken: async (token) => { const u = await tx.user.findUnique({ where: { token } }); return u && toUser(u); },
     getUserBySeedLogin: async (seedLogin) => { const u = await tx.user.findUnique({ where: { seedLogin } }); return u && toUser(u); },
     getUserByFriendCode: async (friendCode) => { const u = await tx.user.findUnique({ where: { friendCode } }); return u && toUser(u); },
+    getUserByPhone: async (phone) => { const u = await tx.user.findFirst({ where: { phone } }); return u && toUser(u); },
     listUsers: async () => (await tx.user.findMany({ orderBy: { createdAt: 'asc' } })).map(toUser),
     putUser: async (u) => {
-      const data = { ...u, seedLogin: u.seedLogin ?? null };
+      const data = { ...u, seedLogin: u.seedLogin ?? null, phone: u.phone ?? null };
       await tx.user.upsert({ where: { id: u.id }, create: data, update: data });
     },
     getDriver: async (userId) => {

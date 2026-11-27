@@ -1,7 +1,8 @@
 // One function per user action (ARCH §7). Each: auth → prepare (reads + travel data, OUTSIDE the lock)
 // → commit (inside store.withLock: re-read, version check, pure rules, write) → publish views after the lock.
 // HTTP (T7) maps ConflictError → 409, LoggedOutError → 401, zod failures → 422.
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomInt, randomUUID } from 'node:crypto';
+import { normalizePhone } from '../domain/phone.js';
 import type { AuthResponse, CategoryQuote, ChatMessageView, DemoView, MatchCard, QuoteView, View, req } from '@nextstop/shared';
 import type { z } from 'zod';
 import { ammanParts, fromIso, toIso } from '../clock/amman.js';
@@ -506,11 +507,17 @@ export function createCommands(ctx: Ctx) {
       const settings = { ...d.settings, offlineFallbackActive: d.settings.offlineFallbackActive || travelOffline() };
       const mine = await linaRide(repo);
       const now = mine && ACTIVE_STATES.includes(mine.state) ? await describeRide(repo, mine, rides.readyLeadMin(d.settings.driversNearby)) : [];
-      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: SCRIPT, log: [...apLog], now };
+      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: SCRIPT, log: [...apLog], now,
+        otps: [...otps].map(([phone, o]) => ({ phone, code: o.code, secondsLeft: Math.round((OTP_TTL_MS - (ctx.realNowMs() - o.sentMs)) / 1000) })).filter((o) => o.secondsLeft > 0) };
     });
   }
 
   // ---------- demo autopilot: the SPEC §2.2 script, one step per tap, read from the ride's state ----------
+
+  // Phone sign-in (owner request). In memory: one VM, and a restart just means "send a new code".
+  const OTP_RESEND_MS = 30_000, OTP_TTL_MS = 300_000, OTP_TRIES = 5, TICKET_TTL_MS = 600_000;
+  const otps = new Map<string, { code: string; sentMs: number; tries: number }>();
+  const tickets = new Map<string, { phone: string; atMs: number }>();
 
   const apLog: DemoView['log'] = [];   // what each autopilot tap did; in memory, cleared on reset
 
@@ -548,10 +555,65 @@ export function createCommands(ctx: Ctx) {
     /** Push a fresh view to a user's sockets (on connect). */
     pushView: (userId: string) => publish([userId]),
 
+    /** Send a sign-in code (demo: returned for the screen instead of texted). One per 30 s, valid 5 min, 5 tries. */
+    async requestOtp(b: Body<typeof req.OtpRequestBody>) {
+      const phone = normalizePhone(b.phone);
+      if (!phone) throw new ConflictError('BAD_PHONE');
+      const now = ctx.realNowMs(), prev = otps.get(phone);
+      if (prev && now - prev.sentMs < OTP_RESEND_MS) throw new ConflictError('OTP_WAIT', `Wait ${Math.ceil((OTP_RESEND_MS - (now - prev.sentMs)) / 1000)} s before sending another code`);
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      otps.set(phone, { code, sentMs: now, tries: 0 });
+      return { phone, demoCode: code, resendInSec: OTP_RESEND_MS / 1000, expiresInSec: OTP_TTL_MS / 1000 };
+    },
+
+    /** Check the code. A known number logs in; a new one gets a sign-up ticket (10 min, one use). */
+    async verifyOtp(b: Body<typeof req.OtpVerifyBody>): Promise<AuthResponse | { ticket: string; phone: string }> {
+      const phone = normalizePhone(b.phone);
+      if (!phone) throw new ConflictError('BAD_PHONE');
+      const now = ctx.realNowMs(), o = otps.get(phone);
+      if (!o || now - o.sentMs > OTP_TTL_MS) { otps.delete(phone); throw new ConflictError('OTP_EXPIRED'); }
+      if (o.code !== b.code) {
+        if (++o.tries >= OTP_TRIES) { otps.delete(phone); throw new ConflictError('OTP_EXPIRED', 'Too many wrong codes. Send a new one.'); }
+        throw new ConflictError('OTP_WRONG', `That code isn't right. ${OTP_TRIES - o.tries} tries left.`);
+      }
+      otps.delete(phone);
+      const existing = await store.withLock(async (repo) => {
+        const u = await repo.getUserByPhone(phone);
+        if (!u) return null;
+        const fresh = { ...u, token: randomBytes(16).toString('hex') };   // a new device: new token
+        await repo.putUser(fresh);
+        return fresh;
+      });
+      if (existing) return { token: existing.token, epoch: existing.epoch, view: await myView(existing.id) };
+      const ticket = randomBytes(18).toString('base64url');
+      tickets.set(ticket, { phone, atMs: now });
+      return { ticket, phone };
+    },
+
+    /** Edit my profile (first name, same-gender default). Gender and phone stay fixed. */
+    async updateProfile(token: string, b: Body<typeof req.ProfileBody>) {
+      const user = await auth(token);
+      return commit(user.id, async (repo) => {
+        const u = (await repo.getUser(user.id))!;
+        await repo.putUser({ ...u, ...(b.firstName ? { firstName: b.firstName.trim() } : {}), ...(b.sameGenderOnly !== undefined ? { sameGenderOnly: b.sameGenderOnly } : {}) });
+      });
+    },
+
+    /** Log out this device: the old token stops working everywhere. */
+    async logout(token: string) {
+      const user = await auth(token);
+      await store.withLock(async (repo) => { const u = (await repo.getUser(user.id))!; await repo.putUser({ ...u, token: randomBytes(16).toString('hex') }); });
+      return { ok: true as const };
+    },
+
     async signup(b: Body<typeof req.SignupBody>): Promise<AuthResponse> {
+      const t = tickets.get(b.ticket);
+      tickets.delete(b.ticket);
+      if (!t || ctx.realNowMs() - t.atMs > TICKET_TTL_MS) throw new ConflictError('OTP_EXPIRED', 'Verify your phone number again');
       const u = await store.withLock(async (repo) => {
         const d = (await repo.getDemoState())!;
-        const user: User = { id: randomUUID(), token: randomBytes(16).toString('hex'), epoch: d.epoch, role: b.role,
+        if (await repo.getUserByPhone(t.phone)) throw new ConflictError('BAD_PHONE', 'That number already has an account. Sign in instead.');
+        const user: User = { id: randomUUID(), token: randomBytes(16).toString('hex'), epoch: d.epoch, role: b.role, phone: t.phone,
           firstName: b.firstName.trim(), gender: b.gender, sameGenderOnly: true, friendCode: await newFriendCode(repo),
           viewSeq: 0, outstandingP: 0, isSim: false, createdAt: toIso(clock.now()) };
         await repo.putUser(user);

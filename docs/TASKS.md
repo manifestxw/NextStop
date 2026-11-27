@@ -66,6 +66,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [x] **T27** `done 32e8742` CC (owner): Place picker everywhere (home, invite, Uni plan): search with addresses, recent places, quick picks, map pin named by Places Nearby; server-side public area (seed area / neighbourhood / city).
 - [x] **T28** `done 32e8742` CC (owner): Invites complete: status for the inviter, every invite with hosts/seats and a price preview, accept with any pickup, gender/full checks, code lookup, invite during setup, profile code sheet; `?as=noor` / `?as=huda` phone logins.
 - [x] **T29** `done 32e8742` CC (owner): Picked-up riders can't leave or remove their +1; rider screen says "You're in the car".
+- [x] **T30** `done HASH` CC (owner, 27 Nov; SPEC §5 "OTP login" lifted by owner): phone sign-up with demo OTP (code on screen + demo menu, no SMS), profile + log out, rider ↔ assigned-driver calling.
 
 ## Cut order if time runs out
 P2 entirely → T16/T15 (pitch Uni plans from a slide) → T18/T17 → T21 → T20.

@@ -26,7 +26,7 @@ async function stopsOf(repo: Repo, ride: Ride, withPlaces: boolean): Promise<Dri
       ...(m.guest && !m.guest.leave ? { guestFirstName: m.guest.firstName } : {}),
       shortAddress: s.place.name, at: s.at, done: s.done,
       ...(s.kind === 'P' ? { shareJod: jod(ride.plan.shareP), cashDueJod: jod(cashDueP(m, ride.plan.shareP)), uniCreditJod: jod(uniCreditP(m, ride.plan.shareP)) } : {}),
-      ...(withPlaces ? { place: { lat: s.place.lat, lng: s.place.lng } } : {}),
+      ...(withPlaces ? { place: { lat: s.place.lat, lng: s.place.lng }, ...(u?.phone && s.kind === 'P' ? { phone: u.phone } : {}) } : {}),   // number: accepted trip only
     });
   }
   return out;
@@ -70,7 +70,7 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
   }
   return {
     role: 'driver', epoch, viewSeq: user.viewSeq,
-    me: { id: user.id, firstName: user.firstName, car: driver.car, plate: driver.plate },
+    me: { id: user.id, firstName: user.firstName, car: driver.car, plate: driver.plate, ...(user.phone ? { phone: user.phone } : {}) },
     offers, ...(trip ? { trip } : { demand: demandFor(driver, now) }),
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),

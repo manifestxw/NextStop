@@ -13,6 +13,7 @@ export interface User {
   role: Role; firstName: string; gender: Gender;  // gender immutable after signup
   sameGenderOnly: boolean; friendCode: string;
   viewSeq: number; outstandingP: number;
+  phone?: string;                                 // +9627XXXXXXXX, verified by OTP; shown only to the assigned driver / to my riders
   isSim: boolean; seedLogin?: 'lina' | 'sara' | 'omar' | 'noor' | 'huda';   // noor = an invitable friend, huda = Uni plan
   createdAt: string;
 }

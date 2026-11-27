@@ -52,6 +52,14 @@ const post = <T = OkResponse>(path: string, body?: unknown, pin?: string) => cal
 
 export const api = {
   signup: (b: In<typeof req.SignupBody>) => auth(post<AuthResponse>('/api/signup', b)),
+  requestOtp: (phone: string) => post<{ ok: true; phone: string; demoCode: string; resendInSec: number; expiresInSec: number }>('/api/otp/request', { phone }),
+  /** A known number logs in (returns the view); a new one returns a sign-up ticket. */
+  verifyOtp: async (phone: string, code: string): Promise<{ ticket: string } | { view: View }> => {
+    const r = await post<AuthResponse | { ticket: string; phone: string }>('/api/otp/verify', { phone, code });
+    return 'token' in r ? { view: await auth(Promise.resolve(r)) } : { ticket: r.ticket };
+  },
+  updateProfile: (b: In<typeof req.ProfileBody>) => withView(post('/api/me', b)),
+  logout: async () => { try { await post<{ ok: true }>('/api/logout', {}); } finally { useSession.getState().logout(); } },
   demoLogin: (as: In<typeof req.DemoLoginBody>['as'], pin: string) => auth(post<AuthResponse>('/api/demo/login', { as }, pin)),
   me: () => withView(call<OkResponse>('GET', '/api/me')),
 
