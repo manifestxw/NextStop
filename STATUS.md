@@ -1,8 +1,8 @@
 # STATUS.md
 > Overwrite on every handoff. Max 40 lines. Git keeps the history.
 
-**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T4, T6, T10)
-**Milestone:** M1 walking skeleton (T1–T4, T6, T10 of T12 done)
+**Updated:** Fri 27 Nov · **By:** Claude Code (T1–T7, T10)
+**Milestone:** M1 walking skeleton (T1–T7, T10 of T12 done; T8, T9, T11, T12 left)
 **Deployed URL:** none yet · **Build stamp:** see `/api/health`
 
 ## Just shipped
@@ -14,14 +14,19 @@
   + summaries, demo clock (stepped fast-forward), simulate rider, reset, settings.
   Views (`server/src/views/`) decide all visibility; Socket.IO pushes per-user views on connect and after commits.
 - **T10:** `server/test/demo-script.test.ts` replays SPEC §2.2 steps 1–6 with every §2.3 number.
+- **T7** (owner moved it to CC): REST routes for every P0 command + banners seen; 409/401/403/422 mapping.
+- **T5** (owner moved it to CC): web shell. `api.ts` (applies views), `socket.ts` (Reconnecting after 2 s),
+  Zustand session + `acceptView` (newer viewSeq, same user/epoch), `?as=&pin=` login, `?demo=1`,
+  DESIGN tokens 1:1 (`data-role`, `data-category`), type classes `.t-*`, fonts, router with placeholders.
 
 ## Verification
-- `npm run check`: green, 111 tests. Includes the demo script, state machine rows, late-leave
+- `npm run check`: green, 120 tests. Includes the demo script, state machine rows, late-leave
   reversal, last-seat race, join vs ready check race, privacy (no other rider's address/coords), realtime auth.
-- `npm start` boots: health, Socket.IO handshake, scheduler ticking. Phones: not yet (T12).
+- `npm start` serves the SPA at deep links + bundle; demo login over HTTP works. Not yet opened in a real browser.
 
 ## Next task
-- **CX: T5, then T7** (route→command map is in TASKS.md T7), T8, T9. CC next: **T11** once O1 lands, else T14 prep.
+- **CX: T8 (rider screens), T9 (driver screens + demo menu)** on top of `web/src/net/api.ts` + `useSession`.
+  Replace `Placeholder` per route in `router.tsx`. CC next: **T11** once O1 (keys) lands.
 
 ## Blocked / waiting
 - Owner: O1 Google keys, O2 Replit (needed by T11, T12). O3 Jeeny screenshots. O4 commission.

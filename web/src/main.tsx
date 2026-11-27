@@ -1,21 +1,50 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { Health } from '@nextstop/shared';
+import { BrowserRouter } from 'react-router-dom';
+import { api } from './net/api.js';
+import { connectSocket, disconnectSocket } from './net/socket.js';
+import { AppRoutes } from './router.js';
+import { useSession } from './state/session.js';
+import './styles/tokens.css';
+import './styles/base.css';
 
-// Walking-skeleton page: proves the build, the server and the phone browser work together.
-// Replaced by the router and real screens in T5.
-function Hello() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    fetch('/api/health').then((r) => r.json()).then(setHealth).catch(() => setError(true));
-  }, []);
-  return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 20 }}>
-      <h1>RideSync</h1>
-      <p>{error ? 'Server unreachable' : health ? `Server ok · build ${health.buildStamp?.hash ?? 'dev'}` : 'Checking server…'}</p>
-    </main>
-  );
+/** `/?as=lina&pin=1337` logs this phone in as a seeded account, then cleans the URL (SPEC §2.6). */
+async function seededLogin() {
+  const q = new URLSearchParams(location.search);
+  const as = q.get('as'), pin = q.get('pin');
+  if (q.get('demo') === '1') history.replaceState(null, '', '/demo');
+  if (as !== 'lina' && as !== 'sara' && as !== 'omar') return;
+  if (!pin) return;
+  q.delete('as'); q.delete('pin');
+  history.replaceState(null, '', location.pathname + (q.size ? `?${q}` : ''));
+  await api.demoLogin(as, pin).catch((e) => console.warn('seeded login failed:', e));
 }
 
-createRoot(document.getElementById('root')!).render(<StrictMode><Hello /></StrictMode>);
+function App() {
+  const token = useSession((s) => s.token);
+  const view = useSession((s) => s.view);
+
+  useEffect(() => { void seededLogin(); }, []);
+
+  // One socket per token: (re)connect on login, close on logout. A stale stored token is cleared by 401.
+  useEffect(() => {
+    if (!token) { disconnectSocket(); return; }
+    connectSocket(token);
+    api.me().catch(() => undefined);
+    return disconnectSocket;
+  }, [token]);
+
+  // Role picks the surface (Paper / Cockpit), the ride's category picks the accent (DESIGN §2).
+  useEffect(() => {
+    const b = document.body.dataset;
+    b.role = view?.role ?? 'rider';
+    b.category = view?.role === 'rider' ? view.ride?.category ?? 'economy'
+      : view?.role === 'driver' ? view.trip?.category ?? view.offers[0]?.category ?? 'economy' : 'economy';
+  }, [view]);
+
+  return <AppRoutes />;
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode><BrowserRouter><App /></BrowserRouter></StrictMode>,
+);

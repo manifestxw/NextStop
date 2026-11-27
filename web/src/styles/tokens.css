@@ -1,0 +1,50 @@
+/* DESIGN.md "Converge" tokens, copied 1:1 (§2–§4). Components use only the semantic names
+   (--accent*, --surface, --card, --raised, --line, --text-1, --text-2): never hex values. */
+:root {
+  /* §2.2 category accents */
+  --tangerine-500: #FF6A2B; --tangerine-600: #E4521A; --tangerine-100: #FFE4D6; --tangerine-700: #B53E0C;
+  --glacier-500: #7DB4FF;   --glacier-600: #5A98EE;   --glacier-100: #E2EEFF;   --glacier-700: #1F5BB5;
+  --runway-500: #FFD23F;    --runway-600: #EDBB14;    --runway-100: #FFF4CC;    --runway-700: #7A5C00;
+
+  /* §2.3 Paper */
+  --white: #FFFFFF; --paper-50: #F6F3EE; --paper-100: #EDE9E1;
+  --ink-200: #DCD8D0; --ink-300: #BDB9B1; --ink-500: #6F727A; --ink-700: #3A3D45; --ink-900: #15171C;
+
+  /* §2.5 semantic */
+  --success: #1E9A55; --success-soft: #DDF3E6;
+  --danger: #D93A3F;  --danger-soft: #FBE3E3;
+  --warn: #B7791F;
+  --scrim: rgba(21, 23, 28, 0.45);
+
+  /* surfaces: rider = Paper (§2.4 remaps them for drivers) */
+  --surface: var(--paper-50); --card: var(--white); --raised: var(--paper-100);
+  --line: var(--ink-200); --text-2: var(--ink-500); --text-1: var(--ink-900);
+
+  /* §2.1 accent (Economy until a category is set) */
+  --accent: var(--tangerine-500); --accent-strong: var(--tangerine-600);
+  --accent-soft: var(--tangerine-100); --accent-text: var(--tangerine-700);
+
+  /* §3 type */
+  --font-display: "Bricolage Grotesque", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-ui: "Inter", "Noto Sans Arabic", system-ui, sans-serif;
+
+  /* §4 space, shape, depth */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+  --pad-x: 20px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 16px; --r-lg: 24px; --r-sheet: 28px; --r-pill: 999px;
+  --shadow-sheet: 0 -8px 24px rgba(21, 23, 28, 0.10);
+  --shadow-map: 0 2px 8px rgba(21, 23, 28, 0.12);
+
+  /* §10 motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-category="economy"] { --accent: var(--tangerine-500); --accent-strong: var(--tangerine-600); --accent-soft: var(--tangerine-100); --accent-text: var(--tangerine-700); }
+[data-category="comfort"] { --accent: var(--glacier-500);   --accent-strong: var(--glacier-600);   --accent-soft: var(--glacier-100);   --accent-text: var(--glacier-700); }
+[data-category="airport"] { --accent: var(--runway-500);    --accent-strong: var(--runway-600);    --accent-soft: var(--runway-100);    --accent-text: var(--runway-700); }
+
+/* §2.4 Cockpit: drivers get dark surfaces; text on accent stays ink. */
+[data-role="driver"] {
+  --surface: #0D0F13; --card: #171A21; --raised: #232831; --line: #343A45; --text-2: #9AA1AC; --text-1: #F1F2F4;
+  color-scheme: dark;
+}

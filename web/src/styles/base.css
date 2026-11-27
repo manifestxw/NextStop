@@ -1,0 +1,31 @@
+/* Base element styles + the DESIGN §3 type scale as classes. Mobile first, LTR only. */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100dvh;
+  background: var(--surface); color: var(--text-1);
+  font: 400 15px/22px var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  transition: background-color 200ms var(--ease);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+input, select, textarea { font-size: 16px; }   /* iOS zooms on inputs under 16 px */
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.t-hero    { font: 800 52px/52px var(--font-display); letter-spacing: -0.02em; }
+.t-big     { font: 800 32px/36px var(--font-display); }
+.t-h1      { font: 700 26px/30px var(--font-display); }
+.t-h2      { font: 700 21px/26px var(--font-display); }
+.t-eyebrow { font: 600 12px/16px var(--font-ui); text-transform: uppercase; letter-spacing: 0.08em; }
+.t-body-l  { font: 400 17px/24px var(--font-ui); }
+.t-body    { font: 400 15px/22px var(--font-ui); }
+.t-caption { font: 500 13px/18px var(--font-ui); }
+.t-button  { font: 600 17px/24px var(--font-ui); }
+.t-link    { font: 600 16px/24px var(--font-ui); color: var(--accent-text); text-underline-offset: 3px; }
+.text-2    { color: var(--text-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
