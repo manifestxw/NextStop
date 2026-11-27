@@ -534,6 +534,13 @@ export function createCommands(ctx: Ctx) {
       }
     },
 
+    async bannerSeen(token: string, bannerId: string) {
+      const user = await auth(token);
+      return commit(user.id, async (repo) => {
+        if ((await repo.listUnseenBanners(user.id)).some((x) => x.id === bannerId)) await repo.markBannerSeen(bannerId);
+      });
+    },
+
     async reject(token: string, rideId: string) {
       const user = await auth(token, 'driver');
       return commit(user.id, async (repo, fx) => {

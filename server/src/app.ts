@@ -11,11 +11,11 @@ const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const PUBLIC_DIR = here('../public');
 const STAMP_FILE = here('../dist/build.json');
 
-function readStamp(): Health['buildStamp'] {
+export function readStamp(): Health['buildStamp'] {
   try { return JSON.parse(readFileSync(STAMP_FILE, 'utf8')); } catch { return null; }
 }
 
-export interface AppDeps { clock?: Clock; source?: () => TravelSource }
+export interface AppDeps { clock?: Clock; source?: () => TravelSource | Promise<TravelSource> }
 
 export function buildApp({ clock, source }: AppDeps = {}) {
   const app = Fastify({ logger: false });
@@ -24,7 +24,7 @@ export function buildApp({ clock, source }: AppDeps = {}) {
   app.get('/api/health', async (): Promise<Health> => ({
     ok: true, buildStamp,
     ...(clock && { clock: { nowIso: toIso(clock.now()), paused: clock.snapshot().paused } }),
-    ...(source && { source: source() }),
+    ...(source && { source: await source() }),
   }));
 
   if (existsSync(PUBLIC_DIR)) app.register(fastifyStatic, { root: PUBLIC_DIR });

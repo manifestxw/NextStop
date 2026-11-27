@@ -1,5 +1,5 @@
 // Error responses (ARCH §7.1). `message` is the user-facing text; the client shows it as is.
-import type { View } from './views.js';
+import type { DemoView, MatchCard, QuoteView, View } from './views.js';
 
 export const ERROR_MESSAGES = {
   RIDE_FULL: 'This ride just filled up',
@@ -29,7 +29,14 @@ export interface LoggedOutResponse { code: 'LOGGED_OUT' }
 export interface InvalidResponse { code: 'INVALID'; issues: { path: string; message: string }[] }
 /** 404 for unknown API paths. */
 export interface NotFoundResponse { code: 'NOT_FOUND' }
+/** 403: a demo call without the right X-Demo-Pin header. */
+export interface BadPinResponse { code: 'BAD_PIN' }
 
-export type ErrorResponse = ConflictResponse | LoggedOutResponse | InvalidResponse | NotFoundResponse;
+export type ErrorResponse = ConflictResponse | LoggedOutResponse | InvalidResponse | NotFoundResponse | BadPinResponse;
+
+// Commands that don't return the caller's view (ARCH §7.1).
+export interface QuoteResponse { ok: true; quote: QuoteView }
+export interface SearchResponse { ok: true; cards: MatchCard[] }
+export interface DemoResponse { ok: true; demo: DemoView }
 
 export interface AuthResponse { token: string; epoch: number; view: View }   // signup, demo login
