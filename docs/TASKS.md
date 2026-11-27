@@ -53,7 +53,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [x] **T18** `done 3be91c0` CX→CC (owner): Friends UI: friends card, add-friend sheet, invite sheet, invite card, profile code. needs: T17
 - [x] **T19** `done e4e99aa` CC (P1 before T12 by owner choice, 27 Nov): Hardening: no-show, driver cancel + redispatch, "Book a solo ride", pickup-time banners, stale tab + reconnect, Google fallback. needs: T12
 - [ ] **T20** `doing CC` CX→CC (owner): P1 UI: Places autocomplete, driver route line, driver chat. (Pickup/drop-off/no-show taps, driver cancel, solo fallback, stale tab and "Map unavailable" shipped with T19/T14.) needs: T19
-- [ ] **T21** `doing CC` CC: Airport: QAIA seed place + snapshot pairs. needs: T11
+- [x] **T21** `done f7a69cb` CC: Airport: QAIA seed place + snapshot pairs. needs: T11
 
 ## P2 (only if time remains before the 9:30 PM freeze)
 - [ ] **T22** `todo` CC: Demand spots: `kmeans.ts` port (mulberry32), `data/demand_seed.json` from `sample_history`, `GET /api/driver/demand`, demo driver-position. needs: T12 (SPEC §3.18)
