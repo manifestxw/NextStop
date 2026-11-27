@@ -61,7 +61,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 - [ ] **T24** `todo` CC: Traffic/weather/supply demo controls. needs: T12
 
 ## Added during the build
-- [x] **T25** `done HASH` CC: Demo autopilot: "Play next step" in the demo menu runs SPEC §2.2 one step at a time as the seeded people (rehearsal + stage backup). Tested to the canonical numbers.
+- [x] **T25** `done 579a19b` CC: Demo autopilot: "Play next step" in the demo menu runs SPEC §2.2 one step at a time as the seeded people (rehearsal + stage backup). Tested to the canonical numbers.
 
 ## Cut order if time runs out
 P2 entirely → T16/T15 (pitch Uni plans from a slide) → T18/T17 → T21 → T20.
