@@ -131,7 +131,7 @@ function PinMap({ title, kind, near, onBack, onPick }: { title: string; kind: 'p
       <div className="pinmap-card stack">
         <span className="t-eyebrow text-2">{title}</span>
         <span className="t-h2 truncate">{spot ? spot.name : moving ? 'Finding this spot…' : 'Move the map to place the pin'}</span>
-        <span className="t-caption text-2">{spot ? `Others see: ${spot.area}${spot.address ? ` · near ${spot.address}` : ''}` : 'Only the area name is shown to other riders'}</span>
+        <span className="t-caption text-2">{spot ? `${spot.address ? `${spot.address} · ` : ''}Other riders see only: ${spot.area}` : 'Other riders see only the area name'}</span>
         <ErrorNote text={err} />
         <Button disabled={!spot || moving} onClick={() => spot && onPick(spot)}>{kind === 'pickup' ? 'Set pickup here' : 'Set destination here'}</Button>
       </div>

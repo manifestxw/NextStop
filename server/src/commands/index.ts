@@ -27,7 +27,7 @@ import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
 import type { Repo, Store } from '../store/repo.js';
 import { loadSeed, resetToSeed } from '../store/seed.js';
 import { selectProvider, travelOffline } from '../travel/select.js';
-import { nearestPlace, searchPlaces } from '../travel/google.js';
+import { nearestPlace, reverseGeocode, searchPlaces } from '../travel/google.js';
 import { areaFor, pinName } from '../travel/places.js';
 import { SCRIPT, describeRide } from './script.js';
 
@@ -584,9 +584,13 @@ export function createCommands(ctx: Ctx) {
       await auth(token, 'rider');
       if (!(lat > 29.1 && lat < 33.4 && lng > 34.9 && lng < 39.4)) throw new ConflictError('NOT_ELIGIBLE', 'Pick a place in Jordan');
       const p = { lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5 };
-      let near = null;
-      if (cfg.googleServerKey) { try { near = await nearestPlace(cfg.googleServerKey, p); } catch (e) { console.warn(`places: ${(e as Error).message}`); } }
-      return remember({ placeId: `pin:${p.lat},${p.lng}`, name: pinName(near?.name), address: near?.address ?? '', area: areaFor(p, near?.parts ?? [], seedPlaces), ...p });
+      // Street address first (Geocoding); then the closest named place (Places Nearby); then "Pinned location".
+      const key = cfg.googleServerKey;
+      const soft = <T>(x: Promise<T>) => x.catch((e: Error) => { console.warn(`places: ${e.message}`); return null; });
+      const [street, near] = key ? await Promise.all([soft(reverseGeocode(key, p)), soft(nearestPlace(key, p))]) : [null, null];
+      const area = areaFor(p, street?.parts ?? near?.parts ?? [], seedPlaces);
+      if (street) return remember({ placeId: `pin:${p.lat},${p.lng}`, name: street.name, address: near ? `Near ${near.name}` : '', area, ...p });
+      return remember({ placeId: `pin:${p.lat},${p.lng}`, name: pinName(near?.name), address: near?.address ?? '', area, ...p });
     },
 
     async demoLogin({ as }: Body<typeof req.DemoLoginBody>): Promise<AuthResponse> {

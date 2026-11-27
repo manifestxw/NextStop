@@ -42,3 +42,21 @@ describe('places without a Google key (tests, offline)', () => {
     await expect(h.cmd.placeAt(await h.login('lina'), 31.5, 34.4)).rejects.toThrow(/Jordan/);
   });
 });
+
+import { streetFrom } from '../src/travel/google.js';
+
+describe('reverse geocoding → pin name', () => {
+  const comps = [{ long_name: 'Irbid', types: ['locality', 'political'] }];
+  it('picks the first street address or route, without plus codes, postcodes or the country', () => {
+    expect(streetFrom([
+      { formatted_address: 'GVV4+VHF, Irbid, Jordan', types: ['dentist', 'establishment'], address_components: comps },
+      { formatted_address: 'Feras Al Ajlouni 21110, Irbid, Jordan', types: ['premise', 'street_address'], address_components: comps },
+    ])).toEqual({ name: 'Feras Al Ajlouni, Irbid', parts: [{ text: 'Irbid', types: ['locality', 'political'] }] });
+    expect(streetFrom([{ formatted_address: 'Wasfi Al-Tal St, Irbid, Jordan', types: ['route'], address_components: comps }])!.name).toBe('Wasfi Al-Tal St, Irbid');
+  });
+  it('no street (only plus codes or areas) → null, so the nearest named place is used instead', () => {
+    expect(streetFrom([{ formatted_address: 'GVV4+VHF, Irbid, Jordan', types: ['plus_code'], address_components: comps },
+      { formatted_address: 'Irbid, Jordan', types: ['locality', 'political'], address_components: comps }])).toBeNull();
+    expect(streetFrom([])).toBeNull();
+  });
+});

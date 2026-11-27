@@ -70,6 +70,26 @@ export async function searchPlaces(key: string, q: string): Promise<FoundPlace[]
   return (r.places ?? []).filter(inJordan).map(found);
 }
 
+interface GeoResult { formatted_address: string; types: string[]; address_components?: { long_name: string; types: string[] }[] }
+const STREET_TYPES = ['street_address', 'premise', 'subpremise', 'route', 'intersection'];
+
+/** Reverse-geocode results → a pin name like "Wasfi Al-Tal St, Irbid" (no plus code, postcode or country), or null. */
+export function streetFrom(results: GeoResult[]): { name: string; parts: AddressPart[] } | null {
+  const r = results.find((x) => x.types.some((t) => STREET_TYPES.includes(t)));
+  if (!r) return null;
+  const name = r.formatted_address.replace(PLUS_CODE, '').replace(/,?\s*Jordan$/, '').replace(/\s+\d{5}\b/g, '').trim();
+  return name ? { name, parts: (r.address_components ?? []).map((c) => ({ text: c.long_name, types: c.types })) } : null;
+}
+
+/** The street address at a pin (Geocoding API). Server only; the key is in the URL, so the URL is never logged. */
+export async function reverseGeocode(key: string, p: LatLng): Promise<{ name: string; parts: AddressPart[] } | null> {
+  const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${p.lat},${p.lng}&language=en&region=jo&key=${encodeURIComponent(key)}`);
+  if (!r.ok) throw new Error(`Google geocode ${r.status}`);
+  const j = (await r.json()) as { status: string; results?: GeoResult[] };
+  if (j.status !== 'OK' && j.status !== 'ZERO_RESULTS') throw new Error(`Google geocode ${j.status}`);
+  return streetFrom(j.results ?? []);
+}
+
 /** The closest named place to a pin (Places Nearby, 250 m), for its name and neighbourhood. Server only. */
 export async function nearestPlace(key: string, p: LatLng): Promise<FoundPlace | null> {
   const r = await post<{ places?: GPlace[] }>('https://places.googleapis.com/v1/places:searchNearby', key, PLACE_FIELDS.replace(/(^|,)/g, '$1places.'), {
