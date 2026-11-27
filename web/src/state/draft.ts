@@ -24,5 +24,6 @@ export const useDraft = create<Draft>((set) => ({
 export const PLACES = [
   { key: 'CC', name: 'Irbid City Center' }, { key: 'US', name: 'University Street' }, { key: 'HS', name: 'Al-Hashmi Street' },
   { key: 'YU', name: 'Yarmouk University' }, { key: 'AM', name: 'Arabella Mall' }, { key: 'JUST', name: 'JUST' },
+  { key: 'QAIA', name: 'Queen Alia Airport' },
 ];
 export const placeName = (key: string | null) => PLACES.find((p) => p.key === key)?.name ?? 'Choose a place';

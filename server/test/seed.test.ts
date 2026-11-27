@@ -6,9 +6,9 @@ import { parseConfig } from '../src/config.js';
 const cfg = parseConfig({});
 
 describe('seed (SPEC §2.6)', () => {
-  it('has the 6 places with area names, the demo accounts and Omar', () => {
+  it('has the 7 places (6 Irbid + the airport) with area names, the demo accounts and Omar', () => {
     const s = loadSeed();
-    expect(s.places.map((p) => p.key)).toEqual(['CC', 'HS', 'US', 'YU', 'AM', 'JUST']);
+    expect(s.places.map((p) => p.key)).toEqual(['CC', 'HS', 'US', 'YU', 'AM', 'JUST', 'QAIA']);
     expect(s.places.find((p) => p.key === 'CC')?.area).toBe('City Center area');
     const byName = Object.fromEntries(s.users.map((u) => [u.firstName, u]));
     expect(byName.Lina).toMatchObject({ gender: 'F', seedLogin: 'lina', friendCode: 'LINA26', isSim: false });

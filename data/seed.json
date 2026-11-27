@@ -48,6 +48,14 @@
       "lat": 32.495,
       "lng": 35.99117,
       "placeId": "ChIJj0I7GjiJGxURfRsy2hSSFP0"
+    },
+    {
+      "key": "QAIA",
+      "name": "Queen Alia International Airport",
+      "area": "Queen Alia Airport",
+      "lat": 31.7217,
+      "lng": 35.99646,
+      "placeId": "ChIJG9NJ4QJUGxUR_JWzrypSOBs"
     }
   ],
   "users": [
