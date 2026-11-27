@@ -51,6 +51,18 @@ async function post<T>(url: string, key: string, fieldMask: string, body: unknow
   return (await r.json()) as T;
 }
 
+/** Places Text Search (P1 autocomplete), Jordan only, biased to Irbid. Server only. */
+export async function searchPlaces(key: string, q: string): Promise<{ placeId: string; name: string; lat: number; lng: number }[]> {
+  const r = await post<{ places?: { id: string; displayName?: { text?: string }; location: { latitude: number; longitude: number } }[] }>(
+    'https://places.googleapis.com/v1/places:searchText', key, 'places.id,places.displayName,places.location', {
+      textQuery: q, regionCode: 'JO', maxResultCount: 5,
+      locationBias: { circle: { center: { latitude: 32.55, longitude: 35.86 }, radius: 30000 } },
+    });
+  return (r.places ?? [])
+    .filter((p) => p.location.latitude > 29.1 && p.location.latitude < 33.4 && p.location.longitude > 34.9 && p.location.longitude < 39.4)
+    .map((p) => ({ placeId: p.id, name: p.displayName?.text ?? 'Place', lat: p.location.latitude, lng: p.location.longitude }));
+}
+
 export function googleProvider(key: string, realNowUs: () => Us = () => Date.now() * 1000): TravelProvider {
   return {
     name: 'google',

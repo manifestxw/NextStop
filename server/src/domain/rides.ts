@@ -140,8 +140,9 @@ export function leaveFrozen(ride: Ride, userId: string, firstName: string, now: 
   if (ride.state === 'READY_CHECK' && activeMembers(ride).every((x) => x.readyAnswer === 'READY')) dispatch(ride, now, drivers, fx);
 }
 
-export function accept(ride: Ride, driver: Driver, driverName: string, now: Us, matrix: NonNullable<Ride['locked']>['matrix'], order: string[], fx: Effects) {
+export function accept(ride: Ride, driver: Driver, driverName: string, now: Us, matrix: NonNullable<Ride['locked']>['matrix'], order: string[], fx: Effects, route?: Ride['plan']['route']) {
   ride.state = 'ACCEPTED';
+  if (route) ride.plan = { ...ride.plan, route };
   ride.driverUserId = driver.userId;
   ride.locked = { at: toIso(now), matrix, order, tariff: ammanParts(fromIso(ride.plan.firstPickup)).hour < 6 ? 'NIGHT' : 'DAY' };
   ride.version++;

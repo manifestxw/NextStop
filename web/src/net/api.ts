@@ -58,7 +58,9 @@ export const api = {
   leave: (rideId: string, b: In<typeof req.LeaveBody> = {}) => withView(post(`/api/rides/${rideId}/leave`, b)),
   findDriver: (rideId: string) => withView(post(`/api/rides/${rideId}/find-driver`)),
   ready: (rideId: string, answer: In<typeof req.ReadyBody>['answer']) => withView(post(`/api/rides/${rideId}/ready`, { answer })),
-  chat: (rideId: string, text: string) => withView(post(`/api/rides/${rideId}/chat`, { channel: 'group', text })),
+  chat: (rideId: string, text: string, channel: 'group' | `driver:${string}` = 'group') => withView(post(`/api/rides/${rideId}/chat`, { channel, text })),
+  places: async (q: string): Promise<{ placeId: string; name: string; lat: number; lng: number }[]> =>
+    (await call<{ ok: true; places: { placeId: string; name: string; lat: number; lng: number }[] }>('GET', `/api/places?q=${encodeURIComponent(q)}`)).places,
   bannerSeen: (id: string) => withView(post(`/api/banners/${id}/seen`)),
   addGuest: (rideId: string, b: In<typeof req.GuestBody>) => withView(post(`/api/rides/${rideId}/guest`, b)),
   removeGuest: (rideId: string, acceptCharge = false) => withView(post(`/api/rides/${rideId}/guest/remove`, { acceptCharge })),

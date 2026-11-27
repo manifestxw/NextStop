@@ -7,7 +7,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import type { Category, QuoteView, RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
-import { PLACES, placeName, useDraft } from '../state/draft.js';
+import { PLACES, placeName, placeRef, useDraft, type GooglePlace } from '../state/draft.js';
 import { arriveByIso, fmtJod, fmtTime } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
 import { Button, CategoryBadge, ErrorNote, Logo, Ring, Square, Switch, useAction } from '../components/ui.js';
@@ -26,7 +26,7 @@ export function useQuote(): { quote: QuoteView | null; error: string | null } {
   useEffect(() => {
     if (!d.pickupKey || !d.destKey || d.pickupKey === d.destKey) { setQuote(null); return; }
     let live = true;
-    api.quote({ pickup: { key: d.pickupKey }, dest: { key: d.destKey }, arriveBy })
+    api.quote({ pickup: placeRef(d.pickupKey), dest: placeRef(d.destKey), arriveBy })
       .then((q) => { if (live) { setQuote(q); setError(null); } })
       .catch((e: Error) => { if (live) setError(e.message); });
     return () => { live = false; };
@@ -80,6 +80,7 @@ export function Home() {
                     <span className="t-body-l truncate" style={{ display: 'block' }}>{key ? placeName(key) : 'Choose a place'}</span>
                   </span>
                 </button>
+                {editing === which && <PlaceSearch onPick={(g) => { const k = d.addCustom(g); d.set(which === 'pickup' ? { pickupKey: k } : { destKey: k }); setEditing(null); }} />}
                 {editing === which && (
                   <div className="chips">
                     {PLACES.map((p) => (
@@ -156,5 +157,27 @@ function InviteCard({ invite, sameGenderOnly }: { invite: RiderView['invites'][n
         <button type="button" className="linkbtn" style={{ alignSelf: 'center' }} onClick={() => a.run(() => api.declineInvite(invite.id))}>Decline</button>
       </div>
     </section>
+  );
+}
+
+/** Place search (P1): the server proxies Google Places (Jordan only). 3+ characters, 300 ms debounce. */
+function PlaceSearch({ onPick }: { onPick: (p: GooglePlace) => void }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<GooglePlace[]>([]);
+  useEffect(() => {
+    if (q.trim().length < 3) { setResults([]); return; }
+    let live = true;
+    const t = setTimeout(() => { api.places(q).then((r) => { if (live) setResults(r); }).catch(() => undefined); }, 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [q]);
+  return (
+    <div className="stack">
+      <input className="field" style={{ height: 44 }} placeholder="Search a place" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search a place" />
+      {results.map((r) => (
+        <button key={r.placeId} type="button" className="row t-body" style={{ background: 'none', border: 0, padding: '6px 0', textAlign: 'left' }} onClick={() => onPick(r)}>
+          <Icon name="next" size={16} /><span className="truncate">{r.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }

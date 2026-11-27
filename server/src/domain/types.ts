@@ -46,6 +46,7 @@ export interface RidePlan {
   fareJod: number;                                // full fare, 2 dp, from the engine
   shareP: number;
   inCarMin: Record<string, number>;
+  route?: LatLng[];                               // road route through the stops, set when a driver accepts (P1)
 }
 
 export interface Ride {

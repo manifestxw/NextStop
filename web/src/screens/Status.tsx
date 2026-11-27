@@ -102,6 +102,12 @@ export function Status() {
           {last && <span className="t-body text-2 truncate" style={{ display: 'block', marginTop: 4 }}>{last.fromFirstName ? `${last.fromFirstName}: ` : ''}{last.text}</span>}
         </button>
 
+        {ride.driver && (
+          <button type="button" className="card card--tight row" style={{ textAlign: 'left' }} onClick={() => nav(`/ride/${ride.id}/driver-chat`)}>
+            <Icon name="message" /><span className="grow t-body-l" style={{ fontWeight: 600 }}>Message {ride.driver.firstName}</span>
+            {(ride.chat.driver?.length ?? 0) > 0 && <span className="t-caption text-2">{ride.chat.driver!.length}</span>}<span className="text-2"><Icon name="next" size={16} /></span>
+          </button>
+        )}
         {ride.state === 'OPEN' && <FriendsCard ride={ride} />}
 
         <section className="card card--tight">

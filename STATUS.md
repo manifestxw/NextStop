@@ -13,7 +13,7 @@
   (Sara) / respond 7:05; late leave at **6:53** → 1.65 each; Omar 4.95 + 1.70 credit = 6.65.
 
 ## Verification
-- `npm run check`: green, 156 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
+- `npm run check`: green, 161 tests. `demo-script.test.ts` replays SPEC §2.2 on the snapshot (stage
   numbers); golden tests on the fixed table. Every flow checked in headless Chromium. Phones: T12.
 - **T14:** real Google map (Paper riders: own pickup + destination only; Cockpit driver: numbered pickups).
 - **T25:** demo menu autopilot ("Play next step") for rehearsal and as a stage backup.
@@ -24,10 +24,13 @@
 - **T15/T16:** Uni plans end to end: picker, week grid, demo card (test numbers, last4 only), My plan (states,
   cancel ≥12 h → replacement, plan a replacement), 12 h placement, 20% per subscriber + RideSync credit. Huda seeded.
 
+- **T20/T21:** driver route line, rider ↔ driver chat (private per rider), live place search (server proxy);
+  Airport place + snapshot pairs (existing cells untouched).
+
 ## Next task
 - **T12 (owner): deploy on Replit.** Import the GitHub repo; `.replit` sets Node 22, build `npm ci --include=dev && npm run build`,
   run `npm start`, port 3000→80, Reserved VM. Secrets: `GOOGLE_SERVER_KEY`, `VITE_GOOGLE_BROWSER_KEY`, `DEMO_PIN` (not 1337).
-  Then open `https://<app>.replit.app/?as=lina&pin=<PIN>` etc. on 3 phones. CC after: T20, T21.
+  Then open `https://<app>.replit.app/?as=lina&pin=<PIN>` etc. on 3 phones. CC: P2 (T22–T24) or DESIGN changes.
 
 ## Blocked / waiting
 - O2 Replit (T12); new hotspot IP → add it to the browser-key referrers. O3 Jeeny screenshots → CALIBRATION. O4 commission + AI scoring at the briefing.

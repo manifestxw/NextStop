@@ -1,13 +1,13 @@
 // What a driver may see (ARCH §9.3): offered rides' stops without coordinates; after accepting, every
 // stop with coordinates, shares and totals. Never the group chat.
-import type { DriverOffer, DriverStop, DriverTripView, DriverView } from '@nextstop/shared';
+import type { ChatMessageView, DriverOffer, DriverStop, DriverTripView, DriverView } from '@nextstop/shared';
 import { fromIso } from '../clock/amman.js';
 import type { Clock } from '../clock/clock.js';
 import { activeMembers, cashDueP, jod, seatsOf, uniCreditP } from '../domain/bridge.js';
 import type { SummaryRecord } from '../domain/rides.js';
 import type { Driver, Ride, User } from '../domain/types.js';
 import type { Repo } from '../store/repo.js';
-import { bannerView, clockView } from './common.js';
+import { bannerView, chatView, clockView } from './common.js';
 
 const DAY_US = 24 * 3_600_000_000;
 
@@ -57,6 +57,8 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
       riders: activeMembers(t).reduce((n, m) => n + seatsOf(m), 0) || (summary?.riders.reduce((n, r) => n + r.seats, 0) ?? 0),
       fareJod: t.plan.fareJod, collectJod: jod(summary ? summary.totalP - summary.creditP - (summary.uniCreditP ?? 0) : collectP(t)),
       creditJod: jod(t.creditsP), uniCreditJod: jod(summary?.uniCreditP ?? uniP(t)), stops: await stopsOf(repo, t, true),
+      ...(mine && t.plan.route ? { route: t.plan.route } : {}),
+      chats: await chatsFor(repo, t),
       ...(summary ? { summary: {
         riders: summary.riders.map((r) => ({ firstName: r.firstName, cashJod: jod(r.cashP) })),
         creditJod: jod(summary.creditP), uniCreditJod: jod(summary.uniCreditP ?? 0), totalJod: jod(summary.totalP),
@@ -70,4 +72,13 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),
   };
+}
+
+/** The driver's private thread with each rider in the trip (P1). */
+async function chatsFor(repo: Repo, ride: Ride): Promise<Record<string, ChatMessageView[]>> {
+  const users = new Map<string, User>();
+  for (const id of [...ride.members.map((m) => m.userId), ride.driverUserId ?? '']) { const u = id && await repo.getUser(id); if (u) users.set(u.id, u); }
+  const out: Record<string, ChatMessageView[]> = {};
+  for (const m of ride.members) out[m.userId] = (await repo.listMessages(ride.id, `driver:${m.userId}`, 100)).map((x) => chatView(x, users));
+  return out;
 }

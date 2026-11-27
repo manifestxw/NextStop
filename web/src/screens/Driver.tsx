@@ -138,7 +138,7 @@ export function DriverTrip() {
   }
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapView dark fit="pickups" marks={stopMarks(t.stops)} />
+      <MapView dark fit="pickups" marks={stopMarks(t.stops)} route={t.route} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <h1 className="t-h1">{t.category[0]!.toUpperCase() + t.category.slice(1)} · {t.riders} riders</h1>
         <p className="t-body text-2">Collect {fmtJod(t.collectJod)} cash{t.creditJod > 0 ? ` · ${fmtJod(t.creditJod)} credit at trip end` : ''}</p>
@@ -153,6 +153,7 @@ export function DriverTrip() {
 /** One row per stop with the driver's taps (P1): Picked up · No-show (5 min after the shown time) · Dropped off. */
 function StopActions({ trip }: { trip: NonNullable<DriverView['trip']> }) {
   const a = useAction();
+  const nav = useNavigate();
   const now = useNow();
   const picked = new Set(trip.stops.filter((s) => s.kind === 'P' && s.done).map((s) => s.firstName));
   const cashFor = (name: string) => trip.stops.find((s) => s.kind === 'P' && s.firstName === name)?.cashDueJod ?? 0;
@@ -171,6 +172,7 @@ function StopActions({ trip }: { trip: NonNullable<DriverView['trip']> }) {
               {!s.done && s.kind === 'P' && (
                 <span className="row" style={{ gap: 8, marginTop: 6 }}>
                   <Button kind="secondary" small disabled={a.busy} onClick={() => tap(s.id, 'picked-up')}>Picked up</Button>
+                  <button type="button" className="iconbtn" aria-label={`Message ${s.firstName}`} onClick={() => nav(`/driver/trip/${trip.rideId}/chat/${s.id.slice(2)}`)}><Icon name="message" /></button>
                   {now >= Date.parse(s.at) - (Date.parse(s.at) % 60_000) + 5 * 60_000 && (
                     <Button kind="danger" small disabled={a.busy} onClick={() => tap(s.id, 'no-show')}>No-show</Button>
                   )}

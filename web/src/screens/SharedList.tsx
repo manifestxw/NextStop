@@ -6,13 +6,13 @@ import type { MatchCard } from '@nextstop/shared';
 import type { RiderView } from '@nextstop/shared';
 import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
-import { placeName, useDraft } from '../state/draft.js';
+import { placeName, placeRef, useDraft } from '../state/draft.js';
 import { arriveByIso, fmtJod, fmtTime } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
 import { Button, ErrorNote, GenderBadge, MergeMark, RoutePair, SeatMeter, useAction } from '../components/ui.js';
 
 export const tripBody = (d: ReturnType<typeof useDraft.getState>, now: number, sameGenderOnly: boolean) => ({
-  pickup: { key: d.pickupKey! }, dest: { key: d.destKey! }, arriveBy: arriveByIso(now, d.time), category: d.category, sameGenderOnly,
+  pickup: placeRef(d.pickupKey!), dest: placeRef(d.destKey!), arriveBy: arriveByIso(now, d.time), category: d.category, sameGenderOnly,
 });
 
 export function SharedList() {

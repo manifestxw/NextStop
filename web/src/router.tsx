@@ -7,7 +7,7 @@ import { Home } from './screens/Home.js';
 import { SharedList } from './screens/SharedList.js';
 import { SharedSetup } from './screens/SharedSetup.js';
 import { Status } from './screens/Status.js';
-import { Chat } from './screens/Chat.js';
+import { Chat, DriverChat, DriverRiderChat } from './screens/Chat.js';
 import { Summary } from './screens/Summary.js';
 import { DriverHome, DriverOffer, DriverTrip } from './screens/Driver.js';
 import { DemoMenu } from './screens/DemoMenu.js';
@@ -37,6 +37,8 @@ export function AppRoutes() {
       <Route path="/shared/new" element={<Authed><SharedSetup /></Authed>} />
       <Route path="/ride/:id" element={<Authed><Status /></Authed>} />
       <Route path="/ride/:id/chat" element={<Authed><Chat /></Authed>} />
+      <Route path="/ride/:id/driver-chat" element={<Authed><DriverChat /></Authed>} />
+      <Route path="/driver/trip/:id/chat/:riderId" element={<Authed><DriverRiderChat /></Authed>} />
       <Route path="/ride/:id/summary" element={<Authed><Summary /></Authed>} />
       <Route path="/plan" element={<Authed><Plan /></Authed>} />
       <Route path="/driver" element={<Authed><DriverHome /></Authed>} />

@@ -27,6 +27,7 @@ import { SIM_ORDER, simShouldAnswer } from '../sim/simRiders.js';
 import type { Repo, Store } from '../store/repo.js';
 import { loadSeed, resetToSeed } from '../store/seed.js';
 import { selectProvider, travelOffline } from '../travel/select.js';
+import { searchPlaces } from '../travel/google.js';
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
 import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
@@ -107,6 +108,13 @@ export function createCommands(ctx: Ctx) {
     return selectProvider(s.source).getMatrix(points(members), departure, { level: s.traffic, weather: s.weather });
   }
 
+  /** Road route through stops in order, for the driver's map (P1). Outside the lock: it may call Google. */
+  async function routeThrough(stops: Ride['plan']['stops'], departure: Us) {
+    const s = (await demo()).settings;
+    const pts = stops.map((x) => ({ lat: x.place.lat, lng: x.place.lng }));
+    return pts.length >= 2 ? selectProvider(s.source).getRoute(pts, departure) : undefined;
+  }
+
   async function viewFor(repo: Repo, u: User, epoch: number): Promise<View> {
     if (u.role === 'driver') return driverView(repo, u, (await repo.getDriver(u.id))!, clock, epoch);
     return riderView(repo, u, clock, epoch);
@@ -142,7 +150,8 @@ export function createCommands(ctx: Ctx) {
         const ride = await repo.getRide(m.rideId);
         const users = new Map<string, User>();
         for (const x of ride?.members ?? []) { const u = await repo.getUser(x.userId); if (u) users.set(u.id, u); }
-        for (const x of ride ? activeMembers(ride) : []) chats.push([x.userId, chatView(m, users)]);
+        const to = m.channel.startsWith('driver:') ? [m.channel.slice(7), ride?.driverUserId ?? ''] : (ride ? activeMembers(ride) : []).map((x) => x.userId);
+        for (const id of to) if (id) chats.push([id, chatView(m, users)]);
       }
     });
     for (const [id, m] of chats) publisher.chat(id, m);
@@ -310,6 +319,7 @@ export function createCommands(ctx: Ctx) {
       } else {
         order = snap.locked?.order ?? active.map((m) => m.userId);
         spec = snap.locked?.matrix ?? await fetchMatrix(active, fromIso(snap.plan.firstPickup));
+        if (snap.driverUserId) route = (await routeThrough(snap.plan.stops.filter((x) => x.userId !== user.id), fromIso(snap.plan.firstPickup))) ?? null;
       }
       try {
         return await commit(user.id, async (repo, fx) => {
@@ -339,6 +349,7 @@ export function createCommands(ctx: Ctx) {
               throw new ConflictError('LATE_CONFIRM_REQUIRED', undefined, { chargeJod: jod(ride.plan.shareP * seatsOf(mine)) });
             }
             rides.leaveFrozen(ride, user.id, user.firstName, now, toTimed(spec!), order, pf(ride.category), fx, await repo.listDrivers());
+            if (route && ride.driverUserId && ACTIVE_STATES.includes(ride.state)) ride.plan = { ...ride.plan, route };
           }
           await repo.putRide(ride);
         });
@@ -497,6 +508,13 @@ export function createCommands(ctx: Ctx) {
       return { token: u.token, epoch: u.epoch, view: await myView(u.id) };
     },
 
+    /** Places search proxy (P1): server-side Google Places, Jordan only, biased to Irbid. No key → nothing. */
+    async places(token: string, q: string) {
+      await auth(token, 'rider');
+      if (q.trim().length < 3 || !cfg.googleServerKey) return [];
+      try { return await searchPlaces(cfg.googleServerKey, q.trim()); } catch (e) { console.warn(`places: ${(e as Error).message}`); return []; }
+    },
+
     async demoLogin({ as }: Body<typeof req.DemoLoginBody>): Promise<AuthResponse> {
       const u = await store.withLock((r) => r.getUserBySeedLogin(as));
       if (!u) throw illegal('Unknown demo login');
@@ -596,8 +614,18 @@ export function createCommands(ctx: Ctx) {
 
     async chat(token: string, rideId: string, b: Body<typeof req.ChatBody>) {
       const user = await auth(token);
-      if (b.channel !== 'group') throw illegal('Driver chat comes later');   // P1
-      return postChat(user, rideId, b.text);
+      if (b.channel === 'group') return postChat(user, rideId, b.text);
+      // Driver channel (P1): one private thread per rider with the accepted driver (SPEC §3.11).
+      const riderId = b.channel.slice('driver:'.length);
+      return commit(user.id, async (repo, fx) => {
+        const ride = await repo.getRide(rideId);
+        if (!ride || !rides.driverAssigned(ride)) throw illegal('Driver chat opens when a driver accepts');
+        const isRider = user.id === riderId && activeMembers(ride).some((m) => m.userId === riderId);
+        const isDriver = user.id === ride.driverUserId && ride.members.some((m) => m.userId === riderId);
+        if (!isRider && !isDriver) throw illegal('That chat is private');
+        fx.messages.push({ rideId, channel: `driver:${riderId}`, kind: 'user', fromUserId: user.id, text: maskChat(b.text.trim()) });
+        fx.touched.add(riderId); fx.touched.add(ride.driverUserId!);
+      });
     },
 
     async accept(token: string, rideId: string) {
@@ -610,6 +638,7 @@ export function createCommands(ctx: Ctx) {
         }
         const order = activeMembers(snap).map((m) => m.userId);
         const spec = await fetchMatrix(activeMembers(snap), fromIso(snap.plan.firstPickup));
+        const route = await routeThrough(snap.plan.stops, fromIso(snap.plan.firstPickup));
         try {
           return await commit(user.id, async (repo, fx) => {
             const ride = await repo.getRide(rideId);
@@ -617,7 +646,7 @@ export function createCommands(ctx: Ctx) {
             if (ride.version !== snap.version) throw RETRY;
             const busy = (await repo.listActiveRides()).some((r) => r.driverUserId === user.id && r.id !== rideId);
             if (busy) throw illegal('You already have a trip');
-            rides.accept(ride, (await repo.getDriver(user.id))!, user.firstName, clock.now(), spec, order, fx);
+            rides.accept(ride, (await repo.getDriver(user.id))!, user.firstName, clock.now(), spec, order, fx, route);
             await repo.putRide(ride);
           });
         } catch (e) {

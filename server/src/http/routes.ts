@@ -43,6 +43,7 @@ export function registerRoutes(app: FastifyInstance, cmd: Commands, cfg: Config)
   app.get('/api/me', async (r) => view(cmd.me(token(r))));
 
   // rider
+  app.get('/api/places', async (r) => ({ ok: true, places: await cmd.places(token(r), String((r.query as { q?: string }).q ?? '')) }));
   app.post('/api/quote', async (r) => ({ ok: true, quote: await cmd.quote(token(r), body(schema.QuoteBody, r)) }));
   app.post('/api/search', async (r) => ({ ok: true, cards: await cmd.search(token(r), body(schema.SearchBody, r)) }));
   app.post('/api/rides', async (r) => view(cmd.createRide(token(r), body(schema.CreateRideBody, r))));

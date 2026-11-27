@@ -77,7 +77,8 @@ async function rideView(repo: Repo, ride: Ride, me: User, now: number): Promise<
     } } : {}),
     findDriverAutoAt: toIso(firstPickupUs(ride) - 45 * 60_000_000),
     leave: { free: !late, chargeJod: late ? jod(cashDueP(mine, ride.plan.shareP)) : 0 },
-    chat: { group: group.map((m) => chatView(m, users)), unread: 0 },
+    chat: { group: group.map((m) => chatView(m, users)), unread: 0,
+      ...(ride.driverUserId ? { driver: (await repo.listMessages(ride.id, `driver:${me.id}`, 100)).map((m) => chatView(m, users)) } : {}) },
     ...(ride.cancelReason ? { cancelReason: ride.cancelReason } : {}),
     ...(mine.guest && !mine.guest.leave ? { myGuest: { firstName: mine.guest.firstName } } : {}),
     pendingInvites: await Promise.all((await repo.listInvitesForRide(ride.id))

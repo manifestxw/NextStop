@@ -83,7 +83,18 @@ function FitBounds({ marks: all, pickupsOnly }: { marks: Mark[]; pickupsOnly?: b
   return null;
 }
 
-function Inner({ marks, dark, fit, fallback }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; fallback: React.ReactNode }) {
+/** The driver's road route (P1), drawn in the accent colour, 5px, round caps (DESIGN §7). */
+function RouteLine({ path }: { path: { lat: number; lng: number }[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || path.length < 2) return;
+    const line = new google.maps.Polyline({ path, map, strokeColor: token('--accent') || '#FF6A2B', strokeWeight: 5, strokeOpacity: 0.9, zIndex: 1 });
+    return () => line.setMap(null);
+  }, [map, path]);
+  return null;
+}
+
+function Inner({ marks, dark, fit, route, fallback }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[]; fallback: React.ReactNode }) {
   const status = useApiLoadingStatus();
   const rejected = useAuthFailed();
   if (rejected || status === APILoadingStatus.FAILED || status === APILoadingStatus.AUTH_FAILURE) return <>{fallback}</>;
@@ -93,18 +104,19 @@ function Inner({ marks, dark, fit, fallback }: { marks: Mark[]; dark?: boolean; 
       {status === APILoadingStatus.LOADED && marks.map((m, i) => (
         <Marker key={`${m.kind}-${i}-${m.lat}`} position={m} icon={iconFor(m)} title={m.label} zIndex={m.me ? 10 : 2} />
       ))}
+      {route && status === APILoadingStatus.LOADED && <RouteLine path={route} />}
       <FitBounds marks={marks} pickupsOnly={fit === 'pickups'} />
     </Map>
   );
 }
 
 /** `fit="pickups"`: frame the pickups (driver), not the far-away destination too. */
-export function MapView({ marks, dark, fit = 'all' }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups' }) {
+export function MapView({ marks, dark, fit = 'all', route }: { marks: Mark[]; dark?: boolean; fit?: 'all' | 'pickups'; route?: { lat: number; lng: number }[] }) {
   const pickup = marks.find((m) => m.kind === 'pickup' && (m.me || m.n?.startsWith('1'))) ?? marks.find((m) => m.kind === 'pickup');
   const dest = marks.find((m) => m.kind === 'dest');
   const fallback = <MapPanel pickup={pickup?.label} dest={dest?.label} pulse={pickup?.me} />;
   if (!MAPS_KEY) return fallback;
-  return <Inner marks={marks} dark={dark} fit={fit} fallback={fallback} />;
+  return <Inner marks={marks} dark={dark} fit={fit} route={route} fallback={fallback} />;
 }
 
 /** One provider for the whole app (main.tsx): one script load and one auth-failure callback. */
