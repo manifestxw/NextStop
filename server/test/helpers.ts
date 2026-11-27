@@ -28,7 +28,7 @@ export async function makeHarness({ stage = false } = {}) {
   const places = stage ? loadSeed().places : loadSeed().places.map((p) => ({ ...p, ...LOC[p.key as keyof typeof LOC] }));
   const ctx: Ctx = { store, clock, cfg, publisher, realNowMs: () => real.ms, places };
   const cmd = createCommands(ctx);
-  const login = async (as: 'laith' | 'saed' | 'yazeed') => (await cmd.demoLogin({ as })).token;
+  const login = async (as: 'laith' | 'saed' | 'yazeed' | 'noor' | 'huda' | 'lina' | 'sara') => (await cmd.demoLogin({ as })).token;
   return { cfg, store, clock, real, pushed, chats, ctx, cmd, login };
 }
 

@@ -17,8 +17,9 @@ async function seededLogin() {
   const q = new URLSearchParams(location.search);
   const as = q.get('as'), pin = q.get('pin');
   if (q.get('demo') === '1') history.replaceState(null, '', '/demo');
-  if (as !== 'laith' && as !== 'saed' && as !== 'yazeed' && as !== 'noor' && as !== 'huda') return;
-  if (!pin) return;
+  const SEEDED = ['laith', 'saed', 'yazeed', 'noor', 'huda', 'lina', 'sara'] as const;
+  const isSeeded = (x: string | null): x is (typeof SEEDED)[number] => SEEDED.includes(x as (typeof SEEDED)[number]);
+  if (!isSeeded(as) || !pin) return;
   q.delete('as'); q.delete('pin');
   history.replaceState(null, '', location.pathname + (q.size ? `?${q}` : ''));
   await api.demoLogin(as, pin).catch((e) => console.warn('seeded login failed:', e));

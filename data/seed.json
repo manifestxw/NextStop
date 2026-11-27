@@ -144,6 +144,28 @@
       "phone": "+962790000008"
     },
     {
+      "id": "u-lina",
+      "firstName": "Lina",
+      "lastName": "Haddad",
+      "seedLogin": "lina",
+      "gender": "F",
+      "role": "rider",
+      "friendCode": "LINA26",
+      "isSim": false,
+      "phone": "+962790000010"
+    },
+    {
+      "id": "u-sara",
+      "firstName": "Sara",
+      "lastName": "Khalil",
+      "seedLogin": "sara",
+      "gender": "F",
+      "role": "rider",
+      "friendCode": "SARA26",
+      "isSim": false,
+      "phone": "+962790000011"
+    },
+    {
       "id": "u-yazeed",
       "firstName": "Yazeed",
       "lastName": "Barakat",
@@ -184,6 +206,20 @@
       "destKey": "JUST",
       "arriveBy": "08:00",
       "chatLine": "Hello!"
+    },
+    {
+      "userId": "u-rasha",
+      "pickupKey": "AM",
+      "destKey": "JUST",
+      "arriveBy": "08:05",
+      "chatLine": "Hi everyone 👋"
+    },
+    {
+      "userId": "u-hala",
+      "pickupKey": "US",
+      "destKey": "JUST",
+      "arriveBy": "08:00",
+      "chatLine": "I'll be at the main gate"
     }
   ]
 }

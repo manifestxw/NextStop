@@ -106,3 +106,38 @@ describe('demo autopilot (demo menu "Play next step")', () => {
     expect((await h.cmd.demo.view()).log).toEqual([]);
   });
 });
+
+describe('women-only demo (owner request: safety for women)', () => {
+  it('the same script with Lina, Sara, Rasha and Hala: women only, same canonical numbers', async () => {
+    const h = await makeHarness({ stage: true });
+    await h.cmd.demo.scenario({ scenario: 'women' });
+    const v0 = await h.cmd.demo.view();
+    expect([v0.scenario, v0.script[0]!.title, v0.script[0]!.does]).toEqual(['women', 'Lina creates a ride', expect.stringContaining('women-only')]);
+    for (let i = 0; i < 10; i++) {
+      if (!(await h.cmd.demo.view()).autopilot) break;
+      await h.cmd.demo.autopilot();
+      h.real.ms += 3_000;
+      await h.cmd.tick();
+    }
+    const v = await h.cmd.demo.view();
+    const log = (n: number) => v.log.find((e) => e.step === n)!.lines.join('\n');
+    expect(log(3)).toContain('4 riders · JOD 1.70 each');
+    expect(log(3)).toMatch(/Rasha · Arabella area/);
+    expect(log(3)).toMatch(/Hala · University Street area/);
+    expect(log(3)).not.toMatch(/Deya'a|Adnan|Noor/);
+    expect(log(6)).toContain('Sara left late at 6:53 AM · charged JOD 1.70');
+    expect(log(7)).toContain('Yazeed earns JOD 6.65 (4.95 cash + 1.70 credit)');
+    const lina = await h.login('lina');
+    const ride = rider(await h.cmd.me(lina)).ride!;
+    expect([ride.genderMode, rider(await h.cmd.me(lina)).me.gender]).toEqual(['same', 'F']);
+  });
+
+  it('a man never sees or joins a women-only ride; the scenario can only change with no script ride running', async () => {
+    const h = await makeHarness({ stage: true });
+    await h.cmd.demo.scenario({ scenario: 'women' });
+    await h.cmd.demo.autopilot();                     // Lina creates the women-only ride
+    const saed = await h.login('saed');
+    expect(await h.cmd.search(saed, { pickup: { key: 'US' }, dest: { key: 'JUST' }, arriveBy: '2026-11-29T08:00:00+03:00', category: 'economy', sameGenderOnly: false })).toEqual([]);
+    await expect(h.cmd.demo.scenario({ scenario: 'men' })).rejects.toThrow(/Reset/);
+  });
+});

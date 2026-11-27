@@ -30,7 +30,7 @@ import { loadSeed, resetToSeed } from '../store/seed.js';
 import { selectProvider, travelOffline } from '../travel/select.js';
 import { nearestPlace, reverseGeocode, searchPlaces } from '../travel/google.js';
 import { areaFor, pinName } from '../travel/places.js';
-import { SCRIPT, describeRide } from './script.js';
+import { CASTS, describeRide, scriptFor, type Scenario } from './script.js';
 
 export interface PlaceResult { key?: string; placeId: string; name: string; address: string; area: string; lat: number; lng: number }
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
@@ -507,7 +507,7 @@ export function createCommands(ctx: Ctx) {
       const settings = { ...d.settings, offlineFallbackActive: d.settings.offlineFallbackActive || travelOffline() };
       const mine = await linaRide(repo);
       const now = mine && ACTIVE_STATES.includes(mine.state) ? await describeRide(repo, mine, rides.readyLeadMin(d.settings.driversNearby)) : [];
-      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: SCRIPT, log: [...apLog], now,
+      return { buildStamp: null, clock: clockView(clock), settings, rides: list, autopilot: await nextStep(repo), script: scriptFor(scenario), scenario, log: [...apLog], now,
         otps: [...otps].map(([phone, o]) => ({ phone, code: o.code, secondsLeft: Math.round((OTP_TTL_MS - (ctx.realNowMs() - o.sentMs)) / 1000) })).filter((o) => o.secondsLeft > 0) };
     });
   }
@@ -520,9 +520,10 @@ export function createCommands(ctx: Ctx) {
   const tickets = new Map<string, { phone: string; atMs: number }>();
 
   const apLog: DemoView['log'] = [];   // what each autopilot tap did; in memory, cleared on reset
+  let scenario: Scenario = 'men';       // which demo the autopilot plays: men-only (Laith) or women-only (Lina)
 
   async function linaRide(repo: Repo): Promise<Ride | null> {
-    const laith = await repo.getUserBySeedLogin('laith');
+    const laith = await repo.getUserBySeedLogin(CASTS[scenario].host);
     const rides = laith ? (await repo.listRidesForUser(laith.id)).filter((r) => r.hostUserId === laith.id || r.members[0]?.userId === laith.id) : [];
     return rides.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
   }
@@ -532,12 +533,13 @@ export function createCommands(ctx: Ctx) {
     const step = (() => {
       if (!ride || ride.state === 'CANCELED') return 1;
       if (ride.state === 'COMPLETED') return 0;
-      const active = activeMembers(ride), saraIn = active.some((m) => m.userId === 'u-saed');
-      if (ride.state === 'OPEN') return !ride.members.some((m) => m.userId === 'u-saed') ? 2 : active.length < 4 ? 3 : 4;
+      const riderId = `u-${CASTS[scenario].rider}`;   // seed ids are u-<login>
+      const active = activeMembers(ride), saraIn = active.some((m) => m.userId === riderId);
+      if (ride.state === 'OPEN') return !ride.members.some((m) => m.userId === riderId) ? 2 : active.length < 4 ? 3 : 4;
       if (ride.state === 'READY_CHECK' || ride.state === 'DISPATCHED') return 5;
       return saraIn ? 6 : 7;
     })();
-    return step ? { step, label: SCRIPT[step - 1]!.title } : null;
+    return step ? { step, label: scriptFor(scenario)[step - 1]!.title } : null;
   }
 
   async function newFriendCode(repo: Repo) {
@@ -1101,7 +1103,7 @@ export function createCommands(ctx: Ctx) {
         const next = await store.withLock(nextStep);
         if (!next) throw new ConflictError('NOT_ELIGIBLE', 'The demo script is done. Reset to run it again.');
         const [laith, saed, yazeed] = await store.withLock(async (r) =>
-          Promise.all((['laith', 'saed', 'yazeed'] as const).map(async (as) => (await r.getUserBySeedLogin(as))!.token)));
+          Promise.all(([CASTS[scenario].host, CASTS[scenario].rider, 'yazeed'] as const).map(async (as) => (await r.getUserBySeedLogin(as))!.token)));
         const day = toIso(clock.now()).slice(0, 10);
         const trip = (key: string) => ({ pickup: { key }, dest: { key: 'JUST' }, arriveBy: `${day}T08:00:00+03:00`, category: 'economy' as const, sameGenderOnly: true });
         const ride = async () => (await store.withLock(linaRide))!;
@@ -1139,6 +1141,17 @@ export function createCommands(ctx: Ctx) {
         const lines = await store.withLock(async (r) => { const x = await linaRide(r); return x ? describeRide(r, x, rides.readyLeadMin((await r.getDemoState())!.settings.driversNearby)) : []; });
         apLog.push({ step: next.step, title: next.label, at: toIso(clock.now()), lines });
         publisher.clock(clockView(clock));
+        return demoView();
+      },
+
+      /** Pick which demo the autopilot plays (men-only or women-only). Only with no script ride running. */
+      async scenario(b: Body<typeof req.DemoScenarioBody>): Promise<DemoView> {
+        if (b.scenario !== scenario) {
+          const running = await store.withLock(async (r) => { const x = await linaRide(r); return !!x && ACTIVE_STATES.includes(x.state); });
+          if (running) throw new ConflictError('NOT_ELIGIBLE', 'A demo ride is running. Reset the demo first, then switch.');
+          scenario = b.scenario;
+          apLog.length = 0;
+        }
         return demoView();
       },
 

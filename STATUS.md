@@ -34,7 +34,8 @@
 
 ## Decisions (this session)
 - Owner: seed people = Laith Na'amneh (host), Saed Barakat, Deya'a Dwekat, Adnan Al-Rousan, Yazeed Barakat (driver);
-  demo ride is men-only now. SPEC §2.2/§2.6 still say Lina/Sara/Omar (names only; numbers unchanged).
+  + a women-only demo (Lina Haddad host, Sara Khalil, sims Rasha/Hala), picked in the demo menu. Same numbers.
+  Driver Yazeed in both (female-driver matching = SPEC §5 Do Not Build). SPEC still names Lina/Sara/Omar.
 - No-show waits count from the shown minute. Default 20 drivers nearby (keeps −45). Deploy: owner, later.
 - User.phone (+962…, plain indexed column; one per account in code) + lastName (own screens only). OTP state in memory. DECLINED invites. Public area of a searched/pinned place is set by the server.
 - Noor + Huda get seed logins. Pins: street address (Geocoding API, owner enabled it), else nearest place. No "use my location" (SPEC §5).

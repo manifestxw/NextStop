@@ -9,39 +9,48 @@ import type { Repo } from '../store/repo.js';
 
 type Step = DemoView['script'][number];
 
-export const SCRIPT: Step[] = [
+/** The cast of each demo: the men-only ride (Laith) or the women-only ride (Lina), same route, times and prices. */
+export const CASTS = {
+  men: { host: 'laith', rider: 'saed', hostName: 'Laith', riderName: 'Saed', simA: "Deya'a", simB: 'Adnan', only: 'men' },
+  women: { host: 'lina', rider: 'sara', hostName: 'Lina', riderName: 'Sara', simA: 'Rasha', simB: 'Hala', only: 'women' },
+} as const;
+export type Scenario = keyof typeof CASTS;
+
+export function scriptFor(scenario: Scenario): Step[] {
+  const c = CASTS[scenario];
+  return [
   {
-    step: 1, title: 'Laith creates a ride', who: 'Laith (host)',
-    does: 'Creates a men-only Economy ride from Irbid City Center to JUST, arriving by 8:00 AM.',
+    step: 1, title: `${c.hostName} creates a ride`, who: `${c.hostName} (host)`,
+    does: `Creates a ${c.only}-only Economy ride from Irbid City Center to JUST, arriving by 8:00 AM.`,
     watch: [
-      { phone: 'Laith', what: 'The Sync Pass appears: 1 of 4 synced, her solo price, "Be ready by" and "Starts automatically at" (45 min before the first pickup).' },
-      { phone: 'Demo menu', what: "Laith's ride shows up in the ride list as OPEN." },
+      { phone: `${c.hostName}`, what: 'The Sync Pass appears: 1 of 4 synced, the solo price, "Be ready by" and "Starts automatically at" (45 min before the first pickup).' },
+      { phone: 'Demo menu', what: `${c.hostName}'s ride shows up in the ride list as OPEN.` },
     ],
-    expect: 'Laith alone: JOD 5.35 (same as riding solo).',
+    expect: `${c.hostName} alone: JOD 5.35 (same as riding solo).`,
   },
   {
-    step: 2, title: 'Saed joins and says hi', who: 'Saed',
-    does: 'Searches from University Street to JUST, joins Laith\'s ride, then posts "Hi! I\'m near University Street" in the group chat.',
+    step: 2, title: `${c.riderName} joins and says hi`, who: `${c.riderName}`,
+    does: `Searches from University Street to JUST, joins ${c.hostName}'s ride, then posts "Hi! I'm near University Street" in the group chat.`,
     watch: [
-      { phone: 'Laith', what: 'The seat meter fills to 2 of 4, the price flaps down, the group chat shows an unread badge.' },
-      { phone: 'Saed', what: 'Her own Sync Pass: she is now the first pickup, with her "Be ready by" time.' },
+      { phone: `${c.hostName}`, what: 'The seat meter fills to 2 of 4, the price flaps down, the group chat shows an unread badge.' },
+      { phone: `${c.riderName}`, what: 'Their own Sync Pass: now the first pickup, with their own "Be ready by" time.' },
     ],
-    expect: '2 riders: JOD 3.10 each. Saed becomes pickup 1.',
+    expect: `2 riders: JOD 3.10 each. ${c.riderName} becomes pickup 1.`,
   },
   {
-    step: 3, title: 'Two simulated riders join', who: 'Deya\'a (Arabella Mall) and Adnan (University Street, same spot as Saed)',
+    step: 3, title: 'Two simulated riders join', who: `${c.simA} (Arabella Mall) and ${c.simB} (University Street, same spot as ${c.riderName})`,
     does: 'The two simulated riders join through the same join rules as real phones.',
     watch: [
-      { phone: 'Laith + Saed', what: 'Each join flaps the price down (2.20, then 1.70) and the seat meter reaches 4 of 4: the ride is full.' },
-      { phone: 'Group chat', what: '"Deya\'a joined" and "Adnan joined" system lines.' },
+      { phone: `${c.hostName} + ${c.riderName}`, what: 'Each join flaps the price down (2.20, then 1.70) and the seat meter reaches 4 of 4: the ride is full.' },
+      { phone: 'Group chat', what: `"${c.simA} joined" and "${c.simB} joined" system lines.` },
     ],
     expect: '3 riders: JOD 2.20 each, then 4 riders: JOD 1.70 each.',
   },
   {
-    step: 4, title: 'Laith finds a driver; Laith and Saed are ready', who: 'Laith, Saed (Deya\'a and Adnan answer by themselves)',
-    does: 'Laith taps "Find a driver": the ready check starts. Laith and Saed answer Ready; the simulated riders answer after about 3 seconds.',
+    step: 4, title: `${c.hostName} finds a driver; ${c.hostName} and ${c.riderName} are ready`, who: `${c.hostName}, ${c.riderName} (${c.simA} and ${c.simB} answer by themselves)`,
+    does: `${c.hostName} taps "Find a driver": the ready check starts. ${c.hostName} and ${c.riderName} answer Ready; the simulated riders answer after about 3 seconds.`,
     watch: [
-      { phone: 'Laith + Saed', what: 'The ready check sheet, then "Finding driver" on the progress rail once all four are ready.' },
+      { phone: `${c.hostName} + ${c.riderName}`, what: 'The ready check sheet, then "Finding driver" on the progress rail once all four are ready.' },
       { phone: 'Yazeed', what: 'An offer card: Economy, 4 riders, fare and cash to collect, "Respond by".' },
     ],
     expect: 'Offer to Yazeed: fare JOD 6.71, collect JOD 6.80. Wait ~3 s before the next step.',
@@ -53,17 +62,17 @@ export const SCRIPT: Step[] = [
       { phone: 'Yazeed', what: 'The trip screen: numbered pickups on the dark map with the orange road route, a chat button per rider, "Collect JOD 6.80".' },
       { phone: 'Riders', what: '"Driver on the way": Yazeed, White Hyundai Elantra, plate 12-34567; "Message Yazeed" card.' },
     ],
-    expect: 'First pickup Saed at 7:20 AM. Yazeed collects JOD 6.80.',
+    expect: `First pickup ${c.riderName} at 7:20 AM. Yazeed collects JOD 6.80.`,
   },
   {
-    step: 6, title: '6:53: Saed leaves late', who: 'Saed',
-    does: 'The clock jumps to 6:53 AM (27 min before the first pickup, after the free-leave cutoff) and Saed leaves, accepting the late charge.',
+    step: 6, title: `6:53: ${c.riderName} leaves late`, who: `${c.riderName}`,
+    does: `The clock jumps to 6:53 AM (27 min before the first pickup, after the free-leave cutoff) and ${c.riderName} leaves, accepting the late charge.`,
     watch: [
-      { phone: 'Saed', what: 'Her share goes on her balance as a late-leave charge; she sees the "You left" screen.' },
-      { phone: 'Laith', what: 'The price goes down a little (the route got shorter). The driver keeps Saed\'s money as credit.' },
-      { phone: 'Yazeed', what: 'Saed\'s stop disappears; 3 pickups left; the route is redrawn.' },
+      { phone: `${c.riderName}`, what: 'The share goes on their balance as a late-leave charge; they see the "You left" screen.' },
+      { phone: `${c.hostName}`, what: `The price goes down a little (the route got shorter). The driver keeps ${c.riderName}'s money as credit.` },
+      { phone: 'Yazeed', what: `${c.riderName}'s stop disappears; 3 pickups left; the route is redrawn.` },
     ],
-    expect: 'Saed charged JOD 1.70. The other 3: JOD 1.65 each. Yazeed: 4.95 cash + 1.70 credit.',
+    expect: `${c.riderName} charged JOD 1.70. The other 3: JOD 1.65 each. Yazeed: 4.95 cash + 1.70 credit.`,
   },
   {
     step: 7, title: 'Complete trip', who: 'Demo menu',
@@ -72,9 +81,10 @@ export const SCRIPT: Step[] = [
       { phone: 'Riders', what: 'The trip summary: paid, saved compared to riding solo, arrival time.' },
       { phone: 'Yazeed', what: 'Earnings: cash per rider plus the late-leave credit.' },
     ],
-    expect: 'Laith saved JOD 3.70 (5.35 → 1.65). Yazeed earns JOD 6.65.',
+    expect: `${c.hostName} saved JOD 3.70 (5.35 → 1.65). Yazeed earns JOD 6.65.`,
   },
 ];
+}
 
 const jod = (p: number) => (p / 100).toFixed(2);
 

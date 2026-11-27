@@ -15,7 +15,7 @@ describe('seed (SPEC §2.6)', () => {
     expect(byName.Yazeed).toMatchObject({ role: 'driver', seedLogin: 'yazeed' });
     expect(s.drivers[0]).toMatchObject({ car: 'White Hyundai Elantra', plate: '12-34567' });
     expect(s.users.filter((u) => u.gender === 'F' && u.role === 'rider').length).toBeGreaterThan(0);   // other-gender riders for the gender rule
-    expect(SIM_ORDER.map((r) => r.firstName)).toEqual(['Deya\'a', 'Adnan', 'Noor']);
+    expect(SIM_ORDER.map((r) => r.firstName)).toEqual(['Deya\'a', 'Adnan', 'Noor', 'Rasha', 'Hala']);   // Rasha, Hala: women-only demo
     expect(new Set(s.users.map((u) => u.friendCode)).size).toBe(s.users.length);
   });
 

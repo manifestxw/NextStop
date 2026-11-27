@@ -199,6 +199,8 @@ export interface DemoView {
   script: { step: number; title: string; who: string; does: string; watch: { phone: string; what: string }[]; expect: string }[];
   /** What each autopilot tap actually did (the script ride's state right after it). */
   log: { step: number; title: string; at: Iso; lines: string[] }[];
+  /** Which demo the autopilot plays: the men-only ride (Laith) or the women-only ride (Lina). */
+  scenario: 'men' | 'women';
   /** The script ride's live state, or [] when there is none. */
   now: string[];
   /** Sign-in codes still waiting to be used (demo: no SMS is sent). */

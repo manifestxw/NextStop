@@ -51,7 +51,7 @@ export function DemoMenu() {
   return (
     <main style={{ font: '16px system-ui', padding: 20, background: '#fff', color: '#111', minHeight: '100dvh', display: 'grid', gap: 12 }}>
       <h1 style={{ margin: 0 }}>Demo menu</h1>
-      <Autopilot demo={demo} busy={busy} play={() => act(() => api.demo.autopilot(pin))} />
+      <Autopilot demo={demo} busy={busy} play={() => act(() => api.demo.autopilot(pin))} pick={(s) => act(() => api.demo.scenario(pin, s))} />
       {demo.otps.length > 0 && (
         <div style={box}><b>Sign-in codes waiting (no SMS in the demo)</b>
           {demo.otps.map((o) => <span key={o.phone}>{o.phone} → <b style={{ letterSpacing: '0.1em' }}>{o.code}</b> · {Math.ceil(o.secondsLeft / 60)} min left</span>)}</div>
@@ -97,7 +97,7 @@ export function DemoMenu() {
         Simulated riders answer Ready automatically
       </label>
       <button style={{ ...big, borderColor: '#b00', color: '#b00' }} onClick={() => { if (confirm('Reset everything and log out all phones?')) void act(() => api.demo.reset(pin)); }}>Reset demo</button>
-      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=laith&amp;pin=…</code> · <code>/?as=saed&amp;pin=…</code> · <code>/?as=yazeed&amp;pin=…</code> · <code>/?as=noor&amp;pin=…</code> (friend to invite, code NOOR26) · <code>/?as=huda&amp;pin=…</code> (Uni plan)</p>
+      <p style={{ margin: 0, color: '#555' }}>Phone links: <code>/?as=laith&amp;pin=…</code> · <code>/?as=saed&amp;pin=…</code> · <code>/?as=yazeed&amp;pin=…</code> · <code>/?as=noor&amp;pin=…</code> (friend to invite, code NOOR26) · <code>/?as=huda&amp;pin=…</code> (Uni plan) · women-only demo: <code>/?as=lina&amp;pin=…</code> · <code>/?as=sara&amp;pin=…</code></p>
     </main>
   );
 }
@@ -105,13 +105,21 @@ export function DemoMenu() {
 const box: React.CSSProperties = { border: '1px solid #bbb', borderRadius: 8, padding: 12, display: 'grid', gap: 6 };
 
 /** The SPEC §2.2 script as a checklist: done steps show what really happened, the next one says what to watch. */
-function Autopilot({ demo, busy, play }: { demo: DemoView; busy: boolean; play: () => void }) {
+function Autopilot({ demo, busy, play, pick }: { demo: DemoView; busy: boolean; play: () => void; pick: (s: 'men' | 'women') => void }) {
   const next = demo.autopilot?.step ?? demo.script.length + 1;
   const cur = demo.script.find((x) => x.step === next);
   return (
     <section style={{ border: '2px solid #111', borderRadius: 8, padding: 12, display: 'grid', gap: 10 }}>
       <b style={{ fontSize: 18 }}>Autopilot · the pitch script (SPEC §2.2)</b>
-      <span style={{ color: '#555' }}>Each tap acts as the seeded people through the same commands their phones use. Keep Laith, Saed and Yazeed open to watch it happen.
+      <div role="group" aria-label="Which demo" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {([['men', 'Men-only ride', 'Laith hosts · Saed joins · ?as=laith, ?as=saed'], ['women', 'Women-only ride', 'Lina hosts · Sara joins · ?as=lina, ?as=sara']] as const).map(([k, t, sub]) => (
+          <button key={k} type="button" aria-pressed={demo.scenario === k} onClick={() => pick(k)} disabled={busy}
+            style={{ ...big, padding: 10, textAlign: 'left', background: demo.scenario === k ? '#111' : '#fff', color: demo.scenario === k ? '#fff' : '#111' }}>
+            {t}<span style={{ display: 'block', font: '13px system-ui', opacity: 0.8 }}>{sub}</span></button>
+        ))}
+      </div>
+      <span style={{ color: '#555', fontSize: 14 }}>Same route, times and prices. Women-only rides are hidden from men in search and refuse men as riders or +1s. Switching needs a reset if a demo ride is running. Driver: Yazeed in both.</span>
+      <span style={{ color: '#555' }}>Each tap acts as the seeded people through the same commands their phones use. Keep {demo.scenario === 'women' ? 'Lina, Sara' : 'Laith, Saed'} and Yazeed open to watch it happen.
         Numbers assume the snapshot travel source.</span>
       <ol style={{ margin: 0, paddingLeft: 22, display: 'grid', gap: 4 }}>
         {demo.script.map((x) => (
