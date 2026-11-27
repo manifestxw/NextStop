@@ -36,6 +36,7 @@ describe('create', () => {
     const eco = q.categories.find((c) => c.category === 'economy')!;
     expect([eco.soloJod, eco.fromJod, eco.estimates.map((e) => e.eachJod), hhmm(eco.beReadyBy), eco.uniTrip]).toEqual([7.85, 2.35, [7.85, 4.15, 2.95, 2.35], '07:15', true]);
     expect(q.categories.find((c) => c.category === 'airport')!.available).toBe(false);
+    expect([q.pickup.area, q.dest.name]).toEqual(['City Center area', 'Jordan University of Science and Technology']);
   });
 });
 

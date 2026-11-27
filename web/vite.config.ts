@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
+  envDir: '..',   // read VITE_* from the repo-root .env; only VITE_-prefixed vars reach the bundle
   resolve: {
     // Bundle shared/ from source so edits show up without rebuilding it.
     alias: { '@nextstop/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)) },

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@nextstop/shared": "*",
+    "@vis.gl/react-google-maps": "^1.10.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "^7.9.0",
@@ -17,6 +18,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.67.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.0.0",

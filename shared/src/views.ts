@@ -56,7 +56,8 @@ export interface CategoryQuote {
   zoneKm: { pickup: number; dest: number };
   uniTrip: boolean;         // SPEC §3.19: own pickup or destination at a campus
 }
-export interface QuoteView { categories: CategoryQuote[] }
+/** `pickup`/`dest` = the rider's own resolved places (for their map). */
+export interface QuoteView { categories: CategoryQuote[]; pickup: PlaceView; dest: PlaceView }
 
 /** A ride in "Rides going your way". Area names only, never coordinates. */
 export interface MatchCard {

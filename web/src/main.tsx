@@ -5,6 +5,7 @@ import { api } from './net/api.js';
 import { connectSocket, disconnectSocket } from './net/socket.js';
 import { AppRoutes } from './router.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { MapsProvider } from './components/MapView.js';
 import { useSession } from './state/session.js';
 import './styles/tokens.css';
 import './styles/base.css';
@@ -49,6 +50,6 @@ function App() {
 // redirect runs first and drops the ?as= query.
 void seededLogin().finally(() => {
   createRoot(document.getElementById('root')!).render(
-    <StrictMode><ErrorBoundary><BrowserRouter><App /></BrowserRouter></ErrorBoundary></StrictMode>,
+    <StrictMode><ErrorBoundary><MapsProvider><BrowserRouter><App /></BrowserRouter></MapsProvider></ErrorBoundary></StrictMode>,
   );
 });

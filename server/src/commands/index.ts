@@ -28,7 +28,7 @@ import { selectProvider } from '../travel/select.js';
 import { toTimed, type MatrixSpec } from '../travel/provider.js';
 import { chatView, clockView } from '../views/common.js';
 import { driverView } from '../views/driverView.js';
-import { riderView } from '../views/riderView.js';
+import { placeView, riderView } from '../views/riderView.js';
 
 export interface Ctx {
   store: Store; clock: Clock; cfg: Config; publisher: Publisher; realNowMs: () => number;
@@ -400,7 +400,7 @@ export function createCommands(ctx: Ctx) {
           fromJod: estimates.at(-1)?.eachJod ?? 0, estimates, beReadyBy: s ? toIso(s.T0) : toIso(by),
           zoneKm: { pickup: zp, dest: zd }, uniTrip };
       });
-      return { categories };
+      return { categories, pickup: placeView(pickup), dest: placeView(dest) };
     },
 
     async search(token: string, b: Body<typeof req.SearchBody>): Promise<MatchCard[]> {

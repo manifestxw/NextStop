@@ -11,7 +11,7 @@ import type { Repo } from '../store/repo.js';
 import { bannerView, chatView, clockView, seatViews } from './common.js';
 
 const DAY_US = 24 * 3_600_000_000;
-const placeView = (p: Place): PlaceView => ({ ...(p.key ? { key: p.key } : {}), name: p.name, area: p.area, lat: p.lat, lng: p.lng });
+export const placeView = (p: Place): PlaceView => ({ ...(p.key ? { key: p.key } : {}), name: p.name, area: p.area, lat: p.lat, lng: p.lng });
 
 /** The ride this rider's screens show: their active ride, else their latest finished one (summary). */
 export async function currentRideFor(repo: Repo, userId: string, nowUs: number): Promise<Ride | null> {

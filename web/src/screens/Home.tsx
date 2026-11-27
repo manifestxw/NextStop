@@ -1,5 +1,6 @@
 // Home + trip screen (DESIGN §7): places, arrive-by, "Same gender only", category tiles, Find rides.
 // Prices on the tiles come from /api/quote; nothing is computed here.
+import { MapView } from '../components/MapView.js';
 import { Icon, type IconName } from '../components/Icon.js';
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ import { useSession } from '../state/session.js';
 import { PLACES, placeName, useDraft } from '../state/draft.js';
 import { arriveByIso, fmtJod } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
-import { Button, ErrorNote, Logo, MapPanel, Ring, Square, Switch } from '../components/ui.js';
+import { Button, ErrorNote, Logo, Ring, Square, Switch } from '../components/ui.js';
 
 export const CATS: { id: Category; name: string; icon: IconName }[] = [
   { id: 'economy', name: 'Economy', icon: 'car' }, { id: 'comfort', name: 'Comfort', icon: 'armchair' }, { id: 'airport', name: 'Airport', icon: 'plane' },
@@ -51,7 +52,10 @@ export function Home() {
 
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapPanel pickup={d.pickupKey ? placeName(d.pickupKey) : undefined} dest={d.destKey ? placeName(d.destKey) : undefined} pulse />
+      <MapView marks={quote ? [
+        { kind: 'pickup', lat: quote.pickup.lat, lng: quote.pickup.lng, label: quote.pickup.name, me: true },
+        { kind: 'dest', lat: quote.dest.lat, lng: quote.dest.lng, label: quote.dest.name },
+      ] : []} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">Code {view.me.friendCode}</span></div>
         {view.me.outstandingJod > 0 && (

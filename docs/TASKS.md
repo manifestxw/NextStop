@@ -44,7 +44,7 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 
 ## M2: RideSync skin (P0 polish)
 - [x] **T13** `done 5f29d05` CX→CC (owner, 27 Nov; before T12 by owner choice): Impeccable pass against DESIGN.md: split-flap numbers, merge mark/loader, perforated Sync Pass, motion + reduced motion, contrast. needs: T12
-- [ ] **T14** `todo` CC: Google map wiring data: rider view own ring + destination only, driver stops; recheck privacy tests. needs: T12
+- [ ] **T14** `doing CC` CC (before T12 by owner choice): Google map wiring data: rider view own ring + destination only, driver stops; recheck privacy tests. needs: T12
 
 ## P1 (only after every P0 item works on the deployed URL)
 - [ ] **T15** `todo` CC: Uni plans domain: subscribe (demo card validation, last4 only), planned trips, `place_bucket` in the scheduler, replacements, 12 h cancel, discount + RideSync credit at COMPLETED; `demo/place-planned`. needs: T12 (SPEC §3.19)

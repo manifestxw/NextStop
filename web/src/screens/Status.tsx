@@ -1,4 +1,5 @@
 // Ride status (DESIGN §7): stage track, Sync Pass, chat card, locations, leave. Ready check + leave sheets.
+import { MapView } from '../components/MapView.js';
 import { Flap } from '../components/Flap.js';
 import { Icon } from '../components/Icon.js';
 import { useState } from 'react';
@@ -9,7 +10,7 @@ import { useSession } from '../state/session.js';
 import { useDraft } from '../state/draft.js';
 import { countdown, fmtJod, fmtTime } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
-import { Button, CategoryBadge, ErrorNote, GenderBadge, MapPanel, MergeMark, Ring, SeatMeter, Sheet, Square, useAction } from '../components/ui.js';
+import { Button, CategoryBadge, ErrorNote, GenderBadge, MergeMark, Ring, SeatMeter, Sheet, Square, useAction } from '../components/ui.js';
 
 const STAGES = ['Syncing', 'Ready check', 'Finding driver', 'Driver set'];
 const stageOf = (s: RiderRideView['state']) => ({ OPEN: 0, READY_CHECK: 1, DISPATCHED: 2, ACCEPTED: 3, IN_PROGRESS: 3, COMPLETED: 4, CANCELED: 4 })[s];
@@ -48,7 +49,10 @@ export function Status() {
 
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapPanel pickup={ride.myPickup.name} dest={ride.myDest.name} pulse={stage < 3} />
+      <MapView marks={[
+        { kind: 'pickup', lat: ride.myPickup.lat, lng: ride.myPickup.lng, label: ride.myPickup.name, me: stage < 3 },
+        { kind: 'dest', lat: ride.myDest.lat, lng: ride.myDest.lng, label: ride.myDest.name },
+      ]} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="stages" aria-label="Progress">
           {STAGES.map((s, i) => <div key={s} className={`stage${i < stage ? ' stage--done' : i === stage ? ' stage--now' : ''}`}><span className="stage-mark" /><span>{s}</span></div>)}

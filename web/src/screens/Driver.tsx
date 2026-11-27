@@ -6,9 +6,22 @@ import { Icon } from '../components/Icon.js';
 import { useSession } from '../state/session.js';
 import { useDraft } from '../state/draft.js';
 import { fmtJod, fmtTime } from '../lib/format.js';
-import { Button, CategoryBadge, ErrorNote, GenderBadge, Logo, MapPanel, MergeMark, Ring, Square, useAction } from '../components/ui.js';
+import { Button, CategoryBadge, ErrorNote, GenderBadge, Logo, MergeMark, Ring, Square, useAction } from '../components/ui.js';
+import { MapView, type Mark } from '../components/MapView.js';
 
 const useDriver = () => useSession((s) => s.view) as DriverView | null;
+
+/** Accepted trip only (offers carry no coordinates): pickups numbered in stop order, one square per destination. */
+function stopMarks(stops: DriverStop[]): Mark[] {
+  const marks: Mark[] = [];
+  let n = 0;
+  for (const s of stops) {
+    if (!s.place || s.done) continue;
+    if (s.kind === 'P') marks.push({ kind: 'pickup', ...s.place, label: `${s.firstName} · ${s.shortAddress}`, n: ++n });
+    else if (!marks.some((m) => m.kind === 'dest' && m.lat === s.place!.lat && m.lng === s.place!.lng)) marks.push({ kind: 'dest', ...s.place, label: s.shortAddress });
+  }
+  return marks;
+}
 
 export function DriverHome() {
   const view = useDriver();
@@ -19,7 +32,7 @@ export function DriverHome() {
   if (view.trip && !dismissed.includes(view.trip.rideId)) return <Navigate to={`/driver/trip/${view.trip.rideId}`} replace />;
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapPanel />
+      <MapView marks={[]} dark />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <div className="row row--between"><Logo /><span className="t-caption text-2">{view.me.car} · {view.me.plate}</span></div>
         <p className="row t-h1" style={{ gap: 10 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--success)' }} />You're online</p>
@@ -116,7 +129,7 @@ export function DriverTrip() {
   }
   return (
     <main className="screen screen--flush" style={{ paddingTop: 0 }}>
-      <MapPanel />
+      <MapView dark marks={stopMarks(t.stops)} />
       <div className="stack" style={{ padding: '0 var(--pad-x)', gap: 'var(--s-3)' }}>
         <h1 className="t-h1">{t.category[0]!.toUpperCase() + t.category.slice(1)} · {t.riders} riders</h1>
         <p className="t-body text-2">Collect {fmtJod(t.collectJod)} cash{t.creditJod > 0 ? ` · ${fmtJod(t.creditJod)} credit at trip end` : ''}</p>
