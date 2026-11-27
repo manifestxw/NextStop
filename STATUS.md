@@ -36,6 +36,5 @@
 
 ## Decisions (this session)
 - Owner: Google's places for seeds (CC = Irbid City Center mall, Aydoun); 4 riders via shared pickup.
-- Al-Hashmi (2.31 km from the real road) is outside the zone; kept as a seed for other rides.
 - Live Google source: 2.5 s timeout → fixed table (logged); "offline estimates" demo flag still P1.
 - Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; Member `pos` column.
