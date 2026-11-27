@@ -9,6 +9,7 @@ import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
 import { PLACES, placeArea, placeName, placeRef, useDraft } from '../state/draft.js';
 import { PlacePicker } from '../components/PlacePicker.js';
+import { FriendCodeCard } from '../components/FriendCode.js';
 import { Sheet } from '../components/ui.js';
 import { arriveByIso, fmtJod, fmtTime } from '../lib/format.js';
 import { useNow } from '../lib/useNow.js';
@@ -139,24 +140,10 @@ export function Home() {
 
 /** Your friend code (P1): friends type it to invite you; you type theirs to invite them. */
 function ProfileSheet({ view, onClose }: { view: RiderView; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const code = view.me.friendCode;
-  const text = `Ride with me on RideSync. My friend code: ${code}`;
-  const copy = async () => { try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* not allowed */ } };
-  const canShare = typeof navigator.share === 'function';
   return (
     <Sheet onClose={onClose}>
-      <span className="t-eyebrow text-2">{view.me.firstName} · your friend code</span>
-      <span className="code-big" aria-label={`Friend code ${code.split('').join(' ')}`}>{code}</span>
-      <div className="row" style={{ gap: 8 }}>
-        <Button kind="secondary" onClick={copy}><Icon name={copied ? 'check' : 'copy'} size={18} /> {copied ? 'Copied' : 'Copy code'}</Button>
-        {canShare && <Button kind="secondary" onClick={() => navigator.share({ text }).catch(() => undefined)}><Icon name="share" size={18} /> Share</Button>}
-      </div>
-      <ul className="t-body text-2" style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-        <li>A friend in a ride types your code to invite you. You'll see the invite here with your price before you join.</li>
-        <li>To invite a friend, open your ride and tap "Invite with a friend code".</li>
-        <li>Everyone picks their own pickup and pays their own share.</li>
-      </ul>
+      <FriendCodeCard code={view.me.friendCode} firstName={view.me.firstName} />
+      <p className="t-body text-2">To invite a friend, open your ride and tap "Invite with a friend code".</p>
     </Sheet>
   );
 }

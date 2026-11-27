@@ -220,3 +220,9 @@
 .status-pill--ok { color: var(--success-text); }
 .status-pill--off { color: var(--text-2); text-decoration: line-through; }
 .code-big { font-size: 40px; font-weight: 700; letter-spacing: 0.18em; font-variant-numeric: tabular-nums; text-align: center; }
+/* friend code pass */
+.code-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: var(--s-2); }
+.code-tile { height: 56px; border-radius: 12px; background: var(--raised); display: grid; place-items: center;
+  font: 800 28px/1 var(--font-display); color: var(--text-1); font-variant-numeric: tabular-nums; }
+.code-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.code-actions .btn, .pass-bottom > div > .btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }

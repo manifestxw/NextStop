@@ -6,6 +6,7 @@ import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
 import { fmtPhone } from '../lib/phone.js';
 import { useInstall } from '../lib/install.js';
+import { FriendCodeCard } from '../components/FriendCode.js';
 import { Icon } from '../components/Icon.js';
 import { Button, ErrorNote, Sheet, Switch, useAction } from '../components/ui.js';
 
@@ -15,14 +16,12 @@ export function Profile() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [leaving, setLeaving] = useState(false);
-  const [copied, setCopied] = useState(false);
   const a = useAction();
   const inst = useInstall();
   if (!view) return null;
   const me = view.me;
   const back = view.role === 'driver' ? '/driver' : '/';
   const rider = view.role === 'rider' ? view : null;
-  const copy = async () => { try { await navigator.clipboard.writeText(rider!.me.friendCode); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* not allowed */ } };
   return (
     <main className="screen">
       <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav(back)}><Icon name="back" /></button><h1 className="t-h2 grow">Profile</h1></div>
@@ -45,16 +44,7 @@ export function Profile() {
         <p className="t-caption text-2">{view.role === 'driver' ? 'Riders on your accepted trip can call you on this number.' : 'Only your driver sees your number, during your trip.'}</p>
       </section>
 
-      {rider && (
-        <section className="card stack">
-          <span className="t-caption text-2">Your friend code</span>
-          <div className="row"><span className="code-big grow" style={{ textAlign: 'left', fontSize: 32 }}>{rider.me.friendCode}</span>
-            <Button kind="secondary" small onClick={copy}><Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? 'Copied' : 'Copy'}</Button>
-            {typeof navigator.share === 'function' && <Button kind="secondary" small onClick={() => navigator.share({ text: `Ride with me on RideSync. My friend code: ${rider.me.friendCode}` }).catch(() => undefined)}><Icon name="share" size={16} /></Button>}
-          </div>
-          <span className="t-caption text-2">Friends in a ride type it to invite you.</span>
-        </section>
-      )}
+      {rider && <FriendCodeCard code={rider.me.friendCode} />}
 
       {rider && (
         <div className="row card card--tight">
