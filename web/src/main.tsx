@@ -1,4 +1,5 @@
 import { StrictMode, useEffect } from 'react';
+import { setupInstall } from './lib/install.js';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { api } from './net/api.js';
@@ -49,6 +50,7 @@ function App() {
 // The seeded login must finish BEFORE the first render: otherwise the router's "not logged in → /signup"
 // redirect runs first and drops the ?as= query.
 void seededLogin().finally(() => {
+  setupInstall();
   createRoot(document.getElementById('root')!).render(
     <StrictMode><ErrorBoundary><MapsProvider><BrowserRouter><App /></BrowserRouter></MapsProvider></ErrorBoundary></StrictMode>,
   );

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#F6F3EE" /><title>RideSync · offline</title>
+  <style>
+    :root { --surface: #F6F3EE; --text-1: #15171C; --text-2: #666970; --accent: #FF6A2B; }
+    @media (prefers-color-scheme: dark) { :root { --surface: #0D0F13; --text-1: #F1F2F4; --text-2: #9AA1AC; } }
+    body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--surface); color: var(--text-1); font: 16px/1.5 system-ui, sans-serif; padding: 24px; box-sizing: border-box; text-align: center; }
+    img { width: 96px; height: 96px; border-radius: 22px; }
+    h1 { font-size: 24px; margin: 16px 0 4px; } p { color: var(--text-2); margin: 0 0 24px; }
+    button { font: 600 17px system-ui, sans-serif; padding: 14px 28px; border-radius: 999px; border: 0; background: var(--accent); color: #15171C; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icon-192.png" alt="" />
+    <h1>You're offline</h1>
+    <p>RideSync needs a connection to sync your ride. Your booking is safe on the server.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

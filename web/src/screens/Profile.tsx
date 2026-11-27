@@ -5,6 +5,7 @@ import type { View } from '@nextstop/shared';
 import { api } from '../net/api.js';
 import { useSession } from '../state/session.js';
 import { fmtPhone } from '../lib/phone.js';
+import { useInstall } from '../lib/install.js';
 import { Icon } from '../components/Icon.js';
 import { Button, ErrorNote, Sheet, Switch, useAction } from '../components/ui.js';
 
@@ -16,6 +17,7 @@ export function Profile() {
   const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const a = useAction();
+  const inst = useInstall();
   if (!view) return null;
   const me = view.me;
   const back = view.role === 'driver' ? '/driver' : '/';
@@ -62,6 +64,17 @@ export function Profile() {
         </div>
       )}
 
+      {inst.state === 'prompt' && (
+        <button type="button" className="card card--tight row" style={{ textAlign: 'left' }} onClick={() => void inst.install()}>
+          <Icon name="share" /><span className="grow"><span className="t-body-l" style={{ display: 'block', fontWeight: 600 }}>Install the app</span>
+            <span className="t-caption text-2">Adds RideSync to your home screen</span></span><Icon name="next" size={16} />
+        </button>
+      )}
+      {inst.state === 'ios' && (
+        <div className="card card--tight row"><Icon name="share" />
+          <span className="grow"><span className="t-body-l" style={{ display: 'block', fontWeight: 600 }}>Install the app</span>
+            <span className="t-caption text-2">In Safari, tap Share, then "Add to Home Screen"</span></span></div>
+      )}
       <button type="button" className="card card--tight row" style={{ color: 'var(--danger)', textAlign: 'left' }} onClick={() => setLeaving(true)}>
         <Icon name="logout" /><span className="t-body-l" style={{ fontWeight: 600 }}>Log out</span>
       </button>

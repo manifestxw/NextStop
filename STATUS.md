@@ -20,7 +20,7 @@
 - **T20/T21:** driver route line, rider ↔ driver chat (private per rider), live place search (server proxy);
   Airport place + snapshot pairs (existing cells untouched).
 - **T22–T24 (P2):** k-means demand spots + best-spot card; demo traffic/weather/drivers; supply-aware ready check.
-- **T26–T30 (owner):** autopilot log; place picker + pins; invites; in-car lock; phone + demo OTP, profile, calling.
+- **T26–T31 (owner):** autopilot log; place picker + pins; invites; in-car lock; phone OTP, profile, calling; PWA.
 
 ## Next task
 - **T12 (owner): deploy on Replit.** Import the GitHub repo; `.replit` sets Node 22, build `npm ci --include=dev && npm run build`,
