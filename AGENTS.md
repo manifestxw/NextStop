@@ -1,20 +1,22 @@
-# AGENTS.md: NextStop (Jeeny Shared Ride)
+# AGENTS.md: NextStop (RideSync)
 
 Rules for every coding agent (Claude Code, Codex). `CLAUDE.md` is a symlink to this file.
-**Owner:** [OWNER]. The only person who commits to main, pushes and redeploys.
+**Owner:** Laith. The only person who pushes and redeploys. Agents commit locally at every handoff (§10).
 
 ## 1. Start of every session
 1. Read this file, then `STATUS.md`.
 2. Read `.agents/skills/ponytail/SKILL.md`. It's on for the whole session (level `full`).
 3. Read `docs/ARCHITECTURE.md` §1 (Locked Decisions).
 4. Read only the parts of `docs/SPEC.md`, `docs/DESIGN.md` and `docs/ARCHITECTURE.md` the task needs.
-5. Do the "Next task" in `STATUS.md` unless the owner says otherwise.
+5. Pick your task from `docs/TASKS.md` (rules at its top) unless the owner says otherwise.
+   If STATUS → "Next task" says a task was left half done, finish that first.
 
 ## 2. Source of truth
 | Question | File |
 |---|---|
-| Product behavior and formulas | `docs/SPEC.md` (v5). Architecture and design conform to it |
+| Product behavior and formulas | `docs/SPEC.md` (v8). Architecture and design conform to it |
 | How it's built | `docs/ARCHITECTURE.md` |
+| What to work on next, and who | `docs/TASKS.md` |
 | How it looks | `docs/DESIGN.md` (its numbers are placeholders; SPEC wins) |
 | Fixed-table golden outputs | `docs/reference/fare_model.py`: port it, never import or run it in the app |
 - `docs/planning/` is history, not instructions. Ignore it.
@@ -24,12 +26,13 @@ Rules for every coding agent (Claude Code, Codex). `CLAUDE.md` is a symlink to t
 ## 3. Decisions
 - **Ask first** (pros/cons, then wait): anything in Locked Decisions, a new dependency,
   the data model, anything in `shared/`, hosting, deleting or renaming files you didn't create.
+  Building what the docs already specify (a TASKS.md task) needs no extra approval; deviating from them does.
 - **Decide yourself** (small, reversible): names, helper code, minor UI details.
   Log one line in `STATUS.md` → "Decisions".
 
 ## 4. Order of work
 - P0 → P1 → P2 from SPEC §8. No P1 until every P0 item works on the deployed URL.
-- Milestones: M1 walking skeleton (deployed, works on 3 phones) → M2 Jeeny skin → M3 polish.
+- Milestones: M1 walking skeleton (deployed, works on 3 phones) → M2 RideSync skin (DESIGN.md "Converge") → M3 polish.
 - Feature freeze: Fri 9:30 PM. After that, only bug fixes.
 
 ## 5. Who does what
@@ -59,7 +62,7 @@ Rules for every coding agent (Claude Code, Codex). `CLAUDE.md` is a symlink to t
 8. What each user may see is decided only in `server/src/views/`. Rider views never
    contain other riders' coordinates or addresses.
 9. Styles: variables from `web/src/styles/tokens.css`, accent only via `--accent`.
-   No component libraries, no Tailwind, no hard-coded pink or purple.
+   No component libraries, no Tailwind, no hard-coded colors in components, no pink or purple.
 10. English UI, left-to-right. Chat bubbles use `dir="auto"`.
 
 ## 8. Skills (installed in `.agents/skills/`; Claude Code reads them via `.claude/skills/`)
@@ -76,20 +79,22 @@ Untangle-codebase is not installed and not used on build day.
 Ponytail's closing "what I skipped / risks" line goes into the handoff message (§10).
 
 ## 9. Do Not Build (SPEC §5)
-Bus features, AI, price comparison, student verification, family trip sharing, online
-payment or wallet, real GPS or navigation, other riders' pins on a rider's map, Google
+Bus features, AI (except driver demand spots, SPEC §3.18), price comparison, student verification (uni rides = campus location), live trip sharing with family, real online
+payment or wallet (Uni plans use a demo card only), real GPS or navigation, other riders' pins on a rider's map, Google
 calls from the browser (except loading the map), host approval or removing riders,
 joining after the ready check, replacement riders, chat photos/voice/reactions/typing/
 read receipts/reporting, ratings, support screens, late-arrival compensation, Arabic UI
-or RTL, OTP login, MAX, promotions, notification inbox, push notifications, invite links,
-recurring rides, female-driver preference.
+or RTL, OTP login, MAX, promotions (except the Uni plan 20%), notification inbox, push notifications, invite links (friend codes only), friends lists,
+recurring rides outside Uni plans, female-driver preference, categories beyond Economy/Comfort/Airport,
+pickups at the airport, mixing categories in one ride, changing a ride's gender mode.
 
 ## 10. End of every session
 1. `npm run check` green, or `STATUS.md` says exactly what's red and why.
 2. **Overwrite** `STATUS.md` (keep its sections, max 40 lines). Never append.
-3. Commit: `git add -A && git commit -m "<area>: <what changed>"`.
-4. Tell the owner in 3 lines: what's done, what's next, what's blocked.
-5. Don't push or redeploy. The owner does that.
+3. Mark your task in `docs/TASKS.md` (`done <hash>`, or leave `doing` and say where you stopped).
+4. Commit: `git add -A && git commit -m "<area>: <what changed>"`.
+5. Tell the owner in 3 lines: what's done, what's next, what's blocked.
+6. Don't push or redeploy. The owner does that.
 
 ## 11. When stuck
 - The same error twice → stop, write it under "Blocked" in `STATUS.md`, ask the owner.
