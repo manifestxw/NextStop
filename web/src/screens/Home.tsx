@@ -142,7 +142,7 @@ export function Home() {
 function ProfileSheet({ view, onClose }: { view: RiderView; onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
-      <FriendCodeCard code={view.me.friendCode} firstName={view.me.firstName} />
+      <FriendCodeCard code={view.me.friendCode} name={[view.me.firstName, view.me.lastName].filter(Boolean).join(' ')} />
       <p className="t-body text-2">To invite a friend, open your ride and tap "Invite with a friend code".</p>
     </Sheet>
   );

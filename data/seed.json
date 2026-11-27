@@ -62,6 +62,7 @@
     {
       "id": "u-lina",
       "firstName": "Lina",
+      "lastName": "Haddad",
       "gender": "F",
       "role": "rider",
       "seedLogin": "lina",
@@ -72,6 +73,7 @@
     {
       "id": "u-sara",
       "firstName": "Sara",
+      "lastName": "Khalil",
       "gender": "F",
       "role": "rider",
       "seedLogin": "sara",
@@ -82,6 +84,7 @@
     {
       "id": "u-rania",
       "firstName": "Rania",
+      "lastName": "Saleh",
       "gender": "F",
       "role": "rider",
       "friendCode": "RANI26",
@@ -91,6 +94,7 @@
     {
       "id": "u-dana",
       "firstName": "Dana",
+      "lastName": "Odeh",
       "gender": "F",
       "role": "rider",
       "friendCode": "DANA26",
@@ -100,6 +104,7 @@
     {
       "id": "u-noor",
       "firstName": "Noor",
+      "lastName": "Hamdan",
       "seedLogin": "noor",
       "gender": "F",
       "role": "rider",
@@ -110,6 +115,7 @@
     {
       "id": "u-huda",
       "firstName": "Huda",
+      "lastName": "Mansour",
       "seedLogin": "huda",
       "gender": "F",
       "role": "rider",
@@ -120,6 +126,7 @@
     {
       "id": "u-ahmad",
       "firstName": "Ahmad",
+      "lastName": "Zoubi",
       "gender": "M",
       "role": "rider",
       "friendCode": "AHMD26",
@@ -129,6 +136,7 @@
     {
       "id": "u-khaled",
       "firstName": "Khaled",
+      "lastName": "Obeidat",
       "gender": "M",
       "role": "rider",
       "friendCode": "KHLD26",
@@ -138,6 +146,7 @@
     {
       "id": "u-omar",
       "firstName": "Omar",
+      "lastName": "Rawashdeh",
       "gender": "M",
       "role": "driver",
       "seedLogin": "omar",

@@ -27,7 +27,7 @@ describe('HTTP routes', () => {
     const otp = await call('POST', '/api/otp/request', { phone: '079 555 0199' });
     expect([otp.status, otp.body.phone]).toEqual([200, '+962795550199']);
     const ver = await call('POST', '/api/otp/verify', { phone: '0795550199', code: otp.body.demoCode });
-    const s = await call('POST', '/api/signup', { firstName: 'Maya', gender: 'F', role: 'rider', ticket: ver.body.ticket });
+    const s = await call('POST', '/api/signup', { firstName: 'Maya', lastName: 'Khoury', gender: 'F', role: 'rider', ticket: ver.body.ticket });
     expect(s.status).toBe(200);
     expect(s.body.view.me.firstName).toBe('Maya');
     expect((await call('GET', '/api/me', undefined, bearer(s.body.token))).body).toMatchObject({ ok: true, view: { role: 'rider' } });
@@ -41,7 +41,7 @@ describe('HTTP routes', () => {
     const r = await call('POST', '/api/signup', { firstName: '', gender: 'X', role: 'rider' });
     expect(r.status).toBe(422);
     expect(r.body.code).toBe('INVALID');
-    expect(r.body.issues.map((i: { path: string }) => i.path).sort()).toEqual(['firstName', 'gender', 'ticket']);
+    expect(r.body.issues.map((i: { path: string }) => i.path).sort()).toEqual(['firstName', 'gender', 'lastName', 'ticket']);
   });
 
   it('demo calls need the PIN (403 BAD_PIN)', async () => {

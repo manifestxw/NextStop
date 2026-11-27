@@ -36,5 +36,5 @@
 - Owner: Google's places for seeds (CC = Aydoun mall); 4 riders via shared pickup.
 - No-show waits count from the shown minute. Default 20 drivers nearby (keeps −45). Deploy: owner, later.
 - Node 20 EOL but locked; `npm audit`: 4 highs in Prisma 6 CLI; storage-only Member `pos`, Ride `cancelReason`.
-- User.phone (+962…, plain indexed column; one per account enforced in code). OTP state in memory. DECLINED invites. Public area of a searched/pinned place is set by the server.
+- User.phone (+962…, plain indexed column; one per account in code) + lastName (own screens only). OTP state in memory. DECLINED invites. Public area of a searched/pinned place is set by the server.
 - Noor + Huda get seed logins. Pins: street address (Geocoding API, owner enabled it), else nearest place. No "use my location" (SPEC §5).

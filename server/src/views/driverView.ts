@@ -70,7 +70,7 @@ export async function driverView(repo: Repo, user: User, driver: Driver, clock: 
   }
   return {
     role: 'driver', epoch, viewSeq: user.viewSeq,
-    me: { id: user.id, firstName: user.firstName, car: driver.car, plate: driver.plate, ...(user.phone ? { phone: user.phone } : {}) },
+    me: { id: user.id, firstName: user.firstName, car: driver.car, plate: driver.plate, ...(user.phone ? { phone: user.phone } : {}), ...(user.lastName ? { lastName: user.lastName } : {}) },
     offers, ...(trip ? { trip } : { demand: demandFor(driver, now) }),
     banners: (await repo.listUnseenBanners(user.id)).map(bannerView),
     clock: clockView(clock),

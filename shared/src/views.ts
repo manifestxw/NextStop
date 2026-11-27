@@ -119,7 +119,7 @@ export interface PlanView {
 
 export interface RiderView {
   role: 'rider'; epoch: number; viewSeq: number;
-  me: { id: string; firstName: string; gender: Gender; sameGenderOnly: boolean; friendCode: string; outstandingJod: number; phone?: string };
+  me: { id: string; firstName: string; gender: Gender; sameGenderOnly: boolean; friendCode: string; outstandingJod: number; phone?: string; lastName?: string };   // lastName: only in my own view
   ride?: RiderRideView;
   invites: InviteView[];    // P1
   plan?: PlanView;          // P1
@@ -173,7 +173,7 @@ export interface DemandView { spots: DemandSpotView[]; bestIndex: number | null;
 
 export interface DriverView {
   role: 'driver'; epoch: number; viewSeq: number;
-  me: { id: string; firstName: string; car: string; plate: string; phone?: string };
+  me: { id: string; firstName: string; car: string; plate: string; phone?: string; lastName?: string };
   offers: DriverOffer[];
   trip?: DriverTripView;
   demand?: DemandView;      // P2

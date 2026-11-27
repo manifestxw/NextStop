@@ -33,7 +33,7 @@ export async function riderView(repo: Repo, user: User, clock: Clock, epoch: num
   const ride = await currentRideFor(repo, user.id, now);
   return {
     role: 'rider', epoch, viewSeq: user.viewSeq,
-    me: { id: user.id, firstName: user.firstName, gender: user.gender, sameGenderOnly: user.sameGenderOnly, ...(user.phone ? { phone: user.phone } : {}),
+    me: { id: user.id, firstName: user.firstName, gender: user.gender, sameGenderOnly: user.sameGenderOnly, ...(user.phone ? { phone: user.phone } : {}), ...(user.lastName ? { lastName: user.lastName } : {}),
       friendCode: user.friendCode, outstandingJod: jod(user.outstandingP) },
     ...(ride ? { ride: await rideView(repo, ride, user, now) } : {}),
     invites: await invitesFor(repo, user.id),

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Icon } from './Icon.js';
 import { Button } from './ui.js';
 
-export function FriendCodeCard({ code, firstName }: { code: string; firstName?: string }) {
+export function FriendCodeCard({ code, name }: { code: string; name?: string }) {
   const [copied, setCopied] = useState(false);
   const canShare = typeof navigator.share === 'function';
   const copy = async () => { try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* not allowed */ } };
@@ -11,7 +11,7 @@ export function FriendCodeCard({ code, firstName }: { code: string; firstName?: 
   return (
     <section className="pass" aria-label="Your friend code">
       <div className="pass-top">
-        <span className="t-eyebrow text-2">{firstName ? `${firstName} · ` : ''}Your friend code</span>
+        <span className="t-eyebrow text-2">{name ? `${name} · ` : ''}Your friend code</span>
         <span className="code-tiles" aria-label={code.split('').join(' ')}>
           {[...code].map((ch, i) => <span key={i} className="code-tile" aria-hidden>{ch}</span>)}
         </span>

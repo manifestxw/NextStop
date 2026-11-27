@@ -80,17 +80,23 @@ function CodeStep({ step, onResent, onNew, onIn }: { step: Extract<Step, { kind:
 
 function ProfileStep({ phone, ticket, onDone, onExpired }: { phone: string; ticket: string; onDone: () => void; onExpired: () => void }) {
   const [name, setName] = useState('');
+  const [last, setLast] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
   const [role, setRole] = useState<Role>('rider');
   const a = useAction();
-  const ok = name.trim().length > 0 && gender;
+  const ok = name.trim().length > 0 && last.trim().length > 0 && gender;
   return (
     <>
       <h1 className="t-h1" style={{ marginTop: 'var(--s-6)' }}>{role === 'rider' ? 'Create your account' : 'Drive scheduled shared rides'}</h1>
-      <p className="t-body text-2">{fmtPhone(phone)} · verified <span style={{ color: 'var(--success-text)' }}><Icon name="check" size={16} /></span></p>
-      <label className="stack"><span className="t-caption text-2">First name</span>
-        <input className="field" value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" maxLength={30} />
-      </label>
+      <p className="row t-body text-2" style={{ gap: 6 }}>{fmtPhone(phone)} · <span className="row" style={{ gap: 4, color: 'var(--success-text)', whiteSpace: 'nowrap' }}><Icon name="check" size={16} /> verified</span></p>
+      <div className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+        <label className="stack grow" style={{ minWidth: 0 }}><span className="t-caption text-2">First name</span>
+          <input className="field" style={{ width: '100%' }} value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" maxLength={30} />
+        </label>
+        <label className="stack grow" style={{ minWidth: 0 }}><span className="t-caption text-2">Last name</span>
+          <input className="field" style={{ width: '100%' }} value={last} onChange={(e) => setLast(e.target.value)} autoComplete="family-name" maxLength={40} />
+        </label>
+      </div>
       <div className="stack"><span className="t-caption text-2">Gender (can't be changed later)</span>
         <div className="chips">
           {(['F', 'M'] as const).map((g) => (
@@ -100,14 +106,14 @@ function ProfileStep({ phone, ticket, onDone, onExpired }: { phone: string; tick
           ))}
         </div>
       </div>
-      <p className="t-caption text-2">Your first name and pickup area are shown to riders in your ride, and you can chat with them.</p>
+      <p className="t-caption text-2">Riders in your ride see only your first name and pickup area. Your full name stays on your profile.</p>
       <ErrorNote text={a.message} />
       {a.error?.code === 'OTP_EXPIRED' && <button type="button" className="linkbtn" onClick={onExpired}>Verify your number again</button>}
       <button type="button" className="linkbtn" style={{ alignSelf: 'flex-start' }} onClick={() => setRole(role === 'rider' ? 'driver' : 'rider')}>
         {role === 'rider' ? 'Driving with RideSync? Sign up as a driver' : 'Riding instead? Sign up as a rider'}
       </button>
       <div className="dock">
-        <Button disabled={!ok || a.busy} onClick={() => a.run(async () => { await api.signup({ firstName: name, gender: gender!, role, ticket }); onDone(); })}>Create account</Button>
+        <Button disabled={!ok || a.busy} onClick={() => a.run(async () => { await api.signup({ firstName: name, lastName: last, gender: gender!, role, ticket }); onDone(); })}>Create account</Button>
       </div>
     </>
   );

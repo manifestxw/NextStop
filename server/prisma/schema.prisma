@@ -13,6 +13,7 @@ model User {
   epoch        Int
   role         String
   firstName    String
+  lastName     String?
   gender       String
   viewSeq      Int      @default(0)
   outstandingP Int      @default(0)

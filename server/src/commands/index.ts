@@ -590,12 +590,12 @@ export function createCommands(ctx: Ctx) {
       return { ticket, phone };
     },
 
-    /** Edit my profile (first name, same-gender default). Gender and phone stay fixed. */
+    /** Edit my profile (first and last name, same-gender default). Gender and phone stay fixed. */
     async updateProfile(token: string, b: Body<typeof req.ProfileBody>) {
       const user = await auth(token);
       return commit(user.id, async (repo) => {
         const u = (await repo.getUser(user.id))!;
-        await repo.putUser({ ...u, ...(b.firstName ? { firstName: b.firstName.trim() } : {}), ...(b.sameGenderOnly !== undefined ? { sameGenderOnly: b.sameGenderOnly } : {}) });
+        await repo.putUser({ ...u, ...(b.firstName ? { firstName: b.firstName.trim() } : {}), ...(b.lastName ? { lastName: b.lastName.trim() } : {}), ...(b.sameGenderOnly !== undefined ? { sameGenderOnly: b.sameGenderOnly } : {}) });
       });
     },
 
@@ -614,7 +614,7 @@ export function createCommands(ctx: Ctx) {
         const d = (await repo.getDemoState())!;
         if (await repo.getUserByPhone(t.phone)) throw new ConflictError('BAD_PHONE', 'That number already has an account. Sign in instead.');
         const user: User = { id: randomUUID(), token: randomBytes(16).toString('hex'), epoch: d.epoch, role: b.role, phone: t.phone,
-          firstName: b.firstName.trim(), gender: b.gender, sameGenderOnly: true, friendCode: await newFriendCode(repo),
+          firstName: b.firstName.trim(), lastName: b.lastName.trim(), gender: b.gender, sameGenderOnly: true, friendCode: await newFriendCode(repo),
           viewSeq: 0, outstandingP: 0, isSim: false, createdAt: toIso(clock.now()) };
         await repo.putUser(user);
         if (b.role === 'driver') {

@@ -15,11 +15,13 @@ export function Profile() {
   const nav = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
+  const [last, setLast] = useState('');
   const [leaving, setLeaving] = useState(false);
   const a = useAction();
   const inst = useInstall();
   if (!view) return null;
   const me = view.me;
+  const fullName = [me.firstName, me.lastName].filter(Boolean).join(' ');
   const back = view.role === 'driver' ? '/driver' : '/';
   const rider = view.role === 'rider' ? view : null;
   return (
@@ -27,24 +29,30 @@ export function Profile() {
       <div className="row"><button type="button" className="iconbtn" aria-label="Back" onClick={() => nav(back)}><Icon name="back" /></button><h1 className="t-h2 grow">Profile</h1></div>
 
       <section className="card stack">
-        <span className="t-caption text-2">First name</span>
+        <span className="t-caption text-2">Full name</span>
         {editing ? (
-          <form className="row" style={{ gap: 8 }} onSubmit={(e) => { e.preventDefault(); if (name.trim()) void a.run(async () => { await api.updateProfile({ firstName: name }); setEditing(false); }); }}>
-            <input className="field grow" style={{ height: 44 }} value={name} maxLength={30} autoFocus onChange={(e) => setName(e.target.value)} aria-label="First name" />
-            <Button type="submit" small disabled={!name.trim() || a.busy}>Save</Button>
+          <form className="stack" onSubmit={(e) => { e.preventDefault(); if (name.trim() && last.trim()) void a.run(async () => { await api.updateProfile({ firstName: name, lastName: last }); setEditing(false); }); }}>
+            <div className="row" style={{ gap: 8 }}>
+              <input className="field grow" style={{ height: 44, minWidth: 0 }} value={name} maxLength={30} autoFocus autoComplete="given-name" onChange={(e) => setName(e.target.value)} aria-label="First name" placeholder="First name" />
+              <input className="field grow" style={{ height: 44, minWidth: 0 }} value={last} maxLength={40} autoComplete="family-name" onChange={(e) => setLast(e.target.value)} aria-label="Last name" placeholder="Last name" />
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <Button type="submit" small disabled={!name.trim() || !last.trim() || a.busy}>Save</Button>
+              <Button kind="secondary" small onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
           </form>
         ) : (
-          <div className="row"><span className="t-h1 grow">{me.firstName}</span>
-            <button type="button" className="linkbtn" onClick={() => { setName(me.firstName); setEditing(true); }}>Edit</button></div>
+          <div className="row"><span className="t-h1 grow">{fullName}</span>
+            <button type="button" className="linkbtn" onClick={() => { setName(me.firstName); setLast(me.lastName ?? ''); setEditing(true); }}>Edit</button></div>
         )}
         <ErrorNote text={a.message} />
         <div className="card-row"><span className="t-caption text-2 grow">Mobile</span><span className="t-body-l">{me.phone ? fmtPhone(me.phone) : 'Not added'}</span></div>
         {rider && <div className="card-row"><span className="t-caption text-2 grow">Gender</span><span className="t-body-l">{rider.me.gender === 'F' ? 'Woman' : 'Man'}</span></div>}
         {view.role === 'driver' && <div className="card-row"><span className="t-caption text-2 grow">Car</span><span className="t-body-l">{view.me.car} · {view.me.plate}</span></div>}
-        <p className="t-caption text-2">{view.role === 'driver' ? 'Riders on your accepted trip can call you on this number.' : 'Only your driver sees your number, during your trip.'}</p>
+        <p className="t-caption text-2">{view.role === 'driver' ? 'Riders see your first name. Riders on your accepted trip can call you on this number.' : 'Riders see only your first name. Only your driver sees your number, during your trip.'}</p>
       </section>
 
-      {rider && <FriendCodeCard code={rider.me.friendCode} />}
+      {rider && <FriendCodeCard code={rider.me.friendCode} name={fullName} />}
 
       {rider && (
         <div className="row card card--tight">

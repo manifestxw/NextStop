@@ -11,6 +11,7 @@ export interface Place { key?: string; placeId?: string; name: string; area: str
 export interface User {
   id: string; token: string; epoch: number;       // epoch bumps on reset → logs everyone out
   role: Role; firstName: string; gender: Gender;  // gender immutable after signup
+  lastName?: string;                              // shown only on my own screens; others see my first name
   sameGenderOnly: boolean; friendCode: string;
   viewSeq: number; outstandingP: number;
   phone?: string;                                 // +9627XXXXXXXX, verified by OTP; shown only to the assigned driver / to my riders

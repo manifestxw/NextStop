@@ -23,10 +23,10 @@ describe('OTP sign-up (demo: the code is shown, not texted)', () => {
     expect([r.phone, /^\d{6}$/.test(r.demoCode), r.resendInSec, r.expiresInSec]).toEqual(['+962795550101', true, 30, 300]);
     const v = await h.cmd.verifyOtp({ phone: '0795550101', code: r.demoCode });
     expect('ticket' in v).toBe(true);
-    const s = await h.cmd.signup({ firstName: 'Maya', gender: 'F', role: 'rider', ticket: (v as { ticket: string }).ticket });
+    const s = await h.cmd.signup({ firstName: 'Maya', lastName: 'Khoury', gender: 'F', role: 'rider', ticket: (v as { ticket: string }).ticket });
     expect(rider(s.view).me.phone).toBe('+962795550101');
     // The ticket works once.
-    expect(await code(h.cmd.signup({ firstName: 'Maya', gender: 'F', role: 'rider', ticket: (v as { ticket: string }).ticket }))).toBe('OTP_EXPIRED');
+    expect(await code(h.cmd.signup({ firstName: 'Maya', lastName: 'Khoury', gender: 'F', role: 'rider', ticket: (v as { ticket: string }).ticket }))).toBe('OTP_EXPIRED');
   });
 
   it('a known number logs straight in (same account, new token)', async () => {
@@ -53,7 +53,7 @@ describe('OTP sign-up (demo: the code is shown, not texted)', () => {
 
   it('sign-up without a verified phone is refused', async () => {
     const h = await makeHarness();
-    expect(await code(h.cmd.signup({ firstName: 'Maya', gender: 'F', role: 'rider', ticket: 'made-up-ticket-1234' }))).toBe('OTP_EXPIRED');
+    expect(await code(h.cmd.signup({ firstName: 'Maya', lastName: 'Khoury', gender: 'F', role: 'rider', ticket: 'made-up-ticket-1234' }))).toBe('OTP_EXPIRED');
   });
 });
 
@@ -84,5 +84,23 @@ describe('calling: only a rider and their assigned driver see each other\'s numb
     expect(Object.fromEntries(stops.map((s) => [s.firstName, s.phone]))).toEqual({ Lina: '+962790000001', Sara: '+962790000002' });
     expect(rider(await h.cmd.me(sara)).ride!.driver!.phone).toBe('+962790000009');
     expect(JSON.stringify(await h.cmd.me(sara))).not.toContain('+962790000001');
+  });
+});
+
+describe('full name (owner request): my own screens show it, others still see only my first name', () => {
+  it('sign-up takes a last name; profile can edit it; riders in my ride never get it', async () => {
+    const h = await makeHarness();
+    const r = await h.cmd.requestOtp({ phone: '0795550144' });
+    const v = await h.cmd.verifyOtp({ phone: '0795550144', code: r.demoCode }) as { ticket: string };
+    const s = rider((await h.cmd.signup({ firstName: 'Maya', lastName: ' Khoury ', gender: 'F', role: 'rider', ticket: v.ticket })).view);
+    expect([s.me.firstName, s.me.lastName]).toEqual(['Maya', 'Khoury']);
+    const maya = (await h.store.withLock(async (repo) => (await repo.listUsers()).find((u) => u.firstName === 'Maya')))!.token;
+    expect(rider(await h.cmd.updateProfile(maya, { lastName: 'Nasser' })).me.lastName).toBe('Nasser');
+    const lina = await h.login('lina');
+    expect(rider(await h.cmd.me(lina)).me.lastName).toBe('Haddad');   // seeded
+    const rideId = rider(await h.cmd.createRide(lina, trip('CC'))).ride!.id;
+    await h.cmd.join(maya, rideId, trip('US'));
+    expect(JSON.stringify(await h.cmd.me(lina))).not.toContain('Nasser');   // Maya's last name never reaches Lina
+    expect(JSON.stringify(await h.cmd.me(maya)).match(/Haddad/g)).toBeNull();   // nor Lina's reaches Maya
   });
 });
