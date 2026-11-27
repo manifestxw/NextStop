@@ -62,10 +62,10 @@ SPEC §8 priorities and AGENTS.md rules apply. One tool edits the repo at a time
 
 ## Added during the build
 - [x] **T25** `done 579a19b` CC: Demo autopilot: "Play next step" in the demo menu runs SPEC §2.2 one step at a time as the seeded people (rehearsal + stage backup). Tested to the canonical numbers.
-- [x] **T26** `done HASH` CC (owner, 27 Nov): Autopilot explained: whole script with who/what/watch per phone/expected numbers, live ride panel, log of each tap's real result.
-- [x] **T27** `done HASH` CC (owner): Place picker everywhere (home, invite, Uni plan): search with addresses, recent places, quick picks, map pin named by Places Nearby; server-side public area (seed area / neighbourhood / city).
-- [x] **T28** `done HASH` CC (owner): Invites complete: status for the inviter, every invite with hosts/seats and a price preview, accept with any pickup, gender/full checks, code lookup, invite during setup, profile code sheet; `?as=noor` / `?as=huda` phone logins.
-- [x] **T29** `done HASH` CC (owner): Picked-up riders can't leave or remove their +1; rider screen says "You're in the car".
+- [x] **T26** `done 32e8742` CC (owner, 27 Nov): Autopilot explained: whole script with who/what/watch per phone/expected numbers, live ride panel, log of each tap's real result.
+- [x] **T27** `done 32e8742` CC (owner): Place picker everywhere (home, invite, Uni plan): search with addresses, recent places, quick picks, map pin named by Places Nearby; server-side public area (seed area / neighbourhood / city).
+- [x] **T28** `done 32e8742` CC (owner): Invites complete: status for the inviter, every invite with hosts/seats and a price preview, accept with any pickup, gender/full checks, code lookup, invite during setup, profile code sheet; `?as=noor` / `?as=huda` phone logins.
+- [x] **T29** `done 32e8742` CC (owner): Picked-up riders can't leave or remove their +1; rider screen says "You're in the car".
 
 ## Cut order if time runs out
 P2 entirely → T16/T15 (pitch Uni plans from a slide) → T18/T17 → T21 → T20.
